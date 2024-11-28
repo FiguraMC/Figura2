@@ -16,10 +16,10 @@ public class GameRendererMixin {
 
     @Inject(method = "render", at = @At("HEAD"))
     public void preRender(DeltaTracker deltaTracker, boolean bl, CallbackInfo ci) {
-        // TODO: Better solution than this for GUI rendering
+        // TODO: Better solution than this for GUI rendering...
         FiguraModClient.AVATAR_RENDERING_STACK.push(AvatarManager.ENTITY_AVATARS.get(ClientUtils.getLocalUUID()));
 
-        // Run the render() event on each avatar:
+        // Run the render event on each avatar:
         float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
         AvatarManager.forEachAvatar(avatar -> {
             Scripts scripts;

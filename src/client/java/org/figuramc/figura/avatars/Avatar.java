@@ -28,9 +28,8 @@ public class Avatar<K> {
         this.components = components;
         for (AvatarComponent component : components) componentsByType.put(component.getClass(), component);
 
-        // Initialize each component in stages
+        // Initialize each component
         for (AvatarComponent component : components) component.initialize(materials, this);
-        for (AvatarComponent component : components) component.postInitialize(materials, this);
     }
 
     @SuppressWarnings("unchecked")

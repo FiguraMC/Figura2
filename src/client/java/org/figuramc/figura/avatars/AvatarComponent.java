@@ -9,10 +9,6 @@ public interface AvatarComponent {
     // To add script APIs, depend on the `Scripts` component and add them here.
     void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException;
 
-    // Runs after all components finish their initialize() calls.
-    // Please justify why this is necessary if you implement this.
-    default void postInitialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {}
-
     // Once loading is entirely complete, this is run on the main/render thread, to instantiate the avatar.
     // Return true if there was an error and we should cancel further operations.
     default boolean mainThreadInitialize() { return false; }

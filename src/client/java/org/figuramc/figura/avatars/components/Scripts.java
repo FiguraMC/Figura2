@@ -4,6 +4,7 @@ import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.model.part.*;
 import org.figuramc.figura.script_hooks.ScriptEngine;
 import org.figuramc.figura.util.exception.ThrowingRunnable;
 import net.minecraft.network.chat.Component;
@@ -19,18 +20,22 @@ public class Scripts implements AvatarComponent {
     @Override
     public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
         this.self = self;
-        this.engine = null; // TODO, add an engine :P
-        // TODO Add built-in APIs to the engine:
-    }
+        this.engine = null; // TODO, add an engine so this isnt null :P
 
-    /**
-     * Justification: The script instance must be created before any other components
-     * can add APIs to it. However, all other components must register their APIs before
-     * we can add the user's scripts to the instance.
-     */
-    @Override
-    public void postInitialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
-        // TODO Add the user's scripts into the engine
+        if (engine != null) {
+            // Register built-in APIs:
+
+            // Model parts
+            engine.registerClass(FiguraModelPart.class);
+            engine.registerClass(RootModelPart.class);
+            engine.registerClass(CustomItemModelPart.class);
+            engine.registerClass(WorldRootModelPart.class);
+            engine.registerClass(VanillaRootModelPart.class);
+
+            // And finally, add in the user's scripts:
+            for (AvatarMaterials.ScriptMaterials script : materials.scripts())
+                engine.addScript(script.name(), script.data());
+        }
     }
 
     // Helper to try running code, catch any error, and error out the Avatar if so
@@ -45,6 +50,7 @@ public class Scripts implements AvatarComponent {
         }
     }
 
+    // Runs once on init
     @Override
     public boolean mainThreadInitialize() {
         return tryOrError(() -> {
@@ -52,6 +58,7 @@ public class Scripts implements AvatarComponent {
         }, "Error during script init");
     }
 
+    // Runs every tick
     @Override
     public boolean tick() {
         return tryOrError(() -> {
@@ -59,6 +66,7 @@ public class Scripts implements AvatarComponent {
         }, "Error during script tick");
     }
 
+    // Runs every frame
     public void renderEvent(float tickDelta) {
         tryOrError(() -> {
             if (engine != null) engine.render(tickDelta);

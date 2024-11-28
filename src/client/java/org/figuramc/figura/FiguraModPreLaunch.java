@@ -5,7 +5,7 @@ import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 // Helpful for testing with renderdoc, enable the boolean
 public class FiguraModPreLaunch implements PreLaunchEntrypoint {
 
-    private static final boolean ENABLE_RENDERDOC = false;
+    private static final boolean ENABLE_RENDERDOC = true;
 
     @Override
     public void onPreLaunch() {
