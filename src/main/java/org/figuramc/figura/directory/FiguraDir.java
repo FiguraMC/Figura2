@@ -1,5 +1,6 @@
 package org.figuramc.figura.directory;
 
+import net.fabricmc.loader.api.FabricLoader;
 import org.figuramc.figura.config.ConfigManager;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
@@ -29,21 +30,20 @@ public class FiguraDir {
     private static Path getModDirectory() throws IOException {
         // No race conditions from multiple threads needing to ask for it at once
         synchronized (ConfigManager.MOD_DIRECTORY) {
-            // Fetch or ask for the mod directory
+            // Fetch the mod directory
             @Nullable String modDirString = ConfigManager.MOD_DIRECTORY.getValue();
-            if (modDirString == null) askPlayerForModDirectory();
-            else if (!Files.isDirectory(Path.of(modDirString))) askPlayerForModDirectory();
-            modDirString = ConfigManager.MOD_DIRECTORY.getValue();
-            Path modDir = Path.of(modDirString);
+            // If null, then use run/figura2/
+            Path modDir = modDirString != null ? Path.of(modDirString) : FabricLoader.getInstance().getGameDir().resolve("figura2");
             // Create sub-folders if they don't yet exist
             for (SubModDirectory subDir : ALL_SUB_DIRECTORIES)
-                if (!Files.isDirectory(modDir.resolve(subDir.key))) Files.createDirectory(modDir.resolve(subDir.key));
+                if (!Files.isDirectory(modDir.resolve(subDir.key))) Files.createDirectories(modDir.resolve(subDir.key));
             // Return it
             return modDir;
         }
     }
 
     // Ask the player for a mod directory path and save it in config.
+    // TODO Add a way to trigger this
     private static void askPlayerForModDirectory() {
         String path = TinyFileDialogs.tinyfd_selectFolderDialog("Choose or create a folder to use as your Figura mod directory!", "");
         System.out.println("Path = \"" + path + "\"");

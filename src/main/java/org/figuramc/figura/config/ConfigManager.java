@@ -18,12 +18,14 @@ public class ConfigManager {
     public static final List<ConfigOption<?>> ALL_CONFIGS = new ArrayList<>();
 
     // The mod directory path, as a string
-    public static final ConfigOption<@Nullable String> MOD_DIRECTORY = new ConfigOption<>("mod_directory_path", null,
+    public static final ConfigOption<@Nullable String> MOD_DIRECTORY = new ConfigOption<>("mod_directory_path",
+            null,
             ele -> ele.isJsonNull() ? null : ele.getAsString(), // Reader
             val -> val == null ? JsonNull.INSTANCE : new JsonPrimitive(val) // Writer
     );
     // Whether to force rendering in compatible mode
-    public static final ConfigOption<Boolean> FORCE_COMPATIBLE_MODE = new ConfigOption<>("force_compatible_mode", false,
+    public static final ConfigOption<Boolean> FORCE_COMPATIBLE_MODE = new ConfigOption<>("force_compatible_mode",
+            false,
             JsonElement::getAsBoolean,
             JsonPrimitive::new
     );
