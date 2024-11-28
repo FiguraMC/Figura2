@@ -1,0 +1,30 @@
+{
+  "required": true,
+  "package": "org.figuramc.figura.mixin.client",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "com.moulberry.mixinconstraints.ConstraintsMixinPlugin",
+  "client": [
+    "ClientLevelMixin",
+    "MinecraftMixin",
+    "compat.sodium.SodiumEntityRendererMixin",
+    "entity_render.EntityRenderDispatcherMixin",
+    "entity_render.EntityRendererMixin",
+    "entity_render.ItemInHandRendererMixin",
+    "entity_render.LivingEntityRendererMixin",
+    "general_render.GameRendererMixin",
+    "item_render.ItemRendererMixin",
+    "vanilla_parts.PlayerModelMixin",
+    "vanilla_parts.render.ModelPartRenderMixin",
+    "vanilla_parts.tracking.CubeDefinitionMixin",
+    "vanilla_parts.tracking.CubeTrackingMixin",
+    "vanilla_parts.tracking.EntityRenderDispatcherMixin",
+    "vanilla_parts.tracking.ModelPartTrackingMixin",
+    "vanilla_parts.tracking.renderlayers.EvokerItemLayerMixin",
+    "vanilla_parts.tracking.renderlayers.IllusionerItemLayerMixin",
+    "vanilla_parts.tracking.renderlayers.VindicatorItemLayerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": []
+}

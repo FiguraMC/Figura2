@@ -1,0 +1,171 @@
+package org.figuramc.figura.util;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3fc;
+
+import java.util.ArrayList;
+
+/**
+ * A matrix stack that doesn't allocate when popping then pushing.
+ * When calling translate(), rotate(), or scale(), it will act as though
+ * it has performed that transformation *before* the transformation it
+ * currently has in its stack. It will *post-multiply*. This is the same
+ * behavior that JOML uses, as well as the vanilla matrix stack, so I'm
+ * implementing this in the same way for convention.
+ *
+ * This uses float precision rather than double - the reason is to potentially
+ * make it easier to change to storing data on the GPU later.
+ *
+ * Problems relating to double vs float precision should be resolved elsewhere, not
+ * as part of the matrix stack.
+ */
+public class FiguraMatrixStack {
+
+    private final ArrayList<Matrix4f> positionMatrices = new ArrayList<>();
+    private final ArrayList<Matrix3f> normalMatrices = new ArrayList<>();
+    int curIndex; //index of the top item
+    int maxSize; //the number of matrices that have been on the stack at its peak
+
+    public FiguraMatrixStack() {
+        curIndex = 0;
+        maxSize = 1;
+        positionMatrices.add(new Matrix4f());
+        normalMatrices.add(new Matrix3f());
+    }
+
+    public FiguraMatrixStack(PoseStack vanillaStack) {
+        this();
+        PoseStack.Pose peeked = vanillaStack.last();
+        positionMatrices.get(curIndex).set(peeked.pose());
+        normalMatrices.get(curIndex).set(peeked.normal());
+    }
+
+    public void translate(Vector3fc vec) {
+        translate(vec.x(), vec.y(), vec.z());
+    }
+    public void translate(float x, float y, float z) {
+        positionMatrices.get(curIndex).translate(x, y, z);
+    }
+    public void translateLocal(float x, float y, float z) {
+        positionMatrices.get(curIndex).translateLocal(x, y, z);
+    }
+
+    public void scale(Vector3fc vec) {
+        scale(vec.x(), vec.y(), vec.z());
+    }
+
+    public void scale(float x, float y, float z) {
+        positionMatrices.get(curIndex).scale(x, y, z);
+        if (x == y && y == z) {
+            if (x > 0)
+                return; //If all positive, and uniform scaling, normals are not affected
+            normalMatrices.get(curIndex).scale(-1);
+        }
+        float f = 1 / x;
+        float g = 1 / y;
+        float h = 1 / z;
+        float i = Mth.fastInvCubeRoot(f * g * h);
+        normalMatrices.get(curIndex).scale(f * i, g * i, h * i);
+    }
+    public void scaleLocal(float x, float y, float z) {
+        positionMatrices.get(curIndex).scaleLocal(x, y, z);
+        if (x == y && y == z) {
+            if (x > 0)
+                return; //If all positive, and uniform scaling, normals are not affected
+            normalMatrices.get(curIndex).scale(-1);
+        }
+        float f = 1 / x;
+        float g = 1 / y;
+        float h = 1 / z;
+        float i = Mth.fastInvCubeRoot(f * g * h);
+        normalMatrices.get(curIndex).scaleLocal(f * i, g * i, h * i);
+    }
+
+    public void rotate(Quaternionf quaternion) {
+        positionMatrices.get(curIndex).rotate(quaternion);
+        normalMatrices.get(curIndex).rotate(quaternion);
+    }
+
+    public void multiply(Matrix4f posMatrix, Matrix3f normalMatrix) {
+        positionMatrices.get(curIndex).mul(posMatrix);
+        normalMatrices.get(curIndex).mul(normalMatrix);
+    }
+
+    private final Matrix3f normal = new Matrix3f();
+    public void multiply(Matrix4f posMatrix) {
+        positionMatrices.get(curIndex).mul(posMatrix);
+        posMatrix.normal(normal);
+        normalMatrices.get(curIndex).mul(normal);
+    }
+
+    public void push() {
+        curIndex++;
+        if (curIndex == maxSize) {
+            positionMatrices.add(new Matrix4f(positionMatrices.get(curIndex-1)));
+            normalMatrices.add(new Matrix3f(normalMatrices.get(curIndex-1)));
+            maxSize++;
+        } else if (curIndex > maxSize) {
+            throw new IllegalStateException("Current index should never be above max size - this is a bug in FiguraMatrixStack!");
+        } else {
+            positionMatrices.get(curIndex).set(positionMatrices.get(curIndex-1));
+            normalMatrices.get(curIndex).set(normalMatrices.get(curIndex-1));
+        }
+    }
+
+    public void pop() {
+        curIndex--;
+    }
+
+    public Matrix4f peekPosition()  {
+        return positionMatrices.get(curIndex);
+    }
+
+    public Matrix3f peekNormal()  {
+        return normalMatrices.get(curIndex);
+    }
+
+    public boolean isEmpty() {
+        return curIndex == 0;
+    }
+
+    public void loadIdentity() {
+        positionMatrices.get(curIndex).identity();
+        normalMatrices.get(curIndex).identity();
+    }
+
+    /**
+     * Converts the matrix stack to a vanilla matrix stack.
+     */
+    public PoseStack getVanillaCopy() {
+        PoseStack result = new PoseStack();
+        PoseStack.Pose entry = result.last();
+        entry.pose().set(positionMatrices.get(curIndex));
+        entry.normal().set(normalMatrices.get(curIndex));
+        return result;
+    }
+
+    /**
+     * Fills a vanilla matrix stack with the top element of this matrix stack.
+     * Does not perform an allocation, unlike getVanillaCopy.
+     */
+    public void fillVanilla(PoseStack target) {
+        target.last().pose().set(positionMatrices.get(curIndex));
+        target.last().normal().set(normalMatrices.get(curIndex));
+    }
+
+    /**
+     * Completely turns this matrix stack into the vanilla version.
+     * Can be used to avoid calling the constructor repeatedly,
+     * instead reusing a single matrix stack to avoid allocation.
+     */
+    public void setFromVanilla(PoseStack vanilla) {
+        this.curIndex = 0;
+        this.peekPosition().set(vanilla.last().pose());
+        this.peekNormal().set(vanilla.last().normal());
+    }
+
+}

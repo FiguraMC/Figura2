@@ -1,0 +1,24 @@
+accessWidener v2 named
+
+# Getting overlay values for LivingEntityRenderer
+accessible method net/minecraft/client/renderer/entity/LivingEntityRenderer getWhiteOverlayProgress (Lnet/minecraft/world/entity/LivingEntity;F)F
+
+# Accessing entities in the ClientLevel
+accessible method net/minecraft/client/multiplayer/ClientLevel getEntities ()Lnet/minecraft/world/level/entity/LevelEntityGetter;
+
+# Removing textures from the map when destroying the texture, freeing memory
+accessible field net/minecraft/client/renderer/texture/TextureManager byPath Ljava/util/Map;
+
+# Grabbing render layers from a LivingEntityRenderer
+accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
+
+# Getting data of vanilla model parts
+accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;
+accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;
+accessible field net/minecraft/client/model/geom/ModelPart$Cube polygons [Lnet/minecraft/client/model/geom/ModelPart$Polygon;
+accessible class net/minecraft/client/model/geom/ModelPart$Polygon
+accessible class net/minecraft/client/model/geom/ModelPart$Vertex
+
+# Grabbing entity renderer maps from EntityRenderDispatcher
+accessible field net/minecraft/client/renderer/entity/EntityRenderDispatcher renderers Ljava/util/Map;
+accessible field net/minecraft/client/renderer/entity/EntityRenderDispatcher playerRenderers Ljava/util/Map;

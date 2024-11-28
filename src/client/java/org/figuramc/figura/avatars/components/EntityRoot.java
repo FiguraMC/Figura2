@@ -1,0 +1,59 @@
+package org.figuramc.figura.avatars.components;
+
+import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.model.optimized.RenderingMode;
+import org.figuramc.figura.model.part.RootModelPart;
+import org.figuramc.figura.script_hooks.ScriptError;
+import org.figuramc.figura.util.FiguraMatrixStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
+
+public class EntityRoot implements AvatarComponent {
+
+    private RootModelPart modelPart;
+
+    @Override
+    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+        // Depends on Textures component
+        Textures texturesComponent = self.assertDependency(Textures.class, getClass());
+        @Nullable Scripts scriptsComponent = self.optionalDependency(Scripts.class, getClass());
+
+        // Create the model part from materials
+        modelPart = new RootModelPart(materials.entityRoot(), texturesComponent.textures, false);
+
+//        // If we have a script, then...
+//        if (scriptsComponent != null) {
+//            // Add the model part to the Avatar
+//            scriptsComponent.globals.get_avatar().entityRoot = this.modelPart;
+//            // Inc, since avatar holds a reference
+//            try {
+//                modelPart.inc(scriptsComponent.scriptInstance.limiter);
+//            } catch (TooMuchHeapMemoryException ex) { throw new AvatarLoadingException(ex); }
+//        }
+    }
+
+    // Render the entity root.
+    public void render(Avatar<?> self, float tickDelta, MultiBufferSource bufferSource, FiguraMatrixStack matrixStack, int light, int overlay) {
+        try {
+            if (RenderingMode.isOptimized())
+                modelPart.renderOptimized(matrixStack, tickDelta);
+            else
+                modelPart.renderImmediate(bufferSource, matrixStack, tickDelta, light, overlay);
+        } catch (ScriptError ex) {
+            self.error(Component.literal("Error inside model part render callback"), ex);
+        } catch (StackOverflowError ex) {
+            self.error(Component.literal("Stack overflow during part rendering - tree too deep!"), ex);
+        } catch (Throwable other) {
+            self.error(Component.literal("Unexpected error during model part rendering"), other);
+        }
+    }
+
+    @Override
+    public void destroy() {
+        modelPart.destroy();
+    }
+}

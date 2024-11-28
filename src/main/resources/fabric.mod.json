@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "figura",
+	"version": "${version}",
+	"name": "Figura",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"sources": ""
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/figura/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"org.figuramc.figura.FiguraMod"
+		],
+		"client": [
+			"org.figuramc.figura.FiguraModClient"
+		],
+		"preLaunch": [
+			"org.figuramc.figura.FiguraModPreLaunch"
+		]
+	},
+	"mixins": [
+		"figura.mixins.json",
+		{
+			"config": "figura.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"accessWidener": "figura.accesswidener",
+	"depends": {
+		"fabricloader": ">=0.15.11",
+		"minecraft": "~1.21",
+		"java": ">=21"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
