@@ -14,7 +14,7 @@ import java.util.List;
 
 public class ConfigManager {
 
-    private static final Path CONFIG_FILE_PATH = FabricLoader.getInstance().getConfigDir().resolve(FiguraMod.MOD_ID + ".json");
+    private static final Path CONFIG_FILE_PATH = FabricLoader.getInstance().getConfigDir().resolve("figura2.json");
     public static final List<ConfigOption<?>> ALL_CONFIGS = new ArrayList<>();
 
     // The mod directory path, as a string
