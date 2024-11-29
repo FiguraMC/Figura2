@@ -5,7 +5,7 @@ import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.model.part.*;
-import org.figuramc.figura.script_hooks.ScriptEngine;
+import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.util.exception.ThrowingRunnable;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 public class Scripts implements AvatarComponent {
 
     // The ScriptEngine which is in use, or none if no script engine
-    private @Nullable ScriptEngine engine;
+    private @Nullable ScriptRuntime engine;
     // The avatar
     private Avatar<?> self;
 

@@ -3,7 +3,7 @@ package org.figuramc.figura.model.part;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.ScriptAllow;
-import org.figuramc.figura.script_hooks.ScriptFunction;
+import org.figuramc.figura.script_hooks.ScriptCallback;
 import net.minecraft.util.Mth;
 import org.joml.Vector3f;
 
@@ -30,7 +30,7 @@ public class VanillaRootModelPart extends RootModelPart {
     // NOT the blockbench version; the blockbench version is QUEUED to render later!
 
     // Args to callbacks: None yet
-    public final ArrayList<ScriptFunction> vanillaRenderCallbacks = new ArrayList<>(0);
+    public final ArrayList<ScriptCallback> vanillaRenderCallbacks = new ArrayList<>(0);
 
 
     public VanillaRootModelPart(AvatarMaterials.VanillaRootPartMaterials materials, List<AvatarTexture> textures) {
@@ -64,11 +64,11 @@ public class VanillaRootModelPart extends RootModelPart {
 
     // Getting the stored vanilla values
 
-    @ScriptAllow public Vector3f get_stored_vanilla_origin() { return new Vector3f(storedVanillaOrigin); }
-    @ScriptAllow public Vector3f get_stored_vanilla_rotation() { return new Vector3f(storedVanillaRotation).mul(Mth.RAD_TO_DEG); } // Convert to degrees
-    @ScriptAllow public Vector3f get_stored_vanilla_scale() { return new Vector3f(storedVanillaScale); }
+    @ScriptAllow public Vector3f getStoredVanillaOrigin() { return new Vector3f(storedVanillaOrigin); }
+    @ScriptAllow public Vector3f getStoredVanillaRotation() { return new Vector3f(storedVanillaRotation).mul(Mth.RAD_TO_DEG); } // Convert to degrees
+    @ScriptAllow public Vector3f getStoredVanillaScale() { return new Vector3f(storedVanillaScale); }
 
     // Render callbacks
-    @ScriptAllow public void addVanillaRenderCallback(ScriptFunction callback) { vanillaRenderCallbacks.add(callback); }
+    @ScriptAllow public void addVanillaRenderCallback(ScriptCallback callback) { vanillaRenderCallbacks.add(callback); }
 
 }

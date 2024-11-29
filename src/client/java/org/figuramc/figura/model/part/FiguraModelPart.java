@@ -9,7 +9,7 @@ import org.figuramc.figura.model.optimized.RenderingMode;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.ScriptAllow;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.script_hooks.ScriptFunction;
+import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -49,7 +49,7 @@ public class FiguraModelPart {
     private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
 
     // Callbacks which are run during various stages of the rendering process.
-    private final ArrayList<ScriptFunction>
+    private final ArrayList<ScriptCallback>
             preRenderCallbacks = new ArrayList<>(0), // Zero sized at first, since most parts will not have callbacks
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
@@ -499,8 +499,8 @@ public class FiguraModelPart {
         matrixStack.pop();
     }
 
-    private void invokeCallbacks(List<ScriptFunction> functions, Object... args) throws ScriptError {
-        for (ScriptFunction f : functions)
+    private void invokeCallbacks(List<ScriptCallback> functions, Object... args) throws ScriptError {
+        for (ScriptCallback f : functions)
             f.call(args);
     }
 

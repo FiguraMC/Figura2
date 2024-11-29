@@ -7,7 +7,7 @@ import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.VanillaParts;
 import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.script_hooks.ScriptFunction;
+import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.util.DeferredVanillaPartRenderQueue;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.client.model.geom.ModelPart;
@@ -104,7 +104,7 @@ public class ModelPartRenderMixin {
 
             // Run the callbacks:
             try {
-                for (ScriptFunction callback : currentModelPart.vanillaRenderCallbacks)
+                for (ScriptCallback callback : currentModelPart.vanillaRenderCallbacks)
                     callback.call();
             } catch (ScriptError ex) {
                 currentAvatar.error(Component.literal("Error inside vanilla part callback"), ex); // Todo translate
