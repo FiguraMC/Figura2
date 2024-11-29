@@ -44,6 +44,7 @@ public class ItemRendererMixin {
         if (modelPart instanceof CustomItemModelPart customModel) {
             // Custom model, apply its own transforms:
             applyTransform(customModel.itemTransforms.getTransform(itemDisplayContext), bl);
+            MATRIX_STACK.translate(0, -0.5f, 0); // Undo BB's 8-unit translation they like to do
         } else {
             // PNG model, apply default item transforms...
             if (itemDisplayContext == ItemDisplayContext.GROUND) {

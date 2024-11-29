@@ -120,7 +120,7 @@ public class FiguraModelPart {
         for (int x = -1; x <= w; x++) {
             float buildingState = 0;
             for (int y = -1; y <= h; y++) {
-                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y)) >> 24 & 0xFF) + 253) / 254);
+                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y) >> 24) & 0xFF) + 253) / 254);
                 if (x >= 0) {
                     byte prevOpacityState = opacityStates[y+1];
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
@@ -147,7 +147,7 @@ public class FiguraModelPart {
         for (int y = -1; y <= h; y++) {
             float buildingState = 0;
             for (int x = -1; x <= w; x++) {
-                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y)) >> 24 & 0xFF) + 253) / 254);
+                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y) >> 24) & 0xFF) + 253) / 254);
                 if (y >= 0) {
                     byte prevOpacityState = opacityStates[x+1];
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
