@@ -8,12 +8,6 @@ package org.figuramc.figura.script_hooks;
 public interface ScriptRuntime {
 
     /**
-     * Register the given class into the runtime. For example, this would be something like FiguraModelPart.class.
-     * Superclasses will be registered before subclasses.
-     */
-    void registerClass(Class<?> clazz);
-
-    /**
      * Add the given user script into the runtime. The script has a name and associated data.
      * In the case of string-based languages, the data will probably be UTF-8 encoded text(? todo explain more).
      */

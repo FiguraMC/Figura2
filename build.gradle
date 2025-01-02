@@ -17,6 +17,7 @@ repositories {
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
 
+	mavenCentral()
 	maven {
 		name = "Modrinth"
 		url = "https://api.modrinth.com/maven"
@@ -48,6 +49,9 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	// Cobalt (lua) dependencies:
+	compileOnly "org.checkerframework:checker-qual:3.36.0"
 
 	// Utils
 	include(implementation("com.moulberry:mixinconstraints:1.0.1"))

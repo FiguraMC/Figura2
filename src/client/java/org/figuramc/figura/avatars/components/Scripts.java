@@ -26,11 +26,11 @@ public class Scripts implements AvatarComponent {
             // Register built-in APIs:
 
             // Model parts
-            engine.registerClass(FiguraModelPart.class);
-            engine.registerClass(RootModelPart.class);
-            engine.registerClass(CustomItemModelPart.class);
-            engine.registerClass(WorldRootModelPart.class);
-            engine.registerClass(VanillaRootModelPart.class);
+//            engine.registerClass(FiguraModelPart.class);
+//            engine.registerClass(RootModelPart.class);
+//            engine.registerClass(CustomItemModelPart.class);
+//            engine.registerClass(WorldRootModelPart.class);
+//            engine.registerClass(VanillaRootModelPart.class);
 
             // And finally, add in the user's scripts:
             for (AvatarMaterials.ScriptMaterials script : materials.scripts())
