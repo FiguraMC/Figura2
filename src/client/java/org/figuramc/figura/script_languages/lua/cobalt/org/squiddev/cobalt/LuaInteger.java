@@ -24,6 +24,8 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+
 /**
  * Extension of {@link LuaNumber} which can hold a Java int as its value.
  * <p>
@@ -143,4 +145,10 @@ public final class LuaInteger extends LuaNumber {
 	public String checkString() {
 		return String.valueOf(v);
 	}
+
+	@Override
+	public long count(MemoryCounter counter, int depth) {
+		return OBJECT_SIZE + 4; // 4 bytes of int we'll say
+	}
+
 }

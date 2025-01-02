@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaC;
@@ -153,5 +154,13 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 		}
 
 		return execute(state, frame, this);
+	}
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		counter.trace(p, depth);
+		for (Upvalue upvalue : upvalues)
+			counter.trace(upvalue, depth);
+		return OBJECT_SIZE;
 	}
 }

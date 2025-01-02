@@ -24,6 +24,8 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.TBOOLEAN;
 
 /**
@@ -80,4 +82,10 @@ public final class LuaBoolean extends LuaValue {
 	public LuaTable getMetatable(LuaState state) {
 		return state.booleanMetatable;
 	}
+
+	@Override
+	public long count(MemoryCounter counter, int depth) {
+		return 0; // Don't worry about it, only 2 instances
+	}
+
 }

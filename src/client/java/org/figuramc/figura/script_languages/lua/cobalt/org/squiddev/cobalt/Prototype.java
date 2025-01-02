@@ -25,6 +25,9 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaInterpretedFunction;
 
@@ -39,7 +42,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
  *
  * @see LuaInterpretedFunction
  */
-public final class Prototype {
+public final class Prototype extends MarkedObjectBase {
 	public final LuaString source;
 	public final LuaString shortSource;
 
@@ -75,6 +78,9 @@ public final class Prototype {
 	 */
 	public final LocalVariable[] locals;
 
+	// Size of the prototype in bytes, for mem counting
+	private final long size;
+
 	public Prototype(
 		LuaString source, LuaString shortSource,
 		LuaValue[] constants, int[] code, Prototype[] children, int parameters, boolean isVarArg, int maxStackSize, UpvalueInfo[] upvalues,
@@ -96,6 +102,13 @@ public final class Prototype {
 		this.lineInfo = lineInfo;
 		this.columnInfo = columnInfo;
 		this.locals = locals;
+
+		size = OBJECT_SIZE + (POINTER_SIZE * 16) // Base size + fields
+				+ POINTER_SIZE * constants.length
+				+ 4L * code.length
+				+ 4L * lineInfo.length + 4L * columnInfo.length
+				+ (POINTER_SIZE + OBJECT_SIZE + 12) * locals.length // Size of array and its (unique) contents.
+				+ (POINTER_SIZE + OBJECT_SIZE + 8) * upvalues.length;
 	}
 
 	public LuaString shortSource() {
@@ -167,5 +180,14 @@ public final class Prototype {
 		public int index() {
 			return byteIndex & 0xFF;
 		}
+	}
+
+	@Override
+	public long traceNoMark(MemoryCounter counter, int depth) {
+		for (var constant : constants) counter.trace(constant, depth);
+		for (var child : children) counter.trace(child, depth);
+		for (var local : locals) counter.trace(local.name, depth);
+		for (var upvalue : upvalues) counter.trace(upvalue.name, depth);
+		return size;
 	}
 }

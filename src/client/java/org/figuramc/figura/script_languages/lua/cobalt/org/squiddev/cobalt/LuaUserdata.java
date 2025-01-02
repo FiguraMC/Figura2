@@ -24,7 +24,10 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-public class LuaUserdata extends LuaValue {
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+
+public class LuaUserdata extends MarkedLuaValue {
 
 	public final Object instance;
 	public LuaTable metatable;
@@ -66,5 +69,14 @@ public class LuaUserdata extends LuaValue {
 	@Override
 	public boolean equals(Object val) {
 		return this == val || (val instanceof LuaUserdata other && metatable == other.metatable && instance.equals(other.instance));
+	}
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		// Trace instance if possible
+		if (instance instanceof MemoryCountable countable) counter.trace(countable, depth);
+		// Always trace metatable
+		counter.trace(metatable, depth);
+		return OBJECT_SIZE + POINTER_SIZE * 2;
 	}
 }

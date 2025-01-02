@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.NumberParser;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.framework.qual.DefaultQualifier;
@@ -56,7 +57,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see ValueFactory#valueOf(byte[])
  */
 @DefaultQualifier(NonNull.class)
-public final class LuaString extends LuaValue implements Comparable<LuaString> {
+public final class LuaString extends MarkedLuaValue implements Comparable<LuaString> {
 	/**
 	 * Size of cache of recent short strings. This is the maximum number of LuaStrings that
 	 * will be retained in the cache of recent short strings. Must be a power of 2.
@@ -633,4 +634,10 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	}
 
 	// endregion
+
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		return OBJECT_SIZE + length;
+	}
 }

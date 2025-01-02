@@ -25,6 +25,10 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.BytecodeFormat;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaC;
@@ -38,7 +42,7 @@ import java.util.function.Supplier;
 /**
  * Global lua state
  */
-public final class LuaState {
+public final class LuaState extends MarkedObjectBase {
 	/**
 	 * The metatable for all strings
 	 */
@@ -79,6 +83,9 @@ public final class LuaState {
 	private volatile boolean interrupted;
 	private final InterruptHandler interruptHandler;
 
+	// Figura: tracker for allocations done in this LuaState.
+	private final @Nullable AllocationTracker allocationTracker;
+
 	/**
 	 * The currently executing thread
 	 */
@@ -107,6 +114,7 @@ public final class LuaState {
 		interruptHandler = builder.interruptHandler;
 		reportError = builder.reportError;
 		bytecodeFormat = builder.bytecodeFormat;
+		allocationTracker = builder.allocationTracker;
 
 		mainThread = currentThread = new LuaThread(this);
 	}
@@ -247,6 +255,7 @@ public final class LuaState {
 		private @Nullable InterruptHandler interruptHandler;
 		private @Nullable ErrorReporter reportError;
 		private @Nullable BytecodeFormat bytecodeFormat;
+		private @Nullable AllocationTracker allocationTracker;
 
 		/**
 		 * Build a Lua state from this builder
@@ -306,6 +315,11 @@ public final class LuaState {
 			this.bytecodeFormat = bytecodeFormat;
 			return this;
 		}
+
+		public Builder allocationTracker(@Nullable AllocationTracker allocationTracker) {
+			this.allocationTracker = allocationTracker;
+			return this;
+		}
 	}
 
 	/**
@@ -322,5 +336,20 @@ public final class LuaState {
 		 * @param message Additional details about this error.
 		 */
 		void report(Throwable error, Supplier<String> message);
+	}
+
+	@Override
+	public long traceNoMark(MemoryCounter counter, int depth) {
+		counter.trace(stringMetatable, depth);
+		counter.trace(booleanMetatable, depth);
+		counter.trace(numberMetatable, depth);
+		counter.trace(nilMetatable, depth);
+		counter.trace(functionMetatable, depth);
+		counter.trace(threadMetatable, depth);
+
+		counter.trace(globals, depth);
+		counter.trace(currentThread, depth);
+		counter.trace(mainThread, depth);
+		return OBJECT_SIZE;
 	}
 }

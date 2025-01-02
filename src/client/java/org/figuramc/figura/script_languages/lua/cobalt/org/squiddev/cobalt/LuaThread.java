@@ -24,8 +24,10 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.FunctionDebugHook;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoroutineLib;
@@ -43,7 +45,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see LuaValue
  * @see CoroutineLib
  */
-public final class LuaThread extends LuaValue {
+public final class LuaThread extends MarkedLuaValue {
 	public enum Status {
 		/**
 		 * A coroutine which has been run at all.
@@ -403,5 +405,24 @@ public final class LuaThread extends LuaValue {
 			DebugFrame frame = ds.getFrame(i);
 			if (frame == null || (frame.flags & FLAG_YPCALL) != 0) return frame;
 		}
+	}
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		counter.trace(errFunc, depth);
+		counter.trace(function, depth);
+		counter.trace(previousThread, depth);
+		if (debugState.getHook() instanceof FunctionDebugHook(LuaFunction f)) counter.trace(f, depth);
+		for (int i = 0; ; i++) {
+			DebugFrame frame = debugState.getFrame(i);
+			if (frame == null) break;
+			counter.trace(frame.func, depth);
+			// counter.trace(frame.state, depth); // TODO figure this out...
+			LuaValue[] stack = frame.stack;
+			if (stack != null)
+				for (LuaValue value : stack)
+					counter.trace(value, depth);
+		}
+		return OBJECT_SIZE;
 	}
 }

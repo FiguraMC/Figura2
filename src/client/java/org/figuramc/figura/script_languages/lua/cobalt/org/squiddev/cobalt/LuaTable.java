@@ -25,6 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
@@ -71,7 +72,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  *
  * @see LuaValue
  */
-public final class LuaTable extends LuaValue {
+public final class LuaTable extends MarkedLuaValue {
 	private static final Object[] EMPTY_ARRAY = new Object[0];
 	private static final int[] EMPTY_NEXT = new int[0];
 
@@ -952,4 +953,17 @@ public final class LuaTable extends LuaValue {
 		}
 	}
 	//endregion
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		// Don't count WeakReferences towards the total
+		for (Object child : array)
+			if (child instanceof LuaValue value)
+				counter.trace(value, depth);
+		for (int i = 0; i < keys.length; i++) {
+			if (keys[i] instanceof LuaValue value) counter.trace(value, depth);
+			if (values[i] instanceof LuaValue value) counter.trace(value, depth);
+		}
+		return OBJECT_SIZE + POINTER_SIZE * array.length + (2 * POINTER_SIZE * keys.length);
+	}
 }

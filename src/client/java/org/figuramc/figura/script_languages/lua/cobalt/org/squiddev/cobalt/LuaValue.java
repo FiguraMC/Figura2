@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
@@ -96,7 +97,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see LoadState
  * @see Varargs
  */
-public abstract class LuaValue extends Varargs {
+public abstract class LuaValue extends Varargs implements MemoryCountable {
 	private final int type;
 
 	protected LuaValue(int type) {

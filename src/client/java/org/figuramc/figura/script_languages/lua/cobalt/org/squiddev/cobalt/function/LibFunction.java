@@ -25,6 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
@@ -331,4 +332,9 @@ public sealed abstract class LibFunction extends LuaFunction
 		Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable;
 	}
 	// endregion
+
+	@Override
+	protected long traceNoMark(MemoryCounter counter, int depth) {
+		return OBJECT_SIZE;
+	}
 }

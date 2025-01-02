@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.FormatDesc;
 
 /**
@@ -168,4 +169,10 @@ public final class LuaDouble extends LuaNumber {
 	public String checkString() {
 		return toString();
 	}
+
+	@Override
+	public long count(MemoryCounter counter, int depth) {
+		return OBJECT_SIZE + 8; // 8 bytes of double we'll say
+	}
+
 }

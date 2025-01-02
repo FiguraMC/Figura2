@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.util.ChatUtils;
 import net.minecraft.network.chat.MutableComponent;
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +22,10 @@ public class Avatar<K> {
 
     private @Nullable Throwable error;
     private boolean isErrored;
+
+    // Memory tracker. Null indicates memory shouldn't be tracked,
+    // making it faster in cases where full permission is granted.
+    private @Nullable AllocationTracker allocationTracker;
 
     public Avatar(K user, AvatarMaterials materials, AvatarComponent... components) throws AvatarLoadingException {
         // Init fields
@@ -42,7 +48,6 @@ public class Avatar<K> {
     }
 
     // Ensure that an instance of "before" appears earlier than any instance of "self", and return that instance.
-    @SuppressWarnings("unchecked")
     public <T extends AvatarComponent> T assertDependency(Class<T> before, Class<? extends AvatarComponent> self) {
         @Nullable T maybe = optionalDependency(before, self);
         if (maybe == null) throw new IllegalStateException("Invalid state in Avatar construction - component \"" + self.getSimpleName() + "\" depends on component \"" + before.getSimpleName() + "\" before it!");
@@ -52,6 +57,7 @@ public class Avatar<K> {
     // If an instance of "before" appears earlier than any instance of "self", return it.
     // If one appears after, error.
     // If none exists at all, return null.
+    @SuppressWarnings("unchecked")
     public <T extends AvatarComponent> @Nullable T optionalDependency(Class<T> before, Class<? extends AvatarComponent> self) {
         for (AvatarComponent component : components) {
             if (before.isAssignableFrom(component.getClass())) {
@@ -62,6 +68,12 @@ public class Avatar<K> {
             }
         }
         return null;
+    }
+
+    // Track a given object as a memory root.
+    public void addMemoryRoot(MemoryCountable root) {
+        if (allocationTracker != null)
+            allocationTracker.addRoot(root);
     }
 
     // Error out the avatar with the given message and reason.
@@ -80,7 +92,9 @@ public class Avatar<K> {
 
     // We want to use this function only when necessary; for most usages, the fact
     // that an errored avatar acts like it has no components is good enough.
-    public boolean isErrored() { return isErrored; }
+    public boolean isErrored() {
+        return isErrored;
+    }
 
     // Run on cleanup. Should be used to prevent memory leaks.
     public void destroy() {

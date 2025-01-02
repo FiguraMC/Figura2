@@ -24,10 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 
 /**
  * Base class for functions implemented in Java.
@@ -41,7 +38,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaVa
  * @see LibFunction
  * @see LuaInterpretedFunction
  */
-public abstract sealed class LuaFunction extends LuaValue permits LibFunction, LuaClosure {
+public abstract sealed class LuaFunction extends MarkedLuaValue permits LibFunction, LuaClosure {
 	LuaFunction() {
 		super(Constants.TFUNCTION);
 	}

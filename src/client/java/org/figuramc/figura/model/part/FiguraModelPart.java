@@ -10,6 +10,8 @@ import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.ScriptAllow;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptCallback;
+import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
@@ -35,7 +37,7 @@ import java.util.Objects;
  * - This can be more efficient rendering-wise, because most of the time individual cubes are not articulated, allowing
  *   for less unneeded computation. When they do need to be articulated, one can simply add a group for said cube.
  */
-public class FiguraModelPart {
+public class FiguraModelPart extends MarkedObjectBase {
 
     public final String name;
     public final PartTransform transform = new PartTransform(); // The transform of this model part
@@ -534,4 +536,25 @@ public class FiguraModelPart {
 //    @ScriptAllow public void addMidRenderCallback(ScriptFunction function) {}
 //    @ScriptAllow public void addPostRenderCallback(ScriptFunction function) {}
 
+    // // // // // // MEMORY LIMITING // // // // // //
+
+    @Override
+    protected long traceNoMark(MemoryCounter counter, int depth) {
+        // Trace other reachable objects
+        for (FiguraModelPart child : children)
+            counter.trace(child, depth);
+        counter.trace(parent, depth);
+        for (ScriptCallback callback : preRenderCallbacks) counter.trace(callback, depth);
+        for (ScriptCallback callback : midRenderCallbacks) counter.trace(callback, depth);
+        for (ScriptCallback callback : postRenderCallbacks) counter.trace(callback, depth);
+        // TODO make our own FiguraRenderType which is traceable, instead of Minecraft RenderType.
+        // Textures are reachable through render types, so this could be a memory exploit if we don't
+        // trace them.
+
+        // Random guess around 200 bytes for the constant sized stuff, don't feel like counting all that
+        return 200
+                + 2L * name.length()
+                + 4L * vertices.length
+                + POINTER_SIZE * (preRenderCallbacks.size() + midRenderCallbacks.size() + postRenderCallbacks.size());
+    }
 }
