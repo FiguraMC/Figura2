@@ -3,6 +3,9 @@ package org.figuramc.figura.script_hooks.mem_count;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 
 // To perform memory counting, create a new MemoryCounter and begin.
 public class MemoryCounter {
@@ -13,6 +16,8 @@ public class MemoryCounter {
     public final int mask;
     // Objects which will need to be deeply traced in a new pass, because we ran out of depth.
     private final ArrayDeque<MemoryCountable> deepTraced = new ArrayDeque<>(128);
+    // Set of traced objects which don't use marking.
+    private final Set<Object> tracedUnmarked = Collections.newSetFromMap(new IdentityHashMap<>());
 
     private MemoryCounter(int mask) {
         this.mask = mask;
@@ -24,6 +29,13 @@ public class MemoryCounter {
         if (depth == 0) deepTraced.addLast(traceable);
         else count += traceable.count(this, depth - 1);
     }
+
+    // Trace various unmarked objects
+    public void traceUnmarked(byte[] arr) {
+        if (tracedUnmarked.add(arr))
+            count += arr.length;
+    }
+
 
     // Count the bytes used by countable objects.
     // Uses a lock to ensure that only one operation is in progress at a time.

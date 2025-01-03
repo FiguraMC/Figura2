@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 
 import java.util.function.Supplier;
@@ -22,8 +23,8 @@ public class RegisteredFunction {
 		return function;
 	}
 
-	public static LuaTable bind(RegisteredFunction[] functions) {
-		LuaTable table = new LuaTable(0, functions.length);
+	public static LuaTable bind(LuaState state, RegisteredFunction[] functions) {
+		LuaTable table = new LuaTable(0, functions.length, state.allocationTracker);
 		bind(table, functions);
 		return table;
 	}

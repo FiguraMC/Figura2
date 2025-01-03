@@ -32,11 +32,12 @@ public interface BytecodeFormat {
 	/**
 	 * Read a function from its bytecode representation.
 	 *
+	 * @param state The LuaState in which this operation is taking place.
 	 * @param name  The name of the file we're reading.
 	 * @param input The input to read from. This will have already read the initial {@code (byte)27} byte.
 	 * @return The newly created function.
 	 * @throws CompileException If the function failed to compile.
 	 * @throws LuaError         If the underlying reader failed.
 	 */
-	SuspendedFunction<Prototype> readFunction(LuaString name, InputReader input) throws CompileException, LuaError;
+	SuspendedFunction<Prototype> readFunction(LuaState state, LuaString name, InputReader input) throws CompileException, LuaError;
 }

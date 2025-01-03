@@ -24,6 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * Class to encapsulate varargs values, either as part of a variable argument list, or multiple return values.
  * <p>
@@ -85,11 +88,11 @@ public abstract class Varargs {
 	 * @return LuaValue value if the argument exists
 	 * @throws LuaError if the argument does not exist.
 	 */
-	public LuaValue checkValue(int i) throws LuaError {
+	public LuaValue checkValue(@Nullable AllocationTracker allocTracker, int i) throws LuaError {
 		if (i <= count()) {
 			return arg(i);
 		} else {
-			throw ErrorFactory.argError(i, "value expected");
+			throw ErrorFactory.argError(allocTracker, i, "value expected");
 		}
 	}
 

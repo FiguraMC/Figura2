@@ -79,9 +79,9 @@ public final class LuaDouble extends LuaNumber {
 	 */
 	private static final String JSTR_NEGINF = "-inf";
 
-	private static final LuaString STR_NAN = ValueFactory.valueOf(JSTR_NAN);
-	private static final LuaString STR_POSINF = ValueFactory.valueOf(JSTR_POSINF);
-	private static final LuaString STR_NEGINF = ValueFactory.valueOf(JSTR_NEGINF);
+	private static final LuaString STR_NAN = ValueFactory.valueOf(JSTR_NAN, null);
+	private static final LuaString STR_POSINF = ValueFactory.valueOf(JSTR_POSINF, null);
+	private static final LuaString STR_NEGINF = ValueFactory.valueOf(JSTR_NEGINF, null);
 	private static final FormatDesc NUMBER_FORMAT = FormatDesc.ofUnsafe(".14g");
 
 	/**
@@ -130,43 +130,43 @@ public final class LuaDouble extends LuaNumber {
 		if (Double.isNaN(v)) return JSTR_NAN;
 		if (Double.isInfinite(v)) return v < 0 ? JSTR_NEGINF : JSTR_POSINF;
 
-		Buffer buffer = new Buffer(16);
+		Buffer buffer = new Buffer(16, null); // Short string not worth tracking
 		NUMBER_FORMAT.format(buffer, v);
 		return buffer.toString();
 	}
 
 	@Override
-	public LuaString checkLuaString() {
+	public LuaString checkLuaString(LuaState state) {
 		if (Double.isNaN(v)) return STR_NAN;
 		if (Double.isInfinite(v)) return v < 0 ? STR_NEGINF : STR_POSINF;
 
-		Buffer buffer = new Buffer(16);
+		Buffer buffer = new Buffer(16, state.allocationTracker);
 		NUMBER_FORMAT.format(buffer, v);
 		return buffer.toLuaString();
 	}
 
 	@Override
-	public LuaValue toLuaString() {
-		return checkLuaString();
+	public LuaValue toLuaString(LuaState state) {
+		return checkLuaString(state);
 	}
 
 	@Override
-	public int checkInteger() {
+	public int checkInteger(LuaState state) {
 		return (int) (long) v;
 	}
 
 	@Override
-	public long checkLong() {
+	public long checkLong(LuaState state) {
 		return (long) v;
 	}
 
 	@Override
-	public double checkDouble() {
+	public double checkDouble(LuaState state) {
 		return v;
 	}
 
 	@Override
-	public String checkString() {
+	public String checkString(LuaState state) {
 		return toString();
 	}
 

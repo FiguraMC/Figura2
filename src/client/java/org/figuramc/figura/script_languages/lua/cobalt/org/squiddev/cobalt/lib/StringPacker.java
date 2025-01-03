@@ -1,6 +1,8 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,12 +22,21 @@ class StringPacker {
 	private final static class Buffer {
 		byte[] output;
 		int offset;
+		private final @Nullable AllocationTracker allocTracker;
+
+		private Buffer(@Nullable AllocationTracker allocTracker) {
+			this.allocTracker = allocTracker;
+		}
 
 		void ensure(int bytes) {
 			if (output == null) {
-				output = new byte[Math.max(32, bytes)];
+				int len = Math.max(32, bytes);
+				if (allocTracker != null) allocTracker.allocate(len);
+				output = new byte[len];
 			} else if (offset + bytes > output.length) {
-				output = Arrays.copyOf(output, Math.max(output.length * 2, offset + bytes));
+				int len = Math.max(output.length * 2, offset + bytes);
+				if (allocTracker != null) allocTracker.allocate(len);
+				output = Arrays.copyOf(output, len);
 			}
 		}
 
@@ -60,10 +71,13 @@ class StringPacker {
 		int size;
 		int alignTo;
 
-		public Info(LuaString string) {
+		private final @Nullable AllocationTracker allocTracker;
+
+		public Info(LuaString string, @Nullable AllocationTracker allocTracker) {
 			this.string = string;
 			position = 0;
 			end = string.length();
+			this.allocTracker = allocTracker;
 		}
 
 		Mode setup(int size, Mode mode) {
@@ -93,7 +107,7 @@ class StringPacker {
 	public static int getNumLimit(Info info, int def) throws LuaError {
 		int size = getNum(info, def);
 		if (size <= 0 || size > 16) {
-			throw new LuaError(String.format("integral size (%d) out of limits [1,16]", size));
+			throw new LuaError(String.format("integral size (%d) out of limits [1,16]", size), info.allocTracker);
 		}
 
 		return size;
@@ -119,7 +133,7 @@ class StringPacker {
 			case 's' -> info.setup(getNumLimit(info, SIZEOF_SIZE_T), Mode.STRING);
 			case 'c' -> {
 				int size = getNum(info, -1);
-				if (size < 0) throw new LuaError("missing size for format option 'c'");
+				if (size < 0) throw new LuaError("missing size for format option 'c'", info.allocTracker);
 				yield info.setup(size, Mode.CHAR);
 			}
 			case 'z' -> info.setup(0, Mode.ZSTR);
@@ -138,7 +152,7 @@ class StringPacker {
 				info.maxAlign = getNumLimit(info, 8);
 				yield info.setup(0, Mode.NONE);
 			}
-			default -> throw new LuaError("invalid format option '" + (char) c + "'");
+			default -> throw new LuaError("invalid format option '" + (char) c + "'", info.allocTracker);
 		};
 	}
 
@@ -147,7 +161,7 @@ class StringPacker {
 		int align = info.size;
 		if (mode == Mode.PADD_ALIGN) {
 			if (info.position >= info.end || getOption(info) == Mode.CHAR || info.size == 0) {
-				throw new LuaError("invalid next option for option 'X'");
+				throw new LuaError("invalid next option for option 'X'", info.allocTracker);
 			}
 
 			align = info.size;
@@ -159,7 +173,7 @@ class StringPacker {
 		} else {
 			align = Math.min(align, info.maxAlign);
 			if ((align & (align - 1)) != 0) {
-				throw new LuaError("bad argument #1 to 'pack' (format asks for alignment not power of 2)");
+				throw new LuaError("bad argument #1 to 'pack' (format asks for alignment not power of 2)", info.allocTracker);
 			}
 
 			info.alignTo = (align - (outPosition & (align - 1))) & (align - 1);
@@ -191,11 +205,11 @@ class StringPacker {
 	 * Returns a binary string containing the values v1, v2, etc.
 	 * serialized in binary form (packed) according to the format string fmt.
 	 */
-	static LuaValue pack(Varargs args) throws LuaError {
-		LuaString fmt = args.arg(1).checkLuaString();
+	static LuaValue pack(LuaState state, Varargs args) throws LuaError {
+		LuaString fmt = args.arg(1).checkLuaString(state);
 
-		Info info = new Info(fmt);
-		Buffer buffer = new Buffer();
+		Info info = new Info(fmt, state.allocationTracker);
+		Buffer buffer = new Buffer(state.allocationTracker);
 		int i = 2;
 		while (info.position < info.end) {
 			Mode mode = getDetails(info, buffer.offset);
@@ -207,20 +221,20 @@ class StringPacker {
 				case NONE:
 					break;
 				case INT: {
-					long num = args.arg(i++).checkLong();
+					long num = args.arg(i++).checkLong(state);
 					if (info.size < SIZE_LONG) {
 						long limit = 1L << (info.size * 8 - 1);
-						if (-limit > num || num >= limit) throw ErrorFactory.argError(i - 1, "integer overflow");
+						if (-limit > num || num >= limit) throw ErrorFactory.argError(state.allocationTracker, i - 1, "integer overflow");
 					}
 
 					packInt(buffer, num, info.isLittle, info.size, num < 0);
 					break;
 				}
 				case UINT: {
-					long num = args.arg(i++).checkLong();
+					long num = args.arg(i++).checkLong(state);
 					if (info.size < SIZE_LONG) {
 						long limit = 1L << (info.size * 8);
-						if (num < 0 || num >= limit) throw ErrorFactory.argError(i - 1, "integer overflow");
+						if (num < 0 || num >= limit) throw ErrorFactory.argError(state.allocationTracker, i - 1, "integer overflow");
 					}
 
 					packInt(buffer, num, info.isLittle, info.size, false);
@@ -228,20 +242,20 @@ class StringPacker {
 				}
 
 				case FLOAT: {
-					float f = (float) args.arg(i++).checkDouble();
+					float f = (float) args.arg(i++).checkDouble(state);
 					packInt(buffer, Float.floatToIntBits(f), info.isLittle, info.size, false);
 					break;
 				}
 				case DOUBLE: {
-					double f = args.arg(i++).checkDouble();
+					double f = args.arg(i++).checkDouble(state);
 					packInt(buffer, Double.doubleToLongBits(f), info.isLittle, info.size, false);
 					break;
 				}
 
 				case CHAR: {
-					LuaString string = args.arg(i++).checkLuaString();
+					LuaString string = args.arg(i++).checkLuaString(state);
 					if (string.length() > info.size)
-						throw ErrorFactory.argError(i - 1, "string longer than given size");
+						throw ErrorFactory.argError(state.allocationTracker, i - 1, "string longer than given size");
 
 					buffer.ensure(info.size);
 					string.copyTo(buffer.output, buffer.offset);
@@ -250,11 +264,11 @@ class StringPacker {
 				}
 
 				case ZSTR: {
-					LuaString string = args.arg(i++).checkLuaString();
+					LuaString string = args.arg(i++).checkLuaString(state);
 
 					int end = string.length();
 					for (int j = 0; j < end; j++) {
-						if (string.byteAt(j) == 0) throw ErrorFactory.argError(i - 1, "string contains zeros");
+						if (string.byteAt(j) == 0) throw ErrorFactory.argError(state.allocationTracker, i - 1, "string contains zeros");
 					}
 
 					buffer.ensure(string.length() + 1);
@@ -264,9 +278,9 @@ class StringPacker {
 				}
 
 				case STRING: {
-					LuaString string = args.arg(i++).checkLuaString();
+					LuaString string = args.arg(i++).checkLuaString(state);
 					if (info.size < SIZEOF_SIZE_T && string.length() > (1 << (info.size * 8))) {
-						throw ErrorFactory.argError(i - 1, "string length does not fit in given size");
+						throw ErrorFactory.argError(state.allocationTracker, i - 1, "string length does not fit in given size");
 					}
 
 					packInt(buffer, string.length(), info.isLittle, info.size, false);
@@ -282,7 +296,7 @@ class StringPacker {
 			}
 		}
 
-		return buffer.offset == 0 ? Constants.EMPTYSTRING : LuaString.valueOf(buffer.output, 0, buffer.offset);
+		return buffer.offset == 0 ? Constants.EMPTYSTRING : LuaString.valueOf(state.allocationTracker, buffer.output, 0, buffer.offset);
 	}
 
 	/**
@@ -291,25 +305,25 @@ class StringPacker {
 	 * Returns the size of a string resulting from string.pack with the given format.
 	 * The format string cannot have the variable-length options 's' or 'z'.
 	 */
-	static long packsize(LuaString fmt) throws LuaError {
+	static long packsize(LuaString fmt, @Nullable AllocationTracker allocTracker) throws LuaError {
 		int size = 0;
-		Info info = new Info(fmt);
+		Info info = new Info(fmt, allocTracker);
 		while (info.position < info.end) {
 			Mode mode = getDetails(info, size);
 
 			int thisSize = info.alignTo + info.size;
-			if (size > Integer.MAX_VALUE - thisSize) throw ErrorFactory.argError(1, "format result too large");
+			if (size > Integer.MAX_VALUE - thisSize) throw ErrorFactory.argError(allocTracker, 1, "format result too large");
 			size += thisSize;
 
 			if (mode == Mode.STRING || mode == Mode.ZSTR) {
-				throw ErrorFactory.argError(1, "variable-length format");
+				throw ErrorFactory.argError(allocTracker, 1, "variable-length format");
 			}
 		}
 
 		return size;
 	}
 
-	private static long unpackInt(LuaString str, int offset, boolean isLittle, int size, boolean signed) throws LuaError {
+	private static long unpackInt(LuaString str, int offset, boolean isLittle, int size, boolean signed, @Nullable AllocationTracker allocTracker) throws LuaError {
 		long res = 0;
 		int limit = Math.min(size, SIZE_LONG);
 		for (int i = limit - 1; i >= 0; i--) {
@@ -326,7 +340,7 @@ class StringPacker {
 			int mask = (!signed || res >= 0) ? 0 : 0xFF;
 			for (int i = limit; i < size; i++) {
 				if (str.charAt(offset + (isLittle ? i : size - 1 - i)) != mask) {
-					throw new LuaError(size + "-byte integer does not fit into Lua Integer");
+					throw new LuaError(size + "-byte integer does not fit into Lua Integer", allocTracker);
 				}
 			}
 		}
@@ -341,19 +355,19 @@ class StringPacker {
 	 * An optional pos marks where to start reading in s (default is 1).
 	 * After the read values, this function also returns the index of the first unread byte in s.
 	 */
-	static Varargs unpack(Varargs args) throws LuaError {
-		LuaString fmt = args.arg(1).checkLuaString();
-		LuaString str = args.arg(2).checkLuaString();
-		int pos = StringLib.posRelative(args.arg(3).optInteger(1), str.length()) - 1;
-		if (pos > str.length() || pos < 0) throw ErrorFactory.argError(3, "initial position out of string");
+	static Varargs unpack(LuaState state, Varargs args) throws LuaError {
+		LuaString fmt = args.arg(1).checkLuaString(state);
+		LuaString str = args.arg(2).checkLuaString(state);
+		int pos = StringLib.posRelative(args.arg(3).optInteger(state, 1), str.length()) - 1;
+		if (pos > str.length() || pos < 0) throw ErrorFactory.argError(state.allocationTracker, 3, "initial position out of string");
 
 		List<LuaValue> out = new ArrayList<>();
-		Info info = new Info(fmt);
+		Info info = new Info(fmt, state.allocationTracker);
 		while (info.position < info.end) {
 			Mode mode = getDetails(info, pos);
 
 			if (info.alignTo + info.size + pos > str.length()) {
-				throw ErrorFactory.argError(2, "data string too short");
+				throw ErrorFactory.argError(state.allocationTracker, 2, "data string too short");
 			}
 			pos += info.alignTo;
 
@@ -365,18 +379,18 @@ class StringPacker {
 
 				case INT:
 				case UINT: {
-					long value = unpackInt(str, pos, info.isLittle, info.size, mode == Mode.INT);
+					long value = unpackInt(str, pos, info.isLittle, info.size, mode == Mode.INT, state.allocationTracker);
 					out.add(valueOf(value));
 					break;
 				}
 				case FLOAT: {
-					long bits = unpackInt(str, pos, info.isLittle, info.size, false);
+					long bits = unpackInt(str, pos, info.isLittle, info.size, false, state.allocationTracker);
 					float value = Float.intBitsToFloat((int) bits);
 					out.add(valueOf(value));
 					break;
 				}
 				case DOUBLE: {
-					long bits = unpackInt(str, pos, info.isLittle, info.size, false);
+					long bits = unpackInt(str, pos, info.isLittle, info.size, false, state.allocationTracker);
 					double value = Double.longBitsToDouble(bits);
 					out.add(valueOf(value));
 					break;
@@ -385,8 +399,8 @@ class StringPacker {
 					out.add(str.substringOfLen(pos, info.size));
 					break;
 				case STRING: {
-					long len = unpackInt(str, pos, info.isLittle, info.size, false);
-					if (info.size + len + pos > str.length()) throw ErrorFactory.argError(2, "data string too short");
+					long len = unpackInt(str, pos, info.isLittle, info.size, false, state.allocationTracker);
+					if (info.size + len + pos > str.length()) throw ErrorFactory.argError(state.allocationTracker, 2, "data string too short");
 					out.add(str.substringOfLen(pos + info.size, (int) len));
 					pos += len;
 					break;

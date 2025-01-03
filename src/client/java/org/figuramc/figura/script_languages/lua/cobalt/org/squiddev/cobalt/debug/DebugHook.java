@@ -35,11 +35,11 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * A basic method for registering for debug hooks
  */
 public interface DebugHook {
-	LuaString CALL = valueOf("call");
-	LuaString LINE = valueOf("line");
-	LuaString COUNT = valueOf("count");
-	LuaString RETURN = valueOf("return");
-	LuaString TAILRETURN = valueOf("tail return");
+	LuaString CALL = valueOf("call", null);
+	LuaString LINE = valueOf("line", null);
+	LuaString COUNT = valueOf("count", null);
+	LuaString RETURN = valueOf("return", null);
+	LuaString TAILRETURN = valueOf("tail return", null);
 
 	/**
 	 * Should this hook be inherited by child threads?

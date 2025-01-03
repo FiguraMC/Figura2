@@ -24,6 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * String buffer for use in string library methods, optimized for producing {@link LuaString} instances.
  *
@@ -46,13 +49,16 @@ public final class Buffer {
 	 */
 	private int length;
 
+	// Allocation tracker for this buffer
+	private final @Nullable AllocationTracker allocTracker;
+
 	/**
 	 * Create buffer with default capacity
 	 *
 	 * @see #DEFAULT_CAPACITY
 	 */
-	public Buffer() {
-		this(DEFAULT_CAPACITY);
+	public Buffer(@Nullable AllocationTracker allocTracker) {
+		this(DEFAULT_CAPACITY, allocTracker);
 	}
 
 	/**
@@ -60,9 +66,11 @@ public final class Buffer {
 	 *
 	 * @param initialCapacity the initial capacity
 	 */
-	public Buffer(int initialCapacity) {
+	public Buffer(int initialCapacity, @Nullable AllocationTracker allocTracker) {
+		if (allocTracker != null) allocTracker.allocate(initialCapacity);
 		bytes = new byte[initialCapacity];
 		length = 0;
+		this.allocTracker = allocTracker;
 	}
 
 	/**
@@ -72,7 +80,7 @@ public final class Buffer {
 	 */
 	public LuaString toLuaString() {
 		realloc(length);
-		return LuaString.valueOf(bytes, 0, length);
+		return LuaString.valueOf(null, bytes, 0, length);
 	}
 
 	/**
@@ -207,6 +215,9 @@ public final class Buffer {
 	 */
 	private void realloc(int newSize) {
 		if (newSize == bytes.length) return;
+
+		if (allocTracker != null && newSize > bytes.length)
+			allocTracker.allocate(newSize);
 
 		byte[] newBytes = new byte[newSize];
 		System.arraycopy(bytes, 0, newBytes, 0, length);

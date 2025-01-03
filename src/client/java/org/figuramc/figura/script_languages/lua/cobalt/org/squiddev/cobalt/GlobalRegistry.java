@@ -1,12 +1,20 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * The global registry, a store of Lua values
  */
 public final class GlobalRegistry {
-	private final LuaTable table = new LuaTable();
 
-	GlobalRegistry() {
+	private final @Nullable AllocationTracker allocTracker;
+
+	private final LuaTable table;
+
+	GlobalRegistry(@Nullable AllocationTracker allocTracker) {
+		this.allocTracker = allocTracker;
+		this.table = new LuaTable(allocTracker);
 	}
 
 	/**
@@ -29,7 +37,7 @@ public final class GlobalRegistry {
 		LuaValue value = table.rawget(name);
 		if (value instanceof LuaTable table) return table;
 
-		LuaTable newValue = new LuaTable();
+		LuaTable newValue = new LuaTable(allocTracker);
 		table.rawset(name, newValue);
 		return newValue;
 	}

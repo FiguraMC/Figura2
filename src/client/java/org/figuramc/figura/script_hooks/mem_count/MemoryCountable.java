@@ -6,6 +6,9 @@ public interface MemoryCountable {
     // Helpful constants
     long OBJECT_SIZE = 16;
     long POINTER_SIZE = 8;
+    long INT_SIZE = 4;
+    long FLOAT_SIZE = 4;
+    long CHAR_SIZE = 2; // Size of JAVA char
 
     // Returns the (non-recursive) amount of memory used by this object.
     // For inner objects, use counter.trace() on each of them.
@@ -21,7 +24,7 @@ public interface MemoryCountable {
     // (to avoid self-reference infinite loops).
     // The mark should start as -1, since this is guaranteed to not be reached by incrementing.
 
-    // Note: marking is currently the only way for an object to avoid being counted multiple times
+    // Note: marking is the best way for an object to avoid being counted multiple times
     // if referenced multiple times!
     long count(MemoryCounter counter, int depth);
 

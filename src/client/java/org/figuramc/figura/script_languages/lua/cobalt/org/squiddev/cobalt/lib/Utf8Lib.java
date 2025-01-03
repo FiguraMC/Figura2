@@ -33,7 +33,7 @@ public final class Utf8Lib {
 		var self = new Utf8Lib();
 		self.codesIter = RegisteredFunction.ofV("utf8.codesIter", Utf8Lib::codesIter).create();
 
-		LuaTable t = new LuaTable(0, 6);
+		LuaTable t = new LuaTable(0, 6, state.allocationTracker);
 		RegisteredFunction.bind(t, new RegisteredFunction[]{
 			RegisteredFunction.ofV("char", Utf8Lib::char$),
 			RegisteredFunction.ofV("codes", self::codes),
@@ -59,12 +59,12 @@ public final class Utf8Lib {
 	}
 
 	private static LuaValue char$(LuaState state, Varargs args) throws LuaError {
-		Buffer sb = new Buffer(args.count());
+		Buffer sb = new Buffer(args.count(), state.allocationTracker);
 		byte[] buffer = null;
 		for (int i = 1, n = args.count(); i <= n; i++) {
-			int codepoint = args.arg(i).checkInteger();
+			int codepoint = args.arg(i).checkInteger(state);
 			if (codepoint < 0 || codepoint > MAX_UNICODE) {
-				throw ErrorFactory.argError(i, "value out of range");
+				throw ErrorFactory.argError(state.allocationTracker, i, "value out of range");
 			}
 
 			if (codepoint < 0x80) {
@@ -80,17 +80,17 @@ public final class Utf8Lib {
 	}
 
 	private Varargs codes(LuaState state, Varargs args) throws LuaError {
-		return varargsOf(codesIter, args.arg(1).checkLuaString(), valueOf(0));
+		return varargsOf(codesIter, args.arg(1).checkLuaString(state), valueOf(0));
 	}
 
 	private static Varargs codepoint(LuaState state, Varargs args) throws LuaError {
-		LuaString s = args.arg(1).checkLuaString();
+		LuaString s = args.arg(1).checkLuaString(state);
 		int length = s.length();
-		int i = posRelative(args.arg(2).optInteger(1), length);
-		int j = posRelative(args.arg(3).optInteger(i), length);
+		int i = posRelative(args.arg(2).optInteger(state, 1), length);
+		int j = posRelative(args.arg(3).optInteger(state, i), length);
 
-		if (i < 1) throw ErrorFactory.argError(2, "out of bounds");
-		if (j > length) throw ErrorFactory.argError(3, "out of bounds");
+		if (i < 1) throw ErrorFactory.argError(state.allocationTracker, 2, "out of bounds");
+		if (j > length) throw ErrorFactory.argError(state.allocationTracker, 3, "out of bounds");
 		if (i > j) return NONE;
 
 		IntBuffer off = new IntBuffer();
@@ -99,7 +99,7 @@ public final class Utf8Lib {
 
 		do {
 			long codepoint = decodeUtf8(s, i - 1, off);
-			if (codepoint < 0) throw new LuaError("invalid UTF-8 code");
+			if (codepoint < 0) throw new LuaError("invalid UTF-8 code", state.allocationTracker);
 			codepoints[n++] = LuaInteger.valueOf(codepoint);
 		} while ((i += off.value) <= j);
 
@@ -107,13 +107,13 @@ public final class Utf8Lib {
 	}
 
 	private static Varargs len(LuaState state, Varargs args) throws LuaError {
-		LuaString s = args.arg(1).checkLuaString();
+		LuaString s = args.arg(1).checkLuaString(state);
 		int len = s.length();
-		int i = posRelative(args.arg(2).optInteger(1), len) - 1;
-		int j = posRelative(args.arg(3).optInteger(-1), len) - 1;
+		int i = posRelative(args.arg(2).optInteger(state, 1), len) - 1;
+		int j = posRelative(args.arg(3).optInteger(state, -1), len) - 1;
 
-		if (i < 0 || i > len) throw ErrorFactory.argError(2, "initial position out of string");
-		if (j >= len) throw ErrorFactory.argError(3, "final position out of string");
+		if (i < 0 || i > len) throw ErrorFactory.argError(state.allocationTracker, 2, "initial position out of string");
+		if (j >= len) throw ErrorFactory.argError(state.allocationTracker, 3, "final position out of string");
 
 		int n = 0;
 		IntBuffer offset = new IntBuffer();
@@ -129,18 +129,18 @@ public final class Utf8Lib {
 	}
 
 	private static LuaValue offset(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
-		LuaString s = arg1.checkLuaString();
-		int n = arg2.checkInteger();
+		LuaString s = arg1.checkLuaString(state);
+		int n = arg2.checkInteger(state);
 
 		int length = s.length();
 		int position = (n >= 0) ? 1 : length + 1;
-		position = posRelative(arg3.optInteger(position), length) - 1;
-		if (position < 0 || position > length) throw ErrorFactory.argError(3, "position out of bounds");
+		position = posRelative(arg3.optInteger(state, position), length) - 1;
+		if (position < 0 || position > length) throw ErrorFactory.argError(state.allocationTracker, 3, "position out of bounds");
 
 		if (n == 0) {
 			while (position > 0 && isCont(s, position)) position--;
 		} else {
-			if (isCont(s, position)) throw new LuaError("initial position is a continuation byte");
+			if (isCont(s, position)) throw new LuaError("initial position is a continuation byte", state.allocationTracker);
 
 			if (n < 0) {
 				while (n < 0 && position > 0) {
@@ -209,8 +209,8 @@ public final class Utf8Lib {
 		// Arg 1: invariant state (the string)
 		// Arg 2: byte offset + 1
 		// Returns: byte offset + 1, code point
-		LuaString s = args.arg(1).checkLuaString();
-		int idx = args.arg(2).checkInteger() - 1;
+		LuaString s = args.arg(1).checkLuaString(state);
+		int idx = args.arg(2).checkInteger(state) - 1;
 		IntBuffer off = new IntBuffer();
 		if (idx < 0) {
 			idx = 0;
@@ -222,7 +222,7 @@ public final class Utf8Lib {
 			return varargsOf();
 		} else {
 			long codepoint = decodeUtf8(s, idx, off);
-			if (codepoint == -1 || isCont(s, idx + off.value)) throw new LuaError("invalid UTF-8 code");
+			if (codepoint == -1 || isCont(s, idx + off.value)) throw new LuaError("invalid UTF-8 code", state.allocationTracker);
 			return varargsOf(valueOf(idx + 1), LuaInteger.valueOf(codepoint));
 		}
 	}

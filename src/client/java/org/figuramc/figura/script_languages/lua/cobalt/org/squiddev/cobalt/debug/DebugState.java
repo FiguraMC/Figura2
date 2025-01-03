@@ -127,7 +127,7 @@ public final class DebugState {
 	 */
 	public DebugFrame pushJavaInfo() throws LuaError {
 		int javaCount = this.javaCount + 1;
-		if (javaCount >= MAX_JAVA_SIZE) throw new LuaError("stack overflow");
+		if (javaCount >= MAX_JAVA_SIZE) throw new LuaError("stack overflow", state.allocationTracker);
 
 		DebugFrame frame = pushInfo();
 		frame.flags |= FLAG_JAVA_STACK;
@@ -146,7 +146,7 @@ public final class DebugState {
 
 		DebugFrame[] frames = stack;
 		int length = frames.length;
-		if (top >= length) frames = stack = growStackOrOverflow(frames, top);
+		if (top >= length) frames = stack = growStackOrOverflow(state, frames, top);
 		this.top = top;
 		return frames[top];
 	}
@@ -154,8 +154,8 @@ public final class DebugState {
 	/**
 	 * Grow the stack by a factor of 1.5, throwing {@code stack overflow} if we execed {@link #MAX_SIZE}.
 	 */
-	private static DebugFrame[] growStackOrOverflow(DebugFrame[] frames, int top) throws LuaError {
-		if (top >= MAX_SIZE) throw new LuaError("stack overflow");
+	private static DebugFrame[] growStackOrOverflow(LuaState state, DebugFrame[] frames, int top) throws LuaError {
+		if (top >= MAX_SIZE) throw new LuaError("stack overflow", state.allocationTracker);
 		int length = frames.length;
 		return growStack(frames, length == 0 ? DEFAULT_SIZE : Math.min(MAX_SIZE, length + (length / 2)));
 	}

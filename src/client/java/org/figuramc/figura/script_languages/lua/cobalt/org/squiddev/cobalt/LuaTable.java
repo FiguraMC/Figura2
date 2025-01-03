@@ -25,6 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 
 import java.lang.ref.WeakReference;
@@ -90,11 +91,16 @@ public final class LuaTable extends MarkedLuaValue {
 	private int metatableFlags;
 	private LuaTable metatable;
 
+	// Allocation tracker for this table.
+	// Resizings can occur at nearly any time, so the tracker is within.
+	private final @Nullable AllocationTracker allocTracker;
+
 	/**
 	 * Construct empty table
 	 */
-	public LuaTable() {
+	public LuaTable(@Nullable AllocationTracker allocTracker) {
 		super(TTABLE);
+		this.allocTracker = allocTracker;
 	}
 
 	/**
@@ -103,13 +109,14 @@ public final class LuaTable extends MarkedLuaValue {
 	 * @param arraySize capacity of array part
 	 * @param hashSize  capacity of hash part
 	 */
-	public LuaTable(int arraySize, int hashSize) {
+	public LuaTable(int arraySize, int hashSize, @Nullable AllocationTracker allocTracker) {
 		super(TTABLE);
+		this.allocTracker = allocTracker;
 		resize(arraySize, hashSize, false);
 	}
 
 	@Override
-	public LuaTable checkTable() {
+	public LuaTable checkTable(LuaState state) {
 		return this;
 	}
 
@@ -140,7 +147,7 @@ public final class LuaTable extends MarkedLuaValue {
 		if (mt != null) {
 			LuaValue mode = mt.rawget(Constants.MODE);
 			if (mode.isString()) {
-				LuaString m = (LuaString) mode.toLuaString();
+				LuaString m = (LuaString) mode.toLuaString(state);
 				if (m.indexOf((byte) 'k') >= 0) newWeakKeys = true;
 				if (m.indexOf((byte) 'v') >= 0) newWeakValues = true;
 			}
@@ -160,7 +167,8 @@ public final class LuaTable extends MarkedLuaValue {
 	 * @return {@link LuaValue} for that key, or {@link Constants#NIL} if not found
 	 */
 	public LuaValue rawget(String key) {
-		return rawget(ValueFactory.valueOf(key));
+		// String is discarded immediately, it's rawget
+		return rawget(ValueFactory.valueOf(key, null));
 	}
 
 	/**
@@ -170,7 +178,8 @@ public final class LuaTable extends MarkedLuaValue {
 	 * @param value the value to use, can be {@link Constants#NIL}, must not be null
 	 */
 	public void rawset(String key, LuaValue value) {
-		rawsetImpl(ValueFactory.valueOf(key), value);
+		// String is discarded immediately, it's rawset
+		rawsetImpl(ValueFactory.valueOf(key, null), value);
 	}
 
 	/**
@@ -284,7 +293,7 @@ public final class LuaTable extends MarkedLuaValue {
 	 */
 	public Varargs next(LuaValue key) throws LuaError {
 		int i = findIndex(key);
-		if (i < 0) throw new LuaError("invalid key to 'next'");
+		if (i < 0) throw new LuaError("invalid key to 'next'", allocTracker);
 
 		for (; i < array.length; i++) {
 			LuaValue value = strengthen(array[i]);
@@ -392,7 +401,8 @@ public final class LuaTable extends MarkedLuaValue {
 	/**
 	 * Resize the table
 	 */
-	private static Object[] setArrayVector(Object[] oldArray, int n, boolean metaChange, boolean weakValues) {
+	private static Object[] setArrayVector(@Nullable AllocationTracker allocTracker, Object[] oldArray, int n, boolean metaChange, boolean weakValues) {
+		if (allocTracker != null) allocTracker.allocate(POINTER_SIZE * n);
 		Object[] newArray = new Object[n];
 		int len = Math.min(n, oldArray.length);
 		if (metaChange) {
@@ -459,6 +469,8 @@ public final class LuaTable extends MarkedLuaValue {
 			int lsize = log2(size);
 			size = 1 << lsize;
 
+			if (allocTracker != null)
+				allocTracker.allocate((POINTER_SIZE * 2 + INT_SIZE) * size);
 			keys = new Object[size];
 			values = new Object[size];
 			next = new int[size];
@@ -479,7 +491,7 @@ public final class LuaTable extends MarkedLuaValue {
 
 		// Array part must grow
 		if (newArraySize > oldArraySize) {
-			array = setArrayVector(array, newArraySize, modeChange, weakValues);
+			array = setArrayVector(allocTracker, array, newArraySize, modeChange, weakValues);
 		}
 
 		Object[] oldKeys = keys;
@@ -488,7 +500,7 @@ public final class LuaTable extends MarkedLuaValue {
 
 		if (newArraySize < oldArraySize) {
 			Object[] oldArray = array;
-			array = setArrayVector(oldArray, newArraySize, modeChange, weakValues);
+			array = setArrayVector(allocTracker, oldArray, newArraySize, modeChange, weakValues);
 
 			// Copy values out of array part into the hash
 			for (int i = newArraySize; i < oldArraySize; i++) {
@@ -865,8 +877,8 @@ public final class LuaTable extends MarkedLuaValue {
 	}
 
 	public void rawset(LuaValue key, LuaValue value) throws LuaError {
-		if (key.isNil()) throw new LuaError("table index is nil");
-		if (key instanceof LuaDouble d && Double.isNaN(d.doubleValue())) throw new LuaError("table index is NaN");
+		if (key.isNil()) throw new LuaError("table index is nil", allocTracker);
+		if (key instanceof LuaDouble d && Double.isNaN(d.doubleValue())) throw new LuaError("table index is NaN", allocTracker);
 		rawsetImpl(key, value);
 	}
 

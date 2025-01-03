@@ -24,7 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugHelpers;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
 
@@ -67,11 +69,11 @@ public final class LuaError extends Exception {
 	 *
 	 * @param cause the Throwable that caused the error, if known.
 	 */
-	public LuaError(Throwable cause) {
+	public LuaError(Throwable cause, @Nullable AllocationTracker allocTracker) {
 		super(cause);
 		level = 1;
 		calculateLevel = true;
-		value = ValueFactory.valueOf("vm error: " + cause.toString());
+		value = ValueFactory.valueOf("vm error: " + cause.toString(), allocTracker);
 	}
 
 	/**
@@ -79,11 +81,11 @@ public final class LuaError extends Exception {
 	 *
 	 * @param message message to supply
 	 */
-	public LuaError(String message) {
+	public LuaError(String message, @Nullable AllocationTracker allocTracker) {
 		super(message);
 		level = 1;
 		calculateLevel = true;
-		value = message == null ? Constants.NIL : ValueFactory.valueOf(message);
+		value = message == null ? Constants.NIL : ValueFactory.valueOf(message, allocTracker);
 	}
 
 	/**
@@ -92,11 +94,11 @@ public final class LuaError extends Exception {
 	 * @param message message to supply
 	 * @param level   where to supply line info from in call stack
 	 */
-	public LuaError(String message, int level) {
+	public LuaError(String message, int level, @Nullable AllocationTracker allocTracker) {
 		super(message);
 		this.level = level;
 		calculateLevel = false;
-		value = message == null ? Constants.NIL : ValueFactory.valueOf(message);
+		value = message == null ? Constants.NIL : ValueFactory.valueOf(message, allocTracker);
 	}
 
 	/**
@@ -131,9 +133,9 @@ public final class LuaError extends Exception {
 	 * @param error The error to convert
 	 * @return The converted error
 	 */
-	public static LuaError wrap(Throwable error) {
+	public static LuaError wrap(Throwable error, @Nullable AllocationTracker allocTracker) {
 		if (error instanceof LuaError) return (LuaError) error;
-		return new LuaError(error);
+		return new LuaError(error, allocTracker);
 	}
 
 	@Override
@@ -162,7 +164,7 @@ public final class LuaError extends Exception {
 			} else {
 				fileLine = DebugHelpers.fileLine(thread, level);
 			}
-			if (fileLine != null) value = ValueFactory.valueOf(fileLine + ": " + value.toString());
+			if (fileLine != null) value = ValueFactory.valueOf(fileLine + ": " + value.toString(), state.allocationTracker);
 		}
 
 		traceback = getMessage() + "\n" + DebugHelpers.traceback(thread, level);

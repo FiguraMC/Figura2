@@ -146,7 +146,7 @@ public class LuaC {
 	 * @throws CompileException If there is a syntax error.
 	 */
 	public static Prototype compile(LuaState state, InputStream stream, String name) throws CompileException, LuaError {
-		return compile(state, stream, valueOf(name));
+		return compile(state, stream, valueOf(name, state.allocationTracker));
 	}
 
 	public static Prototype compile(LuaState state, InputStream stream, LuaString name) throws CompileException, LuaError {
@@ -169,11 +169,11 @@ public class LuaC {
 			checkMode(mode, "binary");
 			var bytecode = state.getBytecodeFormat();
 			if (bytecode == null) throw new CompileException("attempt to load a binary chunk");
-			var reader = bytecode.readFunction(name, stream);
+			var reader = bytecode.readFunction(state, name, stream);
 			return reader.call(state);
 		} else {
 			checkMode(mode, "text");
-			return loadTextChunk(firstByte, stream, name);
+			return loadTextChunk(state, firstByte, stream, name);
 		}
 	}
 
@@ -181,8 +181,8 @@ public class LuaC {
 	 * Parse the input
 	 */
 	@AutoUnwind
-	private static Prototype loadTextChunk(int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, UnwindThrowable {
-		Parser parser = new Parser(stream, firstByte, name, LoadState.getShortName(name));
+	private static Prototype loadTextChunk(LuaState state, int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, UnwindThrowable {
+		Parser parser = new Parser(state, stream, firstByte, name, LoadState.getShortName(name, state.allocationTracker));
 		parser.lexer.skipShebang();
 		return parser.mainFunction();
 	}

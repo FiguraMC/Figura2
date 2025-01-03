@@ -24,11 +24,13 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
+import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Lua.*;
@@ -218,19 +220,19 @@ public final class OperationHelper {
 	public static boolean lt(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
 		int tLeft = left.type();
 		if (tLeft != right.type()) {
-			throw ErrorFactory.compareError(left, right);
+			throw ErrorFactory.compareError(state, left, right);
 		}
 		switch (tLeft) {
 			case TNUMBER:
 				return left.toDouble() < right.toDouble();
 			case TSTRING:
-				return left.checkLuaString().compareTo(right.checkLuaString()) < 0;
+				return left.checkLuaString(state).compareTo(right.checkLuaString(state)) < 0;
 			default:
 				LuaValue h = left.metatag(state, Constants.LT);
 				if (!h.isNil() && h == right.metatag(state, Constants.LT)) {
 					return Dispatch.call(state, h, left, right).toBoolean();
 				} else {
-					throw ErrorFactory.compareError(left, right);
+					throw ErrorFactory.compareError(state, left, right);
 				}
 		}
 	}
@@ -238,13 +240,13 @@ public final class OperationHelper {
 	public static boolean le(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
 		int tLeft = left.type();
 		if (tLeft != right.type()) {
-			throw ErrorFactory.compareError(left, right);
+			throw ErrorFactory.compareError(state, left, right);
 		}
 		switch (tLeft) {
 			case TNUMBER:
 				return left.toDouble() <= right.toDouble();
 			case TSTRING:
-				return left.checkLuaString().compareTo(right.checkLuaString()) <= 0;
+				return left.checkLuaString(state).compareTo(right.checkLuaString(state)) <= 0;
 			default:
 				LuaValue h = left.metatag(state, Constants.LE);
 				if (h.isNil()) {
@@ -262,7 +264,7 @@ public final class OperationHelper {
 					return Dispatch.call(state, h, left, right).toBoolean();
 				}
 
-				throw ErrorFactory.compareError(left, right);
+				throw ErrorFactory.compareError(state, left, right);
 		}
 	}
 
@@ -333,7 +335,7 @@ public final class OperationHelper {
 		int intValue = (int) value;
 		if (value == intValue) return intValue;
 
-		throw new LuaError("object length is not an integer");
+		throw new LuaError("object length is not an integer", state.allocationTracker);
 	}
 
 	/**
@@ -437,7 +439,7 @@ public final class OperationHelper {
 			stack = -1;
 		}
 		while (++loop < Constants.MAXTAGLOOP);
-		throw new LuaError("loop in gettable");
+		throw new LuaError("loop in gettable", state.allocationTracker);
 	}
 
 	/**
@@ -478,18 +480,18 @@ public final class OperationHelper {
 			stack = -1;
 		}
 		while (++loop < Constants.MAXTAGLOOP);
-		throw new LuaError("loop in settable");
+		throw new LuaError("loop in settable", state.allocationTracker);
 	}
 	//endregion
 
 	public static LuaValue toString(LuaState state, LuaValue value) throws LuaError, UnwindThrowable {
 		LuaValue h = value.metatag(state, Constants.TOSTRING);
-		return h.isNil() ? toStringDirect(value) : Dispatch.call(state, h, value);
+		return h.isNil() ? toStringDirect(state, value) : Dispatch.call(state, h, value);
 	}
 
-	public static LuaString checkToString(LuaValue value) throws LuaError {
-		LuaValue asStr = value.toLuaString();
-		if (asStr.isNil()) throw new LuaError("'__tostring' must return a string");
+	public static LuaString checkToString(LuaValue value, LuaState state) throws LuaError {
+		LuaValue asStr = value.toLuaString(state);
+		if (asStr.isNil()) throw new LuaError("'__tostring' must return a string", state.allocationTracker);
 		return (LuaString) asStr;
 	}
 
@@ -503,8 +505,8 @@ public final class OperationHelper {
 	 * @return This value as a string.
 	 * @see <a href="https://www.lua.org/source/5.3/lauxlib.c.html#luaL_tolstring">luaL_tolstring</a>
 	 */
-	public static LuaString toStringDirect(LuaValue value) {
-		LuaValue v = value.toLuaString();
-		return v.isNil() ? LuaString.valueOf(value.toString()) : (LuaString) v;
+	public static LuaString toStringDirect(LuaState state, LuaValue value) {
+		LuaValue v = value.toLuaString(state);
+		return v.isNil() ? LuaString.valueOf(state.allocationTracker, value.toString()) : (LuaString) v;
 	}
 }

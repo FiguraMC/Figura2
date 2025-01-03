@@ -54,7 +54,7 @@ public final class StringLib {
 	}
 
 	public static void add(LuaState state, LuaTable env) throws LuaError {
-		LuaTable t = RegisteredFunction.bind(new RegisteredFunction[]{
+		LuaTable t = RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.of("len", StringLib::len),
 			RegisteredFunction.of("lower", StringLib::lower),
 			RegisteredFunction.of("reverse", StringLib::reverse),
@@ -68,8 +68,8 @@ public final class StringLib {
 			RegisteredFunction.ofV("match", StringMatch::match),
 			RegisteredFunction.ofV("rep", StringLib::rep),
 			RegisteredFunction.ofV("sub", StringLib::sub),
-			RegisteredFunction.ofV("pack", (s, args) -> StringPacker.pack(args)),
-			RegisteredFunction.ofV("unpack", (s, args) -> StringPacker.unpack(args)),
+			RegisteredFunction.ofV("pack", StringPacker::pack),
+			RegisteredFunction.ofV("unpack", StringPacker::unpack),
 			RegisteredFunction.ofFactory("gsub", GSub::new),
 			RegisteredFunction.ofFactory("format", Format::new),
 		});
@@ -77,15 +77,15 @@ public final class StringLib {
 		t.rawset("gfind", t.rawget("gmatch"));
 
 		LibFunction.setGlobalLibrary(state, env, "string", t);
-		state.stringMetatable = tableOf(INDEX, t);
+		state.stringMetatable = tableOf(state.allocationTracker, INDEX, t);
 	}
 
 	private static LuaValue len(LuaState state, LuaValue arg) throws LuaError {
-		return valueOf(arg.checkLuaString().length());
+		return valueOf(arg.checkLuaString(state).length());
 	}
 
 	private static LuaValue lower(LuaState state, LuaValue arg) throws LuaError {
-		LuaString string = arg.checkLuaString();
+		LuaString string = arg.checkLuaString(state);
 
 		// Find the first capital letter,
 		int i = 0, len = string.length();
@@ -96,6 +96,7 @@ public final class StringLib {
 		// If there are none, just return the string unchanged.
 		if (i == len) return string;
 
+		if (state.allocationTracker != null) state.allocationTracker.allocate(len);
 		byte[] value = new byte[len];
 		string.copyTo(value, 0);
 		for (; i < value.length; i++) {
@@ -106,15 +107,16 @@ public final class StringLib {
 	}
 
 	private static LuaValue reverse(LuaState state, LuaValue arg) throws LuaError {
-		LuaString s = arg.checkLuaString();
+		LuaString s = arg.checkLuaString(state);
 		int n = s.length();
+		if (state.allocationTracker != null) state.allocationTracker.allocate(n);
 		byte[] b = new byte[n];
 		for (int i = 0, j = n - 1; i < n; i++, j--) b[j] = s.byteAt(i);
 		return LuaString.valueOf(b);
 	}
 
 	private static LuaValue upper(LuaState state, LuaValue arg) throws LuaError {
-		LuaString string = arg.checkLuaString();
+		LuaString string = arg.checkLuaString(state);
 
 		// Find the first lower-case letter
 		int i = 0, len = string.length();
@@ -125,6 +127,7 @@ public final class StringLib {
 		// If there are none, just return the string unchanged.
 		if (i == len) return string;
 
+		if (state.allocationTracker != null) state.allocationTracker.allocate(string.length());
 		byte[] value = new byte[string.length()];
 		string.copyTo(value, 0);
 		for (i = 0; i < value.length; i++) {
@@ -135,16 +138,16 @@ public final class StringLib {
 	}
 
 	private static LuaValue packsize(LuaState state, LuaValue arg) throws LuaError {
-		return LuaInteger.valueOf(StringPacker.packsize(arg.checkLuaString()));
+		return LuaInteger.valueOf(StringPacker.packsize(arg.checkLuaString(state), state.allocationTracker));
 	}
 
 	private static final class GSub extends ResumableVarArgFunction<GSubState> {
 		@Override
 		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable {
-			LuaString src = args.arg(1).checkLuaString();
-			LuaString p = args.arg(2).checkLuaString();
+			LuaString src = args.arg(1).checkLuaString(state);
+			LuaString p = args.arg(2).checkLuaString(state);
 			LuaValue replace = args.arg(3);
-			int maxS = args.arg(4).optInteger(src.length() + 1);
+			int maxS = args.arg(4).optInteger(state, src.length() + 1);
 
 			GSubState gsub = new GSubState(state, src, p, replace, maxS);
 			di.state = gsub;
@@ -160,15 +163,15 @@ public final class StringLib {
 	private static final class Format extends ResumableVarArgFunction<FormatState> {
 		@Override
 		public Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable {
-			LuaString src = args.arg(1).checkLuaString();
-			FormatState format = new FormatState(src, new Buffer(src.length()), args);
+			LuaString src = args.arg(1).checkLuaString(state);
+			FormatState format = new FormatState(src, new Buffer(src.length(), state.allocationTracker), args);
 			di.state = format;
 			return StringFormat.format(state, format);
 		}
 
 		@Override
 		public Varargs resume(LuaState state, FormatState formatState, Varargs value) throws LuaError, UnwindThrowable {
-			LuaString s = OperationHelper.checkToString(value.first());
+			LuaString s = OperationHelper.checkToString(value.first(), state);
 			formatState.current.format(formatState.buffer, s);
 			return StringFormat.format(state, formatState);
 		}
@@ -186,10 +189,10 @@ public final class StringLib {
 	 * @param args the calling args
 	 */
 	private static Varargs byte$(LuaState state, Varargs args) throws LuaError {
-		LuaString s = args.arg(1).checkLuaString();
+		LuaString s = args.arg(1).checkLuaString(state);
 		int l = s.length();
-		int posi = posRelative(args.arg(2).optInteger(1), l);
-		int pose = posRelative(args.arg(3).optInteger(posi), l);
+		int posi = posRelative(args.arg(2).optInteger(state, 1), l);
+		int pose = posRelative(args.arg(3).optInteger(state, posi), l);
 		if (posi <= 0) posi = 1;
 		if (pose > l) pose = l;
 		if (posi == pose) return valueOf(s.charAt(posi - 1)); // Do the common case first.
@@ -197,7 +200,7 @@ public final class StringLib {
 		if (posi > pose) return NONE; // empty interval; return no values
 		int n = pose - posi + 1;
 		if (posi + n <= pose)  /* overflow? */ {
-			throw new LuaError("string slice too long");
+			throw new LuaError("string slice too long", state.allocationTracker);
 		}
 		LuaValue[] v = new LuaValue[n];
 		for (int i = 0; i < n; i++) {
@@ -221,11 +224,12 @@ public final class StringLib {
 	 */
 	private static LuaValue char$(LuaState state, Varargs args) throws LuaError {
 		int n = args.count();
+		if (state.allocationTracker != null) state.allocationTracker.allocate(n);
 		byte[] bytes = new byte[n];
 		for (int i = 0, a = 1; i < n; i++, a++) {
-			int c = args.arg(a).checkInteger();
+			int c = args.arg(a).checkInteger(state);
 			if (c < 0 || c >= 256) {
-				throw ErrorFactory.argError(a, "invalid value");
+				throw ErrorFactory.argError(state.allocationTracker, a, "invalid value");
 			}
 			bytes[i] = (byte) c;
 		}
@@ -242,17 +246,17 @@ public final class StringLib {
 	 * @throws LuaError If the function cannot be dumped.
 	 */
 	static LuaValue dump(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-		LuaFunction f = arg1.checkFunction();
-		boolean strip = arg2.optBoolean(false);
+		LuaFunction f = arg1.checkFunction(state);
+		boolean strip = arg2.optBoolean(state, false);
 		var bytecode = state.getBytecodeFormat();
 
-		if (!(f instanceof LuaClosure closure) || bytecode == null) throw new LuaError("unable to dump given function");
+		if (!(f instanceof LuaClosure closure) || bytecode == null) throw new LuaError("unable to dump given function", state.allocationTracker);
 
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		try {
 			bytecode.writeFunction(baos, closure.getPrototype(), strip);
 		} catch (IOException e) {
-			throw new LuaError(e.getMessage());
+			throw new LuaError(e.getMessage(), state.allocationTracker);
 		}
 
 		return LuaString.valueOf(baos.toByteArray());
@@ -264,17 +268,18 @@ public final class StringLib {
 	 * Returns a string that is the concatenation of n copies of the string s.
 	 */
 	private static Varargs rep(LuaState state, Varargs args) throws LuaError {
-		LuaString s = args.arg(1).checkLuaString();
+		LuaString s = args.arg(1).checkLuaString(state);
 		int len = s.length();
-		int n = args.arg(2).checkInteger();
-		LuaString sep = args.arg(3).optLuaString(EMPTYSTRING);
+		int n = args.arg(2).checkInteger(state);
+		LuaString sep = args.arg(3).optLuaString(state, EMPTYSTRING);
 
 		if (n <= 0) return Constants.EMPTYSTRING;
 		if (n == 1) return s;
 
 		long newLen = (long) len * n + (long) sep.length() * (n - 1);
-		if (newLen > MAX_LEN) throw new LuaError("resulting string too large");
+		if (newLen > MAX_LEN) throw new LuaError("resulting string too large", state.allocationTracker);
 
+		if (state.allocationTracker != null) state.allocationTracker.allocate(newLen);
 		final byte[] bytes = new byte[(int) newLen];
 		// n >= 2, so copy in the initial string and separator.
 		s.copyTo(bytes, 0);
@@ -304,12 +309,12 @@ public final class StringLib {
 	 * returns a suffix of s with length i.
 	 */
 	private static Varargs sub(LuaState state, Varargs args) throws LuaError {
-		final LuaString s = args.arg(1).checkLuaString();
+		final LuaString s = args.arg(1).checkLuaString(state);
 		final int l = s.length();
 
-		int start = posRelative(args.arg(2).checkInteger(), l);
+		int start = posRelative(args.arg(2).checkInteger(state), l);
 		int defval = -1;
-		int end = posRelative(args.arg(3).optInteger(defval), l);
+		int end = posRelative(args.arg(3).optInteger(state, defval), l);
 
 		if (start < 1) start = 1;
 		if (end > l) end = l;

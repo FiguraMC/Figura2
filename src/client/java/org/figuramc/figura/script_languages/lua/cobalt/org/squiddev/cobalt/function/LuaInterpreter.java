@@ -249,7 +249,7 @@ final class LuaInterpreter {
 					}
 
 					case OP_NEWTABLE: // A B C: R(A):= {} (size = B,C)
-						stack[a] = new LuaTable(luaO_fb2int(GETARG_B(i)), luaO_fb2int(GETARG_C(i)));
+						stack[a] = new LuaTable(luaO_fb2int(GETARG_B(i)), luaO_fb2int(GETARG_C(i)), state.allocationTracker);
 						break;
 
 					case OP_SELF: { // A B C: R(A+1):= R(B): R(A):= R(B)[RK(C)]
@@ -482,9 +482,9 @@ final class LuaInterpreter {
 					}
 
 					case OP_FORLOOP: { // A sBx: R(A)+=R(A+2): if R(A) <?= R(A+1) then { pc+=sBx: R(A+3)=R(A) }
-						double limit = stack[a + 1].checkDouble();
-						double step = stack[a + 2].checkDouble();
-						double value = stack[a].checkDouble();
+						double limit = stack[a + 1].checkDouble(state);
+						double step = stack[a + 2].checkDouble(state);
+						double value = stack[a].checkDouble(state);
 						double idx = step + value;
 						if (0 < step ? idx <= limit : limit <= idx) {
 							stack[a + 3] = stack[a] = valueOf(idx);
@@ -494,9 +494,9 @@ final class LuaInterpreter {
 					}
 
 					case OP_FORPREP: { // A sBx: R(A)-=R(A+2): pc+=sBx
-						LuaNumber init = stack[a].checkNumber("'for' initial value must be a number");
-						LuaNumber limit = stack[a + 1].checkNumber("'for' limit must be a number");
-						LuaNumber step = stack[a + 2].checkNumber("'for' step must be a number");
+						LuaNumber init = stack[a].checkNumber(state, "'for' initial value must be a number");
+						LuaNumber limit = stack[a + 1].checkNumber(state, "'for' limit must be a number");
+						LuaNumber step = stack[a + 2].checkNumber(state, "'for' step must be a number");
 						stack[a] = valueOf(init.toDouble() - step.toDouble());
 						stack[a + 1] = limit;
 						stack[a + 2] = step;
@@ -529,7 +529,7 @@ final class LuaInterpreter {
 						if (c == 0) c = GETARG_Ax(code[pc++]);
 
 						int offset = (c - 1) * LFIELDS_PER_FLUSH;
-						LuaTable tbl = stack[a].checkTable();
+						LuaTable tbl = stack[a].checkTable(state);
 						if (b == 0) {
 							b = di.top - a - 1;
 							int m = b - di.extras.count();
@@ -635,9 +635,9 @@ final class LuaInterpreter {
 				if (!left.isString() || !right.isString()) {
 					// If one of these isn't convertible to a string then use the metamethod
 					stack[top - 2] = OperationHelper.concatNonStrings(state, left, right, top - 2, top - 1);
-				} else if ((rString = right.checkLuaString()).length() == 0) {
-					stack[top - 2] = left.checkLuaString();
-				} else if ((lString = left.checkLuaString()).length() == 0) {
+				} else if ((rString = right.checkLuaString(state)).length() == 0) {
+					stack[top - 2] = left.checkLuaString(state);
+				} else if ((lString = left.checkLuaString(state)).length() == 0) {
 					stack[top - 2] = rString;
 				} else {
 					int length = rString.length() + lString.length();
@@ -648,18 +648,18 @@ final class LuaInterpreter {
 						LuaValue value = stack[top - n - 1];
 						if (!value.isString()) break;
 
-						LuaString string = value.checkLuaString();
+						LuaString string = value.checkLuaString(state);
 
 						// Ensure we don't get a string which is too long
 						int strLen = string.length();
-						if (strLen > Integer.MAX_VALUE - length) throw new LuaError("string length overflow");
+						if (strLen > Integer.MAX_VALUE - length) throw new LuaError("string length overflow", state.allocationTracker);
 
 						// Otherwise increment the length and store this converted string
 						stack[top - n - 1] = string;
 						length += strLen;
 					}
 
-					stack[top - n] = LuaString.valueOfStrings(stack, top - n, n, length);
+					stack[top - n] = LuaString.valueOfStrings(state.allocationTracker, stack, top - n, n, length);
 				}
 
 				// Got "n" strings and created one new one
@@ -745,7 +745,7 @@ final class LuaInterpreter {
 	}
 
 	private static LuaError reportIllegalResume(LuaState state, Prototype prototype, int pc) {
-		LuaError err = new LuaError("cannot resume this opcode");
+		LuaError err = new LuaError("cannot resume this opcode", state.allocationTracker);
 		state.reportInternalError(err, () -> {
 			StringBuilder output = new StringBuilder();
 			output.append(String.format("Resuming function at invalid opcode. file=\"%s\", pc=%d\n", prototype.shortSource(), pc + 1));

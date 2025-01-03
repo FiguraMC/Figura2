@@ -19,7 +19,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * a sandboxed environment.
  */
 public class SystemBaseLib {
-	private static final LuaString STDIN_STR = valueOf("=stdin");
+	private static final LuaString STDIN_STR = valueOf("=stdin", null);
 
 	private final ResourceLoader resources;
 	private final InputStream in;
@@ -42,7 +42,7 @@ public class SystemBaseLib {
 
 	private static LuaValue collectgarbage(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
 		// collectgarbage( opt [,arg] ) -> value
-		String s = arg1.optString("collect");
+		String s = arg1.optString(state, "collect");
 		switch (s) {
 			case "collect" -> {
 				System.gc();
@@ -57,7 +57,7 @@ public class SystemBaseLib {
 				System.gc();
 				return Constants.TRUE;
 			}
-			default -> throw ErrorFactory.argError(1, "invalid option");
+			default -> throw ErrorFactory.argError(state.allocationTracker, 1, "invalid option");
 		}
 	}
 
@@ -65,16 +65,16 @@ public class SystemBaseLib {
 		// loadfile( [filename] ) -> chunk | nil, msg
 		return args.first().isNil() ?
 			SystemBaseLib.loadBasicStream(state, in, STDIN_STR) :
-			SystemBaseLib.loadFile(state, resources, args.arg(1).checkString());
+			SystemBaseLib.loadFile(state, resources, args.arg(1).checkString(state));
 	}
 
 	private Varargs dofile(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable {
 		// dofile( filename ) -> result1, ...
 		Varargs v = args.first().isNil() ?
 			SystemBaseLib.loadBasicStream(state, in, STDIN_STR) :
-			SystemBaseLib.loadFile(state, resources, args.arg(1).checkString());
+			SystemBaseLib.loadFile(state, resources, args.arg(1).checkString(state));
 		if (v.first().isNil()) {
-			throw new LuaError(v.arg(2).toString());
+			throw new LuaError(v.arg(2).toString(), state.allocationTracker);
 		} else {
 			return SuspendedAction.run(di, () -> Dispatch.invoke(state, v.first(), Constants.NONE));
 		}
@@ -83,11 +83,11 @@ public class SystemBaseLib {
 	private Varargs print(LuaState state, DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
 		// print(...) -> void
 		return SuspendedAction.run(frame, () -> {
-			LuaValue tostring = OperationHelper.getTable(state, state.globals(), valueOf("tostring"));
+			LuaValue tostring = OperationHelper.getTable(state, state.globals(), valueOf("tostring", null));
 			for (int i = 1, n = args.count(); i <= n; i++) {
 				if (i > 1) out.write('\t');
 				LuaValue value = Dispatch.call(state, tostring, args.arg(i));
-				LuaString s = value.checkLuaString();
+				LuaString s = value.checkLuaString(state);
 				int z = s.indexOf((byte) 0);
 
 				int len = z >= 0 ? z : s.length();
@@ -104,7 +104,7 @@ public class SystemBaseLib {
 		try {
 			return LoadState.load(state, is, chunkName, state.globals());
 		} catch (LuaError | CompileException e) {
-			return varargsOf(Constants.NIL, valueOf(e.getMessage()));
+			return varargsOf(Constants.NIL, valueOf(e.getMessage(), state.allocationTracker));
 		}
 	}
 
@@ -118,10 +118,10 @@ public class SystemBaseLib {
 	public static Varargs loadFile(LuaState state, ResourceLoader resources, String filename) {
 		InputStream is = resources.load(filename);
 		if (is == null) {
-			return varargsOf(Constants.NIL, valueOf("cannot open " + filename + ": No such file or directory"));
+			return varargsOf(Constants.NIL, valueOf("cannot open " + filename + ": No such file or directory", state.allocationTracker));
 		}
 		try {
-			return loadBasicStream(state, is, valueOf("@" + filename));
+			return loadBasicStream(state, is, valueOf("@" + filename, state.allocationTracker));
 		} finally {
 			try {
 				is.close();

@@ -24,11 +24,13 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugHelpers;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.ObjectName;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
+import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NAME;
 
@@ -54,12 +56,12 @@ public final class ErrorFactory {
 	 * @param value The value to get the type of
 	 * @return The resulting type.
 	 */
-	public static LuaString typeName(LuaValue value) {
-		if (value instanceof LuaTable || value instanceof LuaUserdata) {
-			LuaTable metatable = value.getMetatable(null);
+	public static LuaString typeName(@Nullable LuaState state, LuaValue value) {
+		// If state is present, works on everything. Otherwise, only table and userdata.
+		if (state != null || value instanceof LuaTable || value instanceof LuaUserdata) {
+			LuaTable metatable = value.getMetatable(state);
 			if (metatable != null && metatable.rawget(NAME) instanceof LuaString s) return s;
 		}
-
 		return value.luaTypeName();
 	}
 
@@ -70,12 +72,12 @@ public final class ErrorFactory {
 	 * @param expected String naming the type that was expected
 	 * @return The created LuaError
 	 */
-	public static LuaError argError(LuaValue value, String expected) {
-		return new LuaError(new Buffer(32)
+	public static LuaError argError(LuaState state, LuaValue value, String expected) {
+		return new LuaError(new Buffer(32, state.allocationTracker)
 			.append("bad argument (")
 			.append(expected)
 			.append(" expected, got ")
-			.append(typeName(value))
+			.append(typeName(state, value))
 			.append(")")
 			.toLuaString()
 		);
@@ -88,8 +90,8 @@ public final class ErrorFactory {
 	 * @param msg  String providing information about the invalid argument
 	 * @return The created LuaError
 	 */
-	public static LuaError argError(int iarg, String msg) {
-		return new LuaError("bad argument #" + iarg + " (" + msg + ")");
+	public static LuaError argError(@Nullable AllocationTracker allocTracker, int iarg, String msg) {
+		return new LuaError("bad argument #" + iarg + " (" + msg + ")", allocTracker);
 	}
 
 	/**
@@ -99,11 +101,11 @@ public final class ErrorFactory {
 	 * @param expected String naming the type that was expected
 	 * @return The created LuaError
 	 */
-	public static LuaError typeError(LuaValue value, String expected) {
-		return new LuaError(new Buffer(32)
+	public static LuaError typeError(LuaState state, LuaValue value, String expected) {
+		return new LuaError(new Buffer(32, state.allocationTracker)
 			.append(expected)
 			.append(" expected, got ")
-			.append(typeName(value))
+			.append(typeName(state, value))
 			.toLuaString()
 		);
 	}
@@ -118,7 +120,7 @@ public final class ErrorFactory {
 		}
 
 		if (kind != null) {
-			return new LuaError(new Buffer(32)
+			return new LuaError(new Buffer(32, state.allocationTracker)
 				.append("attempt to ")
 				.append(verb)
 				.append(" ")
@@ -126,16 +128,16 @@ public final class ErrorFactory {
 				.append(" '")
 				.append(kind.name())
 				.append("' (a ")
-				.append(typeName(operand))
+				.append(typeName(state, operand))
 				.append(" value)")
 				.toLuaString()
 			);
 		} else {
-			return new LuaError(new Buffer(32)
+			return new LuaError(new Buffer(32, state.allocationTracker)
 				.append("attempt to ")
 				.append(verb)
 				.append(" a ")
-				.append(typeName(operand))
+				.append(typeName(state, operand))
 				.append(" value")
 				.toLuaString()
 			);
@@ -150,17 +152,17 @@ public final class ErrorFactory {
 	 * @param rhs Right-hand-side of the comparison that resulted in the error.
 	 * @return The created LuaError
 	 */
-	public static LuaError compareError(LuaValue lhs, LuaValue rhs) {
-		LuaString lhsType = typeName(lhs), rhsType = typeName(rhs);
+	public static LuaError compareError(LuaState state, LuaValue lhs, LuaValue rhs) {
+		LuaString lhsType = typeName(state, lhs), rhsType = typeName(state, rhs);
 		if (lhsType.equals(rhsType)) {
-			return new LuaError(new Buffer()
+			return new LuaError(new Buffer(state.allocationTracker)
 				.append("attempt to compare two ")
 				.append(lhsType)
 				.append(" values")
 				.toLuaString()
 			);
 		} else {
-			return new LuaError(new Buffer()
+			return new LuaError(new Buffer(state.allocationTracker)
 				.append("attempt to compare ")
 				.append(lhsType)
 				.append(" with ")

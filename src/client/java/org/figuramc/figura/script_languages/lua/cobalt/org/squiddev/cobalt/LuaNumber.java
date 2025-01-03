@@ -41,12 +41,12 @@ public abstract sealed class LuaNumber extends LuaValue permits LuaInteger, LuaD
 	}
 
 	@Override
-	public LuaNumber checkNumber() {
+	public LuaNumber checkNumber(LuaState state) {
 		return this;
 	}
 
 	@Override
-	public LuaNumber checkNumber(String errmsg) {
+	public LuaNumber checkNumber(LuaState state, String errmsg) {
 		return this;
 	}
 

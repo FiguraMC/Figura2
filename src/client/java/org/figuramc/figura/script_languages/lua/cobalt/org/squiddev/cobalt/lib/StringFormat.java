@@ -64,7 +64,7 @@ class StringFormat {
 				continue;
 			}
 
-			if (i >= n) throw new LuaError("invalid conversion '%' to 'format'");
+			if (i >= n) throw new LuaError("invalid conversion '%' to 'format'", state.allocationTracker);
 
 			if (fmt.charAt(i) == L_ESC) {
 				i++;
@@ -74,38 +74,38 @@ class StringFormat {
 
 			int argIndex = ++format.arg;
 			LuaValue value = format.args.arg(argIndex);
-			FormatDesc desc = new FormatDesc(fmt, i);
+			FormatDesc desc = new FormatDesc(state.allocationTracker, fmt, i);
 			i += desc.length;
 
 			switch (desc.conversion) {
 				case 'c' -> {
 					desc.checkFlags(LEFT_ADJUST);
-					desc.format(result, (byte) value.checkLong());
+					desc.format(result, (byte) value.checkLong(state));
 				}
 				case 'i', 'd' -> {
 					desc.checkFlags(LEFT_ADJUST | EXPLICIT_PLUS | SPACE | ZERO_PAD | PRECISION);
-					desc.format(result, toSignedLong(argIndex, value));
+					desc.format(result, toSignedLong(argIndex, value, state));
 				}
 				case 'u' -> {
 					desc.checkFlags(LEFT_ADJUST | ZERO_PAD | PRECISION);
-					desc.format(result, toUnsignedLong(argIndex, value));
+					desc.format(result, toUnsignedLong(argIndex, value, state));
 				}
 				case 'o', 'x', 'X' -> {
 					desc.checkFlags(LEFT_ADJUST | ALTERNATE_FORM | ZERO_PAD | PRECISION);
-					desc.format(result, toUnsignedLong(argIndex, value));
+					desc.format(result, toUnsignedLong(argIndex, value, state));
 				}
 				case 'e', 'E', 'f', 'g', 'G', 'a', 'A' -> {
 					desc.checkFlags(LEFT_ADJUST | EXPLICIT_PLUS | SPACE | ALTERNATE_FORM | ZERO_PAD | PRECISION);
-					desc.format(result, value.checkDouble());
+					desc.format(result, value.checkDouble(state));
 				}
 				case 'q' -> {
-					if (desc.length != 1) throw new LuaError("specifier '%q' cannot have modifiers");
-					addQuoted(result, format.arg, value);
+					if (desc.length != 1) throw new LuaError("specifier '%q' cannot have modifiers", state.allocationTracker);
+					addQuoted(result, format.arg, value, state);
 				}
 				case 's' -> {
 					desc.checkFlags(LEFT_ADJUST | PRECISION);
 					try {
-						desc.format(result, OperationHelper.checkToString(OperationHelper.toString(state, value)));
+						desc.format(result, OperationHelper.checkToString(OperationHelper.toString(state, value), state));
 					} catch (UnwindThrowable e) {
 						format.current = desc;
 						format.i = i;
@@ -113,7 +113,7 @@ class StringFormat {
 					}
 				}
 				default -> {
-					var buffer = new Buffer();
+					var buffer = new Buffer(state.allocationTracker);
 					buffer.append("invalid conversion '%");
 					buffer.append(desc.format, desc.start, desc.length);
 					buffer.append("' to 'format'");
@@ -125,23 +125,23 @@ class StringFormat {
 		return result.toLuaString();
 	}
 
-	private static long toSignedLong(int arg, LuaValue value) throws LuaError {
-		if (value instanceof LuaInteger i) return i.checkLong();
+	private static long toSignedLong(int arg, LuaValue value, LuaState state) throws LuaError {
+		if (value instanceof LuaInteger i) return i.checkLong(state);
 
-		double asDouble = value.checkDouble();
+		double asDouble = value.checkDouble(state);
 		long asLong = (long) asDouble;
 		double difference = asDouble - asLong;
 		if (-1 < difference && difference < 1) return asLong;
 
-		throw ErrorFactory.argError(arg, "not a number in proper range");
+		throw ErrorFactory.argError(state.allocationTracker, arg, "not a number in proper range");
 	}
 
 	private static final BigDecimal U64_MAX = BigDecimal.valueOf(2).pow(64);
 
-	private static long toUnsignedLong(int arg, LuaValue value) throws LuaError {
-		if (value instanceof LuaInteger i) return i.checkLong();
+	private static long toUnsignedLong(int arg, LuaValue value, LuaState state) throws LuaError {
+		if (value instanceof LuaInteger i) return i.checkLong(state);
 
-		double asDouble = value.checkDouble();
+		double asDouble = value.checkDouble(state);
 		if (asDouble < 9223372036854775807.0) {
 			// If the value fits within a signed long, convert it directly.
 			var asLong = (long) asDouble;
@@ -156,17 +156,17 @@ class StringFormat {
 
 		// The Lua 5.2 error here is "not a non-negative number in proper range". However, we support negative numbers
 		// (well, somewhat), so instead report a more generic message.
-		throw ErrorFactory.argError(arg, "not a number in proper range");
+		throw ErrorFactory.argError(state.allocationTracker, arg, "not a number in proper range");
 	}
 
-	private static void addQuoted(Buffer buf, int arg, LuaValue s) throws LuaError {
+	private static void addQuoted(Buffer buf, int arg, LuaValue s, LuaState state) throws LuaError {
 		switch (s.type()) {
-			case TSTRING -> addQuoted(buf, s.checkLuaString());
+			case TSTRING -> addQuoted(buf, s.checkLuaString(state));
 			case TNUMBER -> {
 				if (s instanceof LuaInteger) {
-					buf.append(Integer.toString(s.checkInteger()));
+					buf.append(Integer.toString(s.checkInteger(state)));
 				} else {
-					double value = s.checkDouble();
+					double value = s.checkDouble(state);
 					// handle NaN, infinity, and negative infinity
 					if (Double.isNaN(value)) buf.append("(0/0)");
 					else if (value == Double.POSITIVE_INFINITY) buf.append("1e9999");
@@ -176,7 +176,7 @@ class StringFormat {
 				}
 			}
 			case TBOOLEAN, TNIL -> buf.append(s.toString());
-			default -> throw ErrorFactory.argError(arg, "value has no literal form");
+			default -> throw ErrorFactory.argError(state.allocationTracker, arg, "value has no literal form");
 		}
 	}
 

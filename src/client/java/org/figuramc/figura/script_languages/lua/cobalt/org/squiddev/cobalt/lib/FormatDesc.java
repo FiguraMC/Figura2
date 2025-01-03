@@ -24,11 +24,14 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.doubles.DoubleToStringConverter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.CharProperties;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Buffer;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
+import org.jetbrains.annotations.Nullable;
 
 public class FormatDesc {
 	private static final DoubleToStringConverter.Symbols LOWER_SYMBOLS =
@@ -58,9 +61,12 @@ public class FormatDesc {
 	final int start;
 	final int length;
 
-	FormatDesc(LuaString format, final int start) throws LuaError {
+	private final @Nullable AllocationTracker allocTracker;
+
+	FormatDesc(@Nullable AllocationTracker allocTracker, LuaString format, final int start) throws LuaError {
 		this.format = format;
 		this.start = start;
+		this.allocTracker = allocTracker;
 
 		int p = start, n = format.length();
 		int c = 0;
@@ -79,7 +85,7 @@ public class FormatDesc {
 		}
 
 		if (p - start - 1 > MAX_FLAGS) {
-			throw new LuaError("invalid format (repeated flags)");
+			throw new LuaError("invalid format (repeated flags)", allocTracker);
 		}
 
 		int width = -1;
@@ -111,7 +117,7 @@ public class FormatDesc {
 		this.precision = precision;
 		this.flags = flags;
 
-		if (CharProperties.isDigit(c)) throw new LuaError("invalid format (width or precision too long)");
+		if (CharProperties.isDigit(c)) throw new LuaError("invalid format (width or precision too long)", allocTracker);
 
 		conversion = c;
 		length = p - start;
@@ -140,9 +146,10 @@ public class FormatDesc {
 		return (flags & (SPACE | EXPLICIT_PLUS)) == SPACE;
 	}
 
+	// Not called with user-provided strings
 	public static FormatDesc ofUnsafe(String format) {
 		try {
-			return new FormatDesc(LuaString.valueOf(format), 0);
+			return new FormatDesc(null, LuaString.valueOf(null, format), 0);
 		} catch (LuaError e) {
 			throw new IllegalStateException(e);
 		}
@@ -151,7 +158,7 @@ public class FormatDesc {
 	void checkFlags(int flags) throws LuaError {
 		if ((this.flags & ~flags) == 0) return;
 
-		var buffer = new Buffer();
+		var buffer = new Buffer(allocTracker);
 		buffer.append("invalid conversion specification: '%");
 		buffer.append(format, start, length);
 		buffer.append("'");

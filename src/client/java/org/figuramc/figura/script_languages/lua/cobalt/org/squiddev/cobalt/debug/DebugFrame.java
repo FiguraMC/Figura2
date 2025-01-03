@@ -151,7 +151,7 @@ public final class DebugFrame {
 
 	public final DebugFrame previous;
 
-	private static final LuaString TEMPORARY = ValueFactory.valueOf("(*temporary)");
+	private static final LuaString TEMPORARY = ValueFactory.valueOf("(*temporary)", null);
 
 	public Varargs varargs, extras;
 	public int pc = -1, oldPc = -1, top = -1;

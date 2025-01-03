@@ -76,8 +76,8 @@ final class Parser {
 	private int activeVariableSize;
 	private short[] activeVariables = new short[16];
 
-	public Parser(InputReader stream, int firstByte, LuaString source, LuaString shortSource) {
-		lexer = new Lex(source, shortSource, stream, firstByte);
+	public Parser(LuaState state, InputReader stream, int firstByte, LuaString source, LuaString shortSource) {
+		lexer = new Lex(state, source, shortSource, stream, firstByte);
 		envName = lexer.newString("_ENV");
 		gotoName = lexer.newString("goto");
 		fs = null;

@@ -40,17 +40,17 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * Helper methods for the debug library
  */
 public final class DebugHelpers {
-	private static final LuaString GLOBAL = valueOf("global");
-	private static final LuaString LOCAL = valueOf("local");
-	private static final LuaString METHOD = valueOf("method");
-	private static final LuaString UPVALUE = valueOf("upvalue");
-	private static final LuaString FIELD = valueOf("field");
-	private static final LuaString QUESTION = valueOf("?");
-	private static final LuaString HOOK = valueOf("hook");
-	private static final LuaString METAMETHOD = valueOf("metamethod");
+	private static final LuaString GLOBAL = valueOf("global", null);
+	private static final LuaString LOCAL = valueOf("local", null);
+	private static final LuaString METHOD = valueOf("method", null);
+	private static final LuaString UPVALUE = valueOf("upvalue", null);
+	private static final LuaString FIELD = valueOf("field", null);
+	private static final LuaString QUESTION = valueOf("?", null);
+	private static final LuaString HOOK = valueOf("hook", null);
+	private static final LuaString METAMETHOD = valueOf("metamethod", null);
 
-	private static final LuaString FUNCTION = valueOf("function");
-	private static final LuaString C = valueOf("[C]");
+	private static final LuaString FUNCTION = valueOf("function", null);
+	private static final LuaString C = valueOf("[C]", null);
 
 	/**
 	 * Size of the first part of the stack
@@ -73,7 +73,7 @@ public final class DebugHelpers {
 	 * @return String containing the stack trace.
 	 */
 	public static String traceback(LuaThread thread, int level) {
-		return traceback(new Buffer(), thread, level).toString();
+		return traceback(new Buffer(thread.luaState.allocationTracker), thread, level).toString();
 	}
 
 	/**
@@ -147,7 +147,7 @@ public final class DebugHelpers {
 	}
 
 	private static ObjectName fromMetamethod(String name) {
-		return new ObjectName(valueOf("__" + name), METAMETHOD);
+		return new ObjectName(valueOf("__" + name, null), METAMETHOD);
 	}
 
 	public static @Nullable ObjectName getFuncName(DebugFrame di, int stackpos) {
@@ -256,7 +256,7 @@ public final class DebugHelpers {
 
 	private static LuaString constantName(Prototype proto, int index) {
 		if (ISK(index) && proto.constants[INDEXK(index)].isString()) {
-			return (LuaString) proto.constants[INDEXK(index)].toLuaString();
+			return (LuaString) proto.constants[INDEXK(index)].toLuaString(proto.state);
 		} else {
 			return DebugLib.QMARK;
 		}

@@ -1,6 +1,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Prototype;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.unwind.SuspendedFunction;
@@ -44,8 +45,8 @@ public final class LuaBytecodeFormat implements BytecodeFormat {
 	}
 
 	@Override
-	public SuspendedFunction<Prototype> readFunction(LuaString name, InputReader input) {
-		var loader = new BytecodeLoader(input);
+	public SuspendedFunction<Prototype> readFunction(LuaState state, LuaString name, InputReader input) {
+		var loader = new BytecodeLoader(state, input);
 
 		return SuspendedAction.toFunction(() -> {
 			try {

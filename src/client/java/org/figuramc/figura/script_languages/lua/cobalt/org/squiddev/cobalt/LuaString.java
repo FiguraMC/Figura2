@@ -24,6 +24,8 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.NumberParser;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -121,10 +123,11 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param string Java String containing characters which will be limited to the 0-255 range
 	 * @return {@link LuaString} with bytes corresponding to the supplied String
 	 */
-	public static LuaString valueOf(String string) {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) {
+		if (allocTracker != null) allocTracker.allocate(string.length());
 		byte[] bytes = new byte[string.length()];
 		encode(string, bytes, 0);
-		return valueOf(bytes, 0, bytes.length);
+		return valueOf(null, bytes, 0, bytes.length);
 	}
 
 	/**
@@ -137,15 +140,18 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param len   length of the byte buffer
 	 * @return {@link LuaString} wrapping the byte buffer
 	 */
-	public static LuaString valueOf(byte[] bytes, int off, int len) {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len) {
+		// Don't bother tracking strings that are shorter than RECENT_STRINGS_MAX_LENGTH.
+		// They aren't the memory hogs anyway.
 		if (bytes.length < RECENT_STRINGS_MAX_LENGTH) {
-			// Short string.  Reuse the backing and check the cache of recent strings before returning.
 			return Cache.instance.get(new LuaString(bytes, off, len));
 		} else if (len >= bytes.length / 2) {
 			// Reuse backing only when more than half the bytes are part of the result.
+			// Backing is reused, don't track.
 			return new LuaString(bytes, off, len);
 		} else {
 			// Short result relative to the source.  Copy only the bytes that are actually to be used.
+			if (allocTracker != null) allocTracker.allocate(len);
 			final byte[] b = new byte[len];
 			System.arraycopy(bytes, off, b, 0, len);
 			LuaString string = new LuaString(b, 0, len);
@@ -162,7 +168,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return {@link LuaString} wrapping the byte buffer
 	 */
 	public static LuaString valueOf(byte[] bytes) {
-		return valueOf(bytes, 0, bytes.length);
+		return valueOf(null, bytes, 0, bytes.length);
 	}
 
 	/**
@@ -176,16 +182,22 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param strLength The length of the resulting string. This must be equal
 	 * @return The resulting Lua string.
 	 */
-	public static LuaString valueOfStrings(LuaValue[] contents, int offset, int length, int strLength) {
+	public static LuaString valueOfStrings(@Nullable AllocationTracker allocTracker, LuaValue[] contents, int offset, int length, int strLength) {
 		if (length == 0 || strLength == 0) return Constants.EMPTYSTRING;
 		if (length == 1) return (LuaString) contents[0];
 
 		if (strLength > RECENT_STRINGS_MAX_LENGTH) {
+			// Rationale: This rope-based string may get turned into a byte[] string
+			// at *any arbitrary point in the future*. It's too difficult to track that
+			// happening, so instead we will allocate with the full, expanded length up front.
+			if (allocTracker != null) allocTracker.allocate(strLength);
+
 			LuaString[] slice = new LuaString[length];
 			System.arraycopy(contents, offset, slice, 0, length);
 			return new LuaString(slice, strLength);
 		}
 
+		if (allocTracker != null) allocTracker.allocate(strLength);
 		byte[] out = new byte[strLength];
 		int position = 0;
 		for (int i = 0; i < length; i++) position = ((LuaString) contents[offset + i]).copyTo(out, position);
@@ -346,16 +358,17 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	// endregion
 
 	// region String operations
+	// Substring of existing string -> no real new allocation
 	public LuaString substringOfLen(int beginIndex, int length) {
-		return valueOf(bytes(), offset + beginIndex, length);
+		return valueOf(null, bytes(), offset + beginIndex, length);
 	}
 
 	public LuaString substringOfEnd(int beginIndex, int endIndex) {
-		return valueOf(bytes(), offset + beginIndex, endIndex - beginIndex);
+		return valueOf(null, bytes(), offset + beginIndex, endIndex - beginIndex);
 	}
 
 	public LuaString substring(int beginIndex) {
-		return valueOf(bytes(), offset + beginIndex, length - 1);
+		return valueOf(null, bytes(), offset + beginIndex, length - 1);
 	}
 
 	public byte byteAt(int index) {
@@ -548,34 +561,34 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 
 	// region Number conversion
 	@Override
-	public int checkInteger() throws LuaError {
-		return (int) (long) checkDouble();
+	public int checkInteger(LuaState state) throws LuaError {
+		return (int) (long) checkDouble(state);
 	}
 
 	@Override
-	public long checkLong() throws LuaError {
-		return (long) checkDouble();
+	public long checkLong(LuaState state) throws LuaError {
+		return (long) checkDouble(state);
 	}
 
 	@Override
-	public double checkDouble() throws LuaError {
+	public double checkDouble(LuaState state) throws LuaError {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
-			throw ErrorFactory.argError(this, "number");
+			throw ErrorFactory.argError(state, this, "number");
 		}
 		return d;
 	}
 
 	@Override
-	public LuaNumber checkNumber() throws LuaError {
-		return ValueFactory.valueOf(checkDouble());
+	public LuaNumber checkNumber(LuaState state) throws LuaError {
+		return ValueFactory.valueOf(checkDouble(state));
 	}
 
 	@Override
-	public LuaNumber checkNumber(String msg) throws LuaError {
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
-			throw new LuaError(msg);
+			throw new LuaError(msg, state.allocationTracker);
 		}
 		return ValueFactory.valueOf(d);
 	}
@@ -602,17 +615,17 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	}
 
 	@Override
-	public LuaValue toLuaString() {
+	public LuaValue toLuaString(LuaState state) {
 		return this;
 	}
 
 	@Override
-	public String checkString() {
+	public String checkString(LuaState state) {
 		return toString();
 	}
 
 	@Override
-	public LuaString checkLuaString() {
+	public LuaString checkLuaString(LuaState state) {
 		return this;
 	}
 
@@ -635,9 +648,16 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 
 	// endregion
 
-
 	@Override
 	protected long traceNoMark(MemoryCounter counter, int depth) {
-		return OBJECT_SIZE + length;
-	}
+		// Trace either primitive byte[] or the rope elements
+		if (contents instanceof byte[] bytes) {
+			counter.traceUnmarked(bytes);
+			return OBJECT_SIZE;
+		} else {
+			for (LuaString ropeElem : (LuaString[]) contents)
+				counter.trace(ropeElem, depth);
+			return OBJECT_SIZE + POINTER_SIZE * ((LuaString[]) contents).length;
+		}
+    }
 }

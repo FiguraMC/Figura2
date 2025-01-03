@@ -1,10 +1,12 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.CharProperties;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.NumberParser;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.Utf8Lib;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -58,7 +60,7 @@ final class Lex {
 			// We skip GOTO and inject it later on when parsing statements.
 			if (FIRST_RESERVED + i == TK_GOTO) continue;
 
-			reserved.put(ValueFactory.valueOf(tokenNames[i]).toBuffer(), FIRST_RESERVED + i);
+			reserved.put(ValueFactory.valueOf(tokenNames[i], null).toBuffer(), FIRST_RESERVED + i);
 		}
 		RESERVED = Collections.unmodifiableMap(reserved);
 	}
@@ -136,7 +138,10 @@ final class Lex {
 	private byte[] buff = new byte[32];  /* buffer for tokens */
 	private int bufferSize; /* length of buffer */
 
-	Lex(LuaString source, LuaString shortSource, InputReader z, int current) {
+	public final LuaState state;
+
+	Lex(LuaState state, LuaString source, LuaString shortSource, InputReader z, int current) {
+		this.state = state;
 		this.source = source;
 		this.shortSource = shortSource;
 		this.z = z;
@@ -179,7 +184,7 @@ final class Lex {
 	}
 
 	Buffer createErrorMessage(int line) {
-		return new Buffer().append(shortSource).append(":").append(Integer.toString(line)).append(": ");
+		return new Buffer(state.allocationTracker).append(shortSource).append(":").append(Integer.toString(line)).append(": ");
 	}
 
 	CompileException lexError(String msg, int token) {

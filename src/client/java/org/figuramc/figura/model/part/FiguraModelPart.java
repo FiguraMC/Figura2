@@ -553,8 +553,8 @@ public class FiguraModelPart extends MarkedObjectBase {
 
         // Random guess around 200 bytes for the constant sized stuff, don't feel like counting all that
         return 200
-                + 2L * name.length()
-                + 4L * vertices.length
+                + CHAR_SIZE * name.length()
+                + FLOAT_SIZE * vertices.length
                 + POINTER_SIZE * (preRenderCallbacks.size() + midRenderCallbacks.size() + postRenderCallbacks.size());
     }
 }

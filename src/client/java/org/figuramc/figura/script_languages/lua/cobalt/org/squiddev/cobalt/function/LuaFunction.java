@@ -44,7 +44,7 @@ public abstract sealed class LuaFunction extends MarkedLuaValue permits LibFunct
 	}
 
 	@Override
-	public final LuaFunction checkFunction() {
+	public final LuaFunction checkFunction(LuaState state) {
 		return this;
 	}
 

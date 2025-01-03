@@ -258,7 +258,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 */
 	@Override
 	public String toString() {
-		return ErrorFactory.typeName(this) + ": " + Integer.toHexString(hashCode());
+		return ErrorFactory.typeName(null, this) + ": " + Integer.toHexString(hashCode());
 	}
 
 	/**
@@ -305,7 +305,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkLuaString()
 	 * @see #toString()
 	 */
-	public LuaValue toLuaString() {
+	public LuaValue toLuaString(LuaState state) {
 		return Constants.NIL;
 	}
 
@@ -320,8 +320,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkBoolean()
 	 * @see Constants#TBOOLEAN
 	 */
-	public final boolean optBoolean(boolean defval) throws LuaError {
-		return this == NIL ? defval : checkBoolean();
+	public final boolean optBoolean(LuaState state, boolean defval) throws LuaError {
+		return this == NIL ? defval : checkBoolean(state);
 	}
 
 	/**
@@ -339,8 +339,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final double optDouble(double defval) throws LuaError {
-		return this == NIL ? defval : checkDouble();
+	public final double optDouble(LuaState state, double defval) throws LuaError {
+		return this == NIL ? defval : checkDouble(state);
 	}
 
 	/**
@@ -359,8 +359,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkFunction()
 	 * @see Constants#TFUNCTION
 	 */
-	public final LuaFunction optFunction(LuaFunction defval) throws LuaError {
-		return this == NIL ? defval : checkFunction();
+	public final LuaFunction optFunction(LuaState state, LuaFunction defval) throws LuaError {
+		return this == NIL ? defval : checkFunction(state);
 	}
 
 	/**
@@ -379,8 +379,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final int optInteger(int defval) throws LuaError {
-		return this == NIL ? defval : checkInteger();
+	public final int optInteger(LuaState state, int defval) throws LuaError {
+		return this == NIL ? defval : checkInteger(state);
 	}
 
 	/**
@@ -399,8 +399,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final long optLong(long defval) throws LuaError {
-		return this == NIL ? defval : checkLong();
+	public final long optLong(LuaState state, long defval) throws LuaError {
+		return this == NIL ? defval : checkLong(state);
 	}
 
 	/**
@@ -420,8 +420,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final LuaNumber optNumber(LuaNumber defval) throws LuaError {
-		return this == NIL ? defval : checkNumber();
+	public final LuaNumber optNumber(LuaState state, LuaNumber defval) throws LuaError {
+		return this == NIL ? defval : checkNumber(state);
 	}
 
 	/**
@@ -438,8 +438,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final String optString(String defval) throws LuaError {
-		return this == NIL ? defval : checkString();
+	public final String optString(LuaState state, String defval) throws LuaError {
+		return this == NIL ? defval : checkString(state);
 	}
 
 	/**
@@ -456,8 +456,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final LuaString optLuaString(LuaString defval) throws LuaError {
-		return this == NIL ? defval : checkLuaString();
+	public final LuaString optLuaString(LuaState state, LuaString defval) throws LuaError {
+		return this == NIL ? defval : checkLuaString(state);
 	}
 
 	/**
@@ -471,8 +471,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkTable()
 	 * @see Constants#TTABLE
 	 */
-	public final LuaTable optTable(LuaTable defval) throws LuaError {
-		return this == NIL ? defval : checkTable();
+	public final LuaTable optTable(LuaState state, LuaTable defval) throws LuaError {
+		return this == NIL ? defval : checkTable(state);
 	}
 
 	/**
@@ -487,8 +487,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isThread()
 	 * @see Constants#TTHREAD
 	 */
-	public final LuaThread optThread(LuaThread defval) throws LuaError {
-		return this == NIL ? defval : checkThread();
+	public final LuaThread optThread(LuaState state, LuaThread defval) throws LuaError {
+		return this == NIL ? defval : checkThread(state);
 	}
 
 	/**
@@ -515,8 +515,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optBoolean(boolean)
 	 * @see Constants#TBOOLEAN
 	 */
-	public boolean checkBoolean() throws LuaError {
-		throw ErrorFactory.argError(this, "boolean");
+	public boolean checkBoolean(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "boolean");
 	}
 
 	/**
@@ -533,8 +533,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optDouble(double)
 	 * @see Constants#TNUMBER
 	 */
-	public double checkDouble() throws LuaError {
-		throw ErrorFactory.argError(this, "number");
+	public double checkDouble(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "number");
 	}
 
 	/**
@@ -548,8 +548,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @return {@code this} if if a lua function or closure
 	 * @throws LuaError if not a function
 	 */
-	public LuaFunction checkFunction() throws LuaError {
-		throw ErrorFactory.argError(this, "function");
+	public LuaFunction checkFunction(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "function");
 	}
 
 	/**
@@ -566,8 +566,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optInteger(int)
 	 * @see Constants#TNUMBER
 	 */
-	public int checkInteger() throws LuaError {
-		throw ErrorFactory.argError(this, "number");
+	public int checkInteger(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "number");
 	}
 
 	/**
@@ -584,8 +584,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optLong(long)
 	 * @see Constants#TNUMBER
 	 */
-	public long checkLong() throws LuaError {
-		throw ErrorFactory.argError(this, "number");
+	public long checkLong(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "number");
 	}
 
 	/**
@@ -601,8 +601,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber() throws LuaError {
-		throw ErrorFactory.argError(this, "number");
+	public LuaNumber checkNumber(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "number");
 	}
 
 	/**
@@ -619,8 +619,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber(String msg) throws LuaError {
-		throw new LuaError(msg);
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError {
+		throw new LuaError(msg, state.allocationTracker);
 	}
 
 	/**
@@ -638,8 +638,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isString
 	 * @see Constants#TSTRING
 	 */
-	public String checkString() throws LuaError {
-		throw ErrorFactory.argError(this, "string");
+	public String checkString(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "string");
 	}
 
 	/**
@@ -657,8 +657,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isString()
 	 * @see Constants#TSTRING
 	 */
-	public LuaString checkLuaString() throws LuaError {
-		throw ErrorFactory.argError(this, "string");
+	public LuaString checkLuaString(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "string");
 	}
 
 	/**
@@ -669,8 +669,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optTable(LuaTable)
 	 * @see Constants#TTABLE
 	 */
-	public LuaTable checkTable() throws LuaError {
-		throw ErrorFactory.argError(this, "table");
+	public LuaTable checkTable(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "table");
 	}
 
 	/**
@@ -682,8 +682,8 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optThread(LuaThread)
 	 * @see Constants#TTHREAD
 	 */
-	public LuaThread checkThread() throws LuaError {
-		throw ErrorFactory.argError(this, "thread");
+	public LuaThread checkThread(LuaState state) throws LuaError {
+		throw ErrorFactory.argError(state, this, "thread");
 	}
 	//endregion
 
@@ -734,7 +734,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @throws LuaError If the metatable cannot be set.
 	 */
 	public void setMetatable(LuaState state, LuaTable metatable) throws LuaError {
-		throw ErrorFactory.argError(this, "table");
+		throw ErrorFactory.argError(state, this, "table");
 	}
 
 	/**

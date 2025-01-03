@@ -77,7 +77,7 @@ public final class LuaThread extends MarkedLuaValue {
 
 		Status(String name) {
 			this.name = name;
-			nameValue = ValueFactory.valueOf(name);
+			nameValue = ValueFactory.valueOf(name, null);
 		}
 
 		public String getDisplayName() {
@@ -92,7 +92,7 @@ public final class LuaThread extends MarkedLuaValue {
 	/**
 	 * The state that this thread lives in
 	 */
-	private final LuaState luaState;
+	public final LuaState luaState;
 
 	/**
 	 * The current status of this thread
@@ -163,7 +163,7 @@ public final class LuaThread extends MarkedLuaValue {
 	}
 
 	@Override
-	public LuaThread checkThread() {
+	public LuaThread checkThread(LuaState state) {
 		return this;
 	}
 
@@ -249,9 +249,9 @@ public final class LuaThread extends MarkedLuaValue {
 
 		LuaThread thread = state.currentThread;
 		if (thread.status != Status.RUNNING) {
-			throw new LuaError("cannot yield a " + thread.status.getDisplayName() + " thread");
+			throw new LuaError("cannot yield a " + thread.status.getDisplayName() + " thread", state.allocationTracker);
 		}
-		if (thread.isMainThread()) throw new LuaError("cannot yield main thread");
+		if (thread.isMainThread()) throw new LuaError("cannot yield main thread", state.allocationTracker);
 
 		throw UnwindThrowable.yield(args);
 	}
@@ -269,11 +269,11 @@ public final class LuaThread extends MarkedLuaValue {
 	public static <T> T resume(LuaState state, LuaThread thread, Varargs args) throws LuaError, UnwindThrowable {
 		LuaThread current = state.currentThread;
 		if (current.status != Status.RUNNING) {
-			throw new LuaError("cannot resume from a " + current.status.getDisplayName() + " thread");
+			throw new LuaError("cannot resume from a " + current.status.getDisplayName() + " thread", state.allocationTracker);
 		}
 
 		if (thread.status.ordinal() > Status.SUSPENDED.ordinal()) {
-			throw new LuaError("cannot resume " + thread.status.getDisplayName() + " coroutine");
+			throw new LuaError("cannot resume " + thread.status.getDisplayName() + " coroutine", state.allocationTracker);
 		}
 
 		throw UnwindThrowable.resume(thread, args);
@@ -322,7 +322,7 @@ public final class LuaThread extends MarkedLuaValue {
 						args = Dispatch.invoke(state, toExecute, args);
 					} catch (Exception | VirtualMachineError e) {
 						args = null;
-						le = LuaError.wrap(e);
+						le = LuaError.wrap(e, state.allocationTracker);
 					}
 				} else {
 					thread.status = Status.RUNNING;
@@ -356,7 +356,7 @@ public final class LuaThread extends MarkedLuaValue {
 							}
 						} catch (Exception | VirtualMachineError e) {
 							args = null;
-							le = LuaError.wrap(e);
+							le = LuaError.wrap(e, state.allocationTracker);
 						}
 					}
 				}

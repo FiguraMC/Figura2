@@ -80,12 +80,16 @@ public final class Prototype extends MarkedObjectBase {
 
 	// Size of the prototype in bytes, for mem counting
 	private final long size;
+	// State, for mem accounting
+	public final LuaState state;
 
 	public Prototype(
+		LuaState state,
 		LuaString source, LuaString shortSource,
 		LuaValue[] constants, int[] code, Prototype[] children, int parameters, boolean isVarArg, int maxStackSize, UpvalueInfo[] upvalues,
 		int lineDefined, int lastLineDefined, int[] lineInfo, int[] columnInfo, LocalVariable[] locals
 	) {
+		this.state = state;
 		this.source = source;
 		this.shortSource = shortSource;
 

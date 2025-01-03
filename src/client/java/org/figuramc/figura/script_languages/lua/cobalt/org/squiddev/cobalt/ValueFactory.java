@@ -24,6 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -71,8 +74,8 @@ public final class ValueFactory {
 	 * @param s String value to convert
 	 * @return {@link LuaString} instance, possibly pooled, whose value is s
 	 */
-	public static LuaString valueOf(String s) {
-		return LuaString.valueOf(s);
+	public static LuaString valueOf(String s, @Nullable AllocationTracker allocTracker) {
+		return LuaString.valueOf(allocTracker, s);
 	}
 
 	/**
@@ -93,8 +96,8 @@ public final class ValueFactory {
 	 * @param len   number of bytes to include in the {@link LuaString}
 	 * @return {@link LuaString} instance, possibly pooled, whose bytes are those in the supplied array
 	 */
-	public static LuaString valueOf(byte[] bytes, int off, int len) {
-		return LuaString.valueOf(bytes, off, len);
+	public static LuaString valueOf(byte[] bytes, int off, int len, @Nullable AllocationTracker allocTracker) {
+		return LuaString.valueOf(allocTracker, bytes, off, len);
 	}
 
 	/**
@@ -102,8 +105,8 @@ public final class ValueFactory {
 	 *
 	 * @return new {@link LuaTable} instance with no values and no metatable.
 	 */
-	public static LuaTable tableOf() {
-		return new LuaTable();
+	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker) {
+		return new LuaTable(allocTracker);
 	}
 
 	/**
@@ -112,8 +115,8 @@ public final class ValueFactory {
 	 * @param values array of {@link LuaValue} containing the values to use in initialization
 	 * @return new {@link LuaTable} instance with sequential elements coming from the array.
 	 */
-	public static LuaTable listOf(LuaValue... values) {
-		LuaTable table = new LuaTable(values.length, 0);
+	public static LuaTable listOf(@Nullable AllocationTracker allocTracker, LuaValue... values) {
+		LuaTable table = new LuaTable(values.length, 0, allocTracker);
 		for (int i = 0; i < values.length; i++) table.rawset(i + 1, values[i]);
 		return table;
 	}
@@ -125,8 +128,8 @@ public final class ValueFactory {
 	 *              in order {@code {key-a, value-a, key-b, value-b, ...} }
 	 * @return new {@link LuaTable} instance with non-sequential keys coming from the supplied array.
 	 */
-	public static LuaTable tableOf(LuaValue... items) throws LuaError {
-		LuaTable table = new LuaTable(0, items.length >> 1);
+	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker, LuaValue... items) throws LuaError {
+		LuaTable table = new LuaTable(0, items.length >> 1, allocTracker);
 		for (int i = 0; i < items.length; i += 2) {
 			if (!items[i + 1].isNil()) table.rawset(items[i], items[i + 1]);
 		}

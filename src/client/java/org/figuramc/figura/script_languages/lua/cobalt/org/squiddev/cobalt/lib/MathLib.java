@@ -53,27 +53,27 @@ public final class MathLib {
 	public static void add(LuaState state, LuaTable env) throws LuaError {
 		var self = new MathLib();
 		final RegisteredFunction[] functions = new RegisteredFunction[]{
-			RegisteredFunction.of("abs", (s, arg) -> valueOf(Math.abs(arg.checkDouble()))),
-			RegisteredFunction.of("ceil", (s, arg) -> valueOf(Math.ceil(arg.checkDouble()))),
-			RegisteredFunction.of("cos", (s, arg) -> valueOf(Math.cos(arg.checkDouble()))),
-			RegisteredFunction.of("deg", (s, arg) -> valueOf(Math.toDegrees(arg.checkDouble()))),
-			RegisteredFunction.of("exp", (s, arg) -> valueOf(Math.exp(arg.checkDouble()))),
-			RegisteredFunction.of("floor", (s, arg) -> valueOf(Math.floor(arg.checkDouble()))),
-			RegisteredFunction.of("rad", (s, arg) -> valueOf(Math.toRadians(arg.checkDouble()))),
-			RegisteredFunction.of("sin", (s, arg) -> valueOf(Math.sin(arg.checkDouble()))),
-			RegisteredFunction.of("sqrt", (s, arg) -> valueOf(Math.sqrt(arg.checkDouble()))),
-			RegisteredFunction.of("tan", (s, arg) -> valueOf(Math.tan(arg.checkDouble()))),
-			RegisteredFunction.of("acos", (s, arg) -> valueOf(Math.acos(arg.checkDouble()))),
-			RegisteredFunction.of("asin", (s, arg) -> valueOf(Math.asin(arg.checkDouble()))),
+			RegisteredFunction.of("abs", (s, arg) -> valueOf(Math.abs(arg.checkDouble(s)))),
+			RegisteredFunction.of("ceil", (s, arg) -> valueOf(Math.ceil(arg.checkDouble(s)))),
+			RegisteredFunction.of("cos", (s, arg) -> valueOf(Math.cos(arg.checkDouble(s)))),
+			RegisteredFunction.of("deg", (s, arg) -> valueOf(Math.toDegrees(arg.checkDouble(s)))),
+			RegisteredFunction.of("exp", (s, arg) -> valueOf(Math.exp(arg.checkDouble(s)))),
+			RegisteredFunction.of("floor", (s, arg) -> valueOf(Math.floor(arg.checkDouble(s)))),
+			RegisteredFunction.of("rad", (s, arg) -> valueOf(Math.toRadians(arg.checkDouble(s)))),
+			RegisteredFunction.of("sin", (s, arg) -> valueOf(Math.sin(arg.checkDouble(s)))),
+			RegisteredFunction.of("sqrt", (s, arg) -> valueOf(Math.sqrt(arg.checkDouble(s)))),
+			RegisteredFunction.of("tan", (s, arg) -> valueOf(Math.tan(arg.checkDouble(s)))),
+			RegisteredFunction.of("acos", (s, arg) -> valueOf(Math.acos(arg.checkDouble(s)))),
+			RegisteredFunction.of("asin", (s, arg) -> valueOf(Math.asin(arg.checkDouble(s)))),
 			RegisteredFunction.of("atan", MathLib::atan),
-			RegisteredFunction.of("cosh", (s, arg) -> valueOf(Math.cosh(arg.checkDouble()))),
-			RegisteredFunction.of("log10", (s, arg) -> valueOf(Math.log10(arg.checkDouble()))),
-			RegisteredFunction.of("sinh", (s, arg) -> valueOf(Math.sinh(arg.checkDouble()))),
-			RegisteredFunction.of("tanh", (s, arg) -> valueOf(Math.tanh(arg.checkDouble()))),
+			RegisteredFunction.of("cosh", (s, arg) -> valueOf(Math.cosh(arg.checkDouble(s)))),
+			RegisteredFunction.of("log10", (s, arg) -> valueOf(Math.log10(arg.checkDouble(s)))),
+			RegisteredFunction.of("sinh", (s, arg) -> valueOf(Math.sinh(arg.checkDouble(s)))),
+			RegisteredFunction.of("tanh", (s, arg) -> valueOf(Math.tanh(arg.checkDouble(s)))),
 			RegisteredFunction.of("fmod", MathLib::fmod),
 			RegisteredFunction.of("ldexp", MathLib::ldexp),
-			RegisteredFunction.of("pow", (s, x, y) -> valueOf(Math.pow(x.checkDouble(), y.checkDouble()))),
-			RegisteredFunction.of("atan2", (s, x, y) -> valueOf(Math.atan2(x.checkDouble(), y.checkDouble()))),
+			RegisteredFunction.of("pow", (s, x, y) -> valueOf(Math.pow(x.checkDouble(s), y.checkDouble(s)))),
+			RegisteredFunction.of("atan2", (s, x, y) -> valueOf(Math.atan2(x.checkDouble(s), y.checkDouble(s)))),
 			RegisteredFunction.of("log", MathLib::log),
 			RegisteredFunction.ofV("frexp", MathLib::frexp),
 			RegisteredFunction.ofV("max", MathLib::max),
@@ -84,7 +84,7 @@ public final class MathLib {
 			RegisteredFunction.ofV("random", self::random),
 		};
 
-		LuaTable t = new LuaTable(0, functions.length + 3);
+		LuaTable t = new LuaTable(0, functions.length + 3, state.allocationTracker);
 		RegisteredFunction.bind(t, functions);
 		t.rawset("pi", valueOf(Math.PI));
 		t.rawset("huge", LuaDouble.POSINF);
@@ -94,38 +94,38 @@ public final class MathLib {
 	}
 
 	private static LuaValue fmod(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-		double x = arg1.checkDouble();
-		double y = arg2.checkDouble();
+		double x = arg1.checkDouble(state);
+		double y = arg2.checkDouble(state);
 		double q = x / y;
 		double f = x - y * (q >= 0 ? Math.floor(q) : Math.ceil(q));
 		return valueOf(f);
 	}
 
 	private static LuaValue ldexp(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-		double x = arg1.checkDouble();
-		double y = arg2.checkDouble() + 1023.5;
+		double x = arg1.checkDouble(state);
+		double y = arg2.checkDouble(state) + 1023.5;
 		long e = (long) ((0 != (1 & ((int) y))) ? Math.floor(y) : Math.ceil(y - 1));
 		return valueOf(x * Double.longBitsToDouble(e << 52));
 	}
 
 	private static LuaValue log(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
 		if (arg2.isNil()) {
-			return valueOf(Math.log(arg1.checkDouble()));
+			return valueOf(Math.log(arg1.checkDouble(state)));
 		} else {
-			return valueOf(Math.log(arg1.checkDouble()) / Math.log(arg2.checkDouble()));
+			return valueOf(Math.log(arg1.checkDouble(state)) / Math.log(arg2.checkDouble(state)));
 		}
 	}
 
 	private static LuaValue atan(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
 		if (arg2.isNil()) {
-			return valueOf(Math.atan(arg1.checkDouble()));
+			return valueOf(Math.atan(arg1.checkDouble(state)));
 		} else {
-			return valueOf(Math.atan2(arg1.checkDouble(), arg2.checkDouble()));
+			return valueOf(Math.atan2(arg1.checkDouble(state), arg2.checkDouble(state)));
 		}
 	}
 
 	private static Varargs frexp(LuaState state, Varargs args) throws LuaError {
-		double x = args.arg(1).checkDouble();
+		double x = args.arg(1).checkDouble(state);
 		if (x == 0) return varargsOf(Constants.ZERO, Constants.ZERO);
 		long bits = Double.doubleToLongBits(x);
 		double m = ((bits & (~(-1L << 52))) + (1L << 52)) * ((bits >= 0) ? (.5 / (1L << 52)) : (-.5 / (1L << 52)));
@@ -134,23 +134,23 @@ public final class MathLib {
 	}
 
 	private static LuaValue max(LuaState state, Varargs args) throws LuaError {
-		double m = args.arg(1).checkDouble();
+		double m = args.arg(1).checkDouble(state);
 		for (int i = 2, n = args.count(); i <= n; ++i) {
-			m = Math.max(m, args.arg(i).checkDouble());
+			m = Math.max(m, args.arg(i).checkDouble(state));
 		}
 		return valueOf(m);
 	}
 
 	private static LuaValue min(LuaState state, Varargs args) throws LuaError {
-		double m = args.arg(1).checkDouble();
+		double m = args.arg(1).checkDouble(state);
 		for (int i = 2, n = args.count(); i <= n; ++i) {
-			m = Math.min(m, args.arg(i).checkDouble());
+			m = Math.min(m, args.arg(i).checkDouble(state));
 		}
 		return valueOf(m);
 	}
 
 	private static Varargs modf(LuaState state, Varargs args) throws LuaError {
-		double x = args.arg(1).checkDouble();
+		double x = args.arg(1).checkDouble(state);
 		double intPart = (x > 0) ? Math.floor(x) : Math.ceil(x);
 		double fracPart = x - intPart;
 		return varargsOf(valueOf(intPart), valueOf(fracPart));
@@ -167,8 +167,8 @@ public final class MathLib {
 			part1 = random.seeder.nextLong();
 			part2 = random.seeder.nextLong();
 		} else {
-			part1 = args.arg(1).checkLong();
-			part2 = args.arg(2).optLong(0);
+			part1 = args.arg(1).checkLong(state);
+			part2 = args.arg(2).optLong(state, 0);
 		}
 
 		random.seed(part1, part2);
@@ -183,17 +183,17 @@ public final class MathLib {
 				return valueOf(random.nextDouble());
 			}
 			case 1 -> {
-				int high = args.arg(1).checkInteger();
-				if (high < 1) throw ErrorFactory.argError(1, "interval is empty");
+				int high = args.arg(1).checkInteger(state);
+				if (high < 1) throw ErrorFactory.argError(state.allocationTracker, 1, "interval is empty");
 				return valueOf(1 + random.nextLong(high - 1));
 			}
 			case 2 -> {
-				long low = args.arg(1).checkLong();
-				long high = args.arg(2).checkLong();
-				if (high < low) throw ErrorFactory.argError(2, "interval is empty");
+				long low = args.arg(1).checkLong(state);
+				long high = args.arg(2).checkLong(state);
+				if (high < low) throw ErrorFactory.argError(state.allocationTracker, 2, "interval is empty");
 				return valueOf(low + random.nextLong(high - low));
 			}
-			default -> throw new LuaError("wrong number of arguments");
+			default -> throw new LuaError("wrong number of arguments", state.allocationTracker);
 		}
 	}
 

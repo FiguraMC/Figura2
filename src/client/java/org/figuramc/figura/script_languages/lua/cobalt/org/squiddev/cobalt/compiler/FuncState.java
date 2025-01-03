@@ -92,6 +92,7 @@ final class FuncState {
 
 	Prototype toPrototype() {
 		return new Prototype(
+			lexer.state,
 			lexer.source, lexer.shortSource,
 			// Code
 			constants.toArray(new LuaValue[0]), LuaC.realloc(code, pc),

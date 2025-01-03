@@ -24,11 +24,13 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaInterpretedFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoreLibraries;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
 
@@ -88,7 +90,7 @@ public final class LoadState {
 	}
 
 	public static LuaClosure load(LuaState state, InputStream stream, String name, LuaValue env) throws CompileException, LuaError {
-		return load(state, stream, valueOf(name), env);
+		return load(state, stream, valueOf(name, state.allocationTracker), env);
 	}
 
 	/**
@@ -110,12 +112,12 @@ public final class LoadState {
 	private static final int FILE_LENGTH = NAME_LENGTH - " '...' ".length() - 1;
 	private static final int STRING_LENGTH = NAME_LENGTH - " [string \"...\"] ".length() - 1;
 
-	private static final LuaString REMAINING = valueOf("...");
-	private static final LuaString STRING = valueOf("[string \"");
-	private static final LuaString EMPTY_STRING = valueOf("[string \"\"]");
-	private static final LuaString NEW_LINES = valueOf("\r\n");
+	private static final LuaString REMAINING = valueOf("...", null);
+	private static final LuaString STRING = valueOf("[string \"", null);
+	private static final LuaString EMPTY_STRING = valueOf("[string \"\"]", null);
+	private static final LuaString NEW_LINES = valueOf("\r\n", null);
 
-	static LuaString getShortName(LuaString name) {
+	static LuaString getShortName(LuaString name, @Nullable AllocationTracker allocTracker) {
 		if (name.length() == 0) return EMPTY_STRING;
 		switch (name.charAt(0)) {
 			case '=' -> {
@@ -123,6 +125,7 @@ public final class LoadState {
 			}
 			case '@' -> { // out = "source", or "...source"
 				if (name.length() - 1 > FILE_LENGTH) {
+					if (allocTracker != null) allocTracker.allocate(FILE_LENGTH + 3);
 					byte[] bytes = new byte[FILE_LENGTH + 3];
 					REMAINING.copyTo(bytes, 0);
 					name.copyTo(name.length() - FILE_LENGTH, bytes, REMAINING.length(), FILE_LENGTH);
@@ -148,6 +151,7 @@ public final class LoadState {
 			len = STRING_LENGTH;
 		}
 
+		if (allocTracker != null) allocTracker.allocate(NAME_LENGTH);
 		byte[] out = new byte[NAME_LENGTH];
 		STRING.copyTo(out, 0);
 		int offset = STRING.length();
@@ -157,7 +161,7 @@ public final class LoadState {
 		out[offset++] = '"';
 		out[offset++] = ']';
 
-		return LuaString.valueOf(out, 0, offset);
+		return LuaString.valueOf(null, out, 0, offset);
 	}
 
 	static void checkMode(LuaString mode, String current) throws CompileException {

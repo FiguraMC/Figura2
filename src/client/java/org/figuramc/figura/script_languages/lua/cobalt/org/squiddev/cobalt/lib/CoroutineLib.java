@@ -56,7 +56,7 @@ public final class CoroutineLib {
 	}
 
 	public static void add(LuaState state, LuaTable env) throws LuaError {
-		LibFunction.setGlobalLibrary(state, env, "coroutine", RegisteredFunction.bind(new RegisteredFunction[]{
+		LibFunction.setGlobalLibrary(state, env, "coroutine", RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.of("create", CoroutineLib::create),
 			RegisteredFunction.ofV("running", CoroutineLib::running),
 			RegisteredFunction.of("status", CoroutineLib::status),
@@ -68,7 +68,7 @@ public final class CoroutineLib {
 	}
 
 	private static LuaValue create(LuaState state, LuaValue arg) throws LuaError {
-		final LuaFunction func = arg.checkFunction();
+		final LuaFunction func = arg.checkFunction(state);
 		return new LuaThread(state, func);
 	}
 
@@ -78,16 +78,16 @@ public final class CoroutineLib {
 	}
 
 	private static LuaValue status(LuaState state, LuaValue arg) throws LuaError {
-		return arg.checkThread().getStatus().getDisplayNameValue();
+		return arg.checkThread(state).getStatus().getDisplayNameValue();
 	}
 
 	private static LuaValue isyieldable(LuaState state, LuaValue arg) throws LuaError {
 		// Much simpler in our case, as coroutines can always yield.
-		return valueOf(!arg.optThread(state.getCurrentThread()).isMainThread());
+		return valueOf(!arg.optThread(state, state.getCurrentThread()).isMainThread());
 	}
 
 	private static LuaValue wrap(LuaState state, LuaValue arg) throws LuaError {
-		final LuaFunction func = arg.checkFunction();
+		final LuaFunction func = arg.checkFunction(state);
 		final LuaThread thread = new LuaThread(state, func);
 
 		return new Wrapped(thread);
@@ -98,7 +98,7 @@ public final class CoroutineLib {
 		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable {
 			// TODO: Is this really the right way to do this?
 			di.flags |= FLAG_YPCALL;
-			LuaThread thread = args.arg(1).checkThread();
+			LuaThread thread = args.arg(1).checkThread(state);
 			try {
 				Varargs result = LuaThread.resume(state, thread, args.subargs(2));
 				return varargsOf(Constants.TRUE, result);

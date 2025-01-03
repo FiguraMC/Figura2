@@ -97,7 +97,7 @@ public final class Constants {
 		"value",
 	};
 
-	static final LuaString[] TYPE_NAMES_LUA = Arrays.stream(TYPE_NAMES).map(LuaString::valueOf).toArray(LuaString[]::new);
+	static final LuaString[] TYPE_NAMES_LUA = Arrays.stream(TYPE_NAMES).map(s -> LuaString.valueOf(null, s)).toArray(LuaString[]::new);
 
 	/**
 	 * LuaValue constant corresponding to lua {@code nil}
@@ -137,117 +137,117 @@ public final class Constants {
 	/**
 	 * LuaString constant with value "__name" for use as metatag
 	 */
-	public static final LuaString NAME = valueOf("__name");
+	public static final LuaString NAME = valueOf("__name", null);
 
 	/**
 	 * LuaString constant with value "__index" for use as metatag
 	 */
-	public static final LuaString INDEX = valueOf("__index");
+	public static final LuaString INDEX = valueOf("__index", null);
 
 	/**
 	 * LuaString constant with value "__newindex" for use as metatag
 	 */
-	public static final LuaString NEWINDEX = valueOf("__newindex");
+	public static final LuaString NEWINDEX = valueOf("__newindex", null);
 
 	/**
 	 * LuaString constant with value "__call" for use as metatag
 	 */
-	public static final LuaString CALL = valueOf("__call");
+	public static final LuaString CALL = valueOf("__call", null);
 
 	/**
 	 * LuaString constant with value "__mode" for use as metatag
 	 */
-	public static final LuaString MODE = valueOf("__mode");
+	public static final LuaString MODE = valueOf("__mode", null);
 
 	/**
 	 * LuaString constant with value "__metatable" for use as metatag
 	 */
-	public static final LuaString METATABLE = valueOf("__metatable");
+	public static final LuaString METATABLE = valueOf("__metatable", null);
 
 	/**
 	 * LuaString constant with value "__add" for use as metatag
 	 */
-	public static final LuaString ADD = valueOf("__add");
+	public static final LuaString ADD = valueOf("__add", null);
 
 	/**
 	 * LuaString constant with value "__sub" for use as metatag
 	 */
-	public static final LuaString SUB = valueOf("__sub");
+	public static final LuaString SUB = valueOf("__sub", null);
 
 	/**
 	 * LuaString constant with value "__div" for use as metatag
 	 */
-	public static final LuaString DIV = valueOf("__div");
+	public static final LuaString DIV = valueOf("__div", null);
 
 	/**
 	 * LuaString constant with value "__mul" for use as metatag
 	 */
-	public static final LuaString MUL = valueOf("__mul");
+	public static final LuaString MUL = valueOf("__mul", null);
 
 	/**
 	 * LuaString constant with value "__pow" for use as metatag
 	 */
-	public static final LuaString POW = valueOf("__pow");
+	public static final LuaString POW = valueOf("__pow", null);
 
 	/**
 	 * LuaString constant with value "__mod" for use as metatag
 	 */
-	public static final LuaString MOD = valueOf("__mod");
+	public static final LuaString MOD = valueOf("__mod", null);
 
 	/**
 	 * LuaString constant with value "__unm" for use as metatag
 	 */
-	public static final LuaString UNM = valueOf("__unm");
+	public static final LuaString UNM = valueOf("__unm", null);
 
 	/**
 	 * LuaString constant with value "__len" for use as metatag
 	 */
-	public static final LuaString LEN = valueOf("__len");
+	public static final LuaString LEN = valueOf("__len", null);
 
 	/**
 	 * LuaString constant with value "__eq" for use as metatag
 	 */
-	public static final LuaString EQ = valueOf("__eq");
+	public static final LuaString EQ = valueOf("__eq", null);
 
 	/**
 	 * LuaString constant with value "__lt" for use as metatag
 	 */
-	public static final LuaString LT = valueOf("__lt");
+	public static final LuaString LT = valueOf("__lt", null);
 
 	/**
 	 * LuaString constant with value "__le" for use as metatag
 	 */
-	public static final LuaString LE = valueOf("__le");
+	public static final LuaString LE = valueOf("__le", null);
 
 	/**
 	 * LuaString constant with value "__tostring" for use as metatag
 	 */
-	public static final LuaString TOSTRING = valueOf("__tostring");
+	public static final LuaString TOSTRING = valueOf("__tostring", null);
 
 	/**
 	 * LuaString constant with value "__concat" for use as metatag
 	 */
-	public static final LuaString CONCAT = valueOf("__concat");
+	public static final LuaString CONCAT = valueOf("__concat", null);
 
 	/**
 	 * LuaString constant with value "__pairs" for use as metatag
 	 */
-	public static final LuaString PAIRS = valueOf("__pairs");
+	public static final LuaString PAIRS = valueOf("__pairs", null);
 
 	/**
 	 * LuaString constant with value ""
 	 */
-	public static final LuaString EMPTYSTRING = valueOf("");
+	public static final LuaString EMPTYSTRING = valueOf("", null);
 
 	/**
 	 * The global loaded package table.
 	 */
-	public static final LuaString LOADED = valueOf("_LOADED");
+	public static final LuaString LOADED = valueOf("_LOADED", null);
 
 	/**
 	 * LuaString constant with value "_ENV" for use as metatag
 	 */
-	public static final LuaString ENV = valueOf("_ENV");
+	public static final LuaString ENV = valueOf("_ENV", null);
 
 	/**
 	 * Constant limiting metatag loop processing

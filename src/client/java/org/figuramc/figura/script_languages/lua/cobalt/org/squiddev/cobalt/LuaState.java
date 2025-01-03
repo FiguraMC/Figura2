@@ -84,7 +84,7 @@ public final class LuaState extends MarkedObjectBase {
 	private final InterruptHandler interruptHandler;
 
 	// Figura: tracker for allocations done in this LuaState.
-	private final @Nullable AllocationTracker allocationTracker;
+	public final @Nullable AllocationTracker allocationTracker;
 
 	/**
 	 * The currently executing thread
@@ -96,14 +96,14 @@ public final class LuaState extends MarkedObjectBase {
 	 */
 	private final LuaThread mainThread;
 
-	private final LuaTable globals = new LuaTable();
+	private final LuaTable globals;
 
 	/**
 	 * Report an internal VM error.
 	 */
 	private final ErrorReporter reportError;
 
-	private final GlobalRegistry registry = new GlobalRegistry();
+	private final GlobalRegistry registry;
 
 	public LuaState() {
 		this(new LuaState.Builder());
@@ -116,6 +116,8 @@ public final class LuaState extends MarkedObjectBase {
 		bytecodeFormat = builder.bytecodeFormat;
 		allocationTracker = builder.allocationTracker;
 
+		globals = new LuaTable(allocationTracker);
+		registry = new GlobalRegistry(allocationTracker);
 		mainThread = currentThread = new LuaThread(this);
 	}
 

@@ -11,7 +11,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.StringLib.L_ESC;
 
 class StringMatch {
-	private static final LuaString SPECIALS = valueOf("^$*+?.([%-");
+	private static final LuaString SPECIALS = valueOf("^$*+?.([%-", null);
 	private static final int MAX_CAPTURES = 32;
 
 	private static final int CAP_UNFINISHED = -1;
@@ -100,8 +100,8 @@ class StringMatch {
 	 * as this would prevent the iteration.
 	 */
 	static Varargs gmatch(LuaState state, Varargs args) throws LuaError {
-		LuaString src = args.arg(1).checkLuaString();
-		LuaString pat = args.arg(2).checkLuaString();
+		LuaString src = args.arg(1).checkLuaString(state);
+		LuaString pat = args.arg(2).checkLuaString(state);
 		return new GMatchAux(state, src, pat);
 	}
 
@@ -215,9 +215,9 @@ class StringMatch {
 	 * This utility method implements both string.find and string.match.
 	 */
 	private static Varargs str_find_aux(LuaState state, Varargs args, boolean find) throws LuaError {
-		LuaString s = args.arg(1).checkLuaString();
-		LuaString pat = args.arg(2).checkLuaString();
-		int init = args.arg(3).optInteger(1);
+		LuaString s = args.arg(1).checkLuaString(state);
+		LuaString pat = args.arg(2).checkLuaString(state);
+		int init = args.arg(3).optInteger(state, 1);
 
 		if (init > 0) {
 			init = Math.min(init - 1, s.length());
@@ -299,7 +299,7 @@ class StringMatch {
 		int count;
 
 		GSubState(LuaState state, LuaString src, LuaString pattern, LuaValue replace, int maxS) {
-			this.buffer = new Buffer(src.length());
+			this.buffer = new Buffer(src.length(), state.allocationTracker);
 			this.string = src;
 			this.pattern = pattern;
 			this.replace = replace;
@@ -346,7 +346,7 @@ class StringMatch {
 						lbuf.append(s.substringOfEnd(soff, e));
 					} else {
 						LuaValue value = push_onecapture(b - '1', soff, e);
-						lbuf.append(value.checkLuaString());
+						lbuf.append(value.checkLuaString(state));
 					}
 				}
 			}
@@ -356,7 +356,7 @@ class StringMatch {
 			LuaValue replace;
 			switch (repl.type()) {
 				case TSTRING, TNUMBER -> {
-					add_s(lbuf, repl.checkLuaString(), soffset, end);
+					add_s(lbuf, repl.checkLuaString(state), soffset, end);
 					return;
 				}
 				case TFUNCTION ->
@@ -366,7 +366,7 @@ class StringMatch {
 					// Need to call push_onecapture here for the error checking
 					replace = OperationHelper.getTable(state, repl, push_onecapture(0, soffset, end));
 				}
-				default -> throw new LuaError("bad argument: string/function/table expected");
+				default -> throw new LuaError("bad argument: string/function/table expected", state.allocationTracker);
 			}
 
 			finishAddValue(lbuf, soffset, end, replace);
@@ -376,9 +376,9 @@ class StringMatch {
 			if (!repl.toBoolean()) {
 				repl = s.substringOfEnd(soffset, end);
 			} else if (!repl.isString()) {
-				throw new LuaError("invalid replacement value (a " + repl.typeName() + ")");
+				throw new LuaError("invalid replacement value (a " + repl.typeName() + ")", state.allocationTracker);
 			}
-			lbuf.append(repl.checkLuaString());
+			lbuf.append(repl.checkLuaString(state));
 		}
 
 		Varargs push_captures(boolean wholeMatch, int soff, int end) throws LuaError {
@@ -403,12 +403,12 @@ class StringMatch {
 				if (i == 0) {
 					return s.substringOfEnd(soff, end);
 				} else {
-					throw new LuaError("invalid capture index");
+					throw new LuaError("invalid capture index", state.allocationTracker);
 				}
 			} else {
 				int l = clen[i];
 				if (l == CAP_UNFINISHED) {
-					throw new LuaError("unfinished capture");
+					throw new LuaError("unfinished capture", state.allocationTracker);
 				}
 				if (l == CAP_POSITION) {
 					return valueOf(cinit[i] + 1);
@@ -422,7 +422,7 @@ class StringMatch {
 		private int check_capture(int l) throws LuaError {
 			l -= '1';
 			if (l < 0 || l >= level || this.clen[l] == CAP_UNFINISHED) {
-				throw new LuaError("invalid capture index");
+				throw new LuaError("invalid capture index", state.allocationTracker);
 			}
 			return l;
 		}
@@ -434,26 +434,26 @@ class StringMatch {
 					return level;
 				}
 			}
-			throw new LuaError("invalid pattern capture");
+			throw new LuaError("invalid pattern capture", state.allocationTracker);
 		}
 
 		int classend(int poffset) throws LuaError {
 			switch (p.charAt(poffset++)) {
 				case L_ESC -> {
 					if (poffset == p.length()) {
-						throw new LuaError("malformed pattern (ends with %)");
+						throw new LuaError("malformed pattern (ends with %)", state.allocationTracker);
 					}
 					return poffset + 1;
 				}
 				case '[' -> {
-					if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')");
+					if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')", state.allocationTracker);
 					if (p.charAt(poffset) == '^') {
 						poffset++;
-						if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')");
+						if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')", state.allocationTracker);
 					}
 					do {
 						if (p.charAt(poffset++) == L_ESC && poffset < p.length()) poffset++;
-						if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')");
+						if (poffset == p.length()) throw new LuaError("malformed pattern (missing ']')", state.allocationTracker);
 					} while (p.charAt(poffset) != ']');
 					return poffset + 1;
 				}
@@ -545,7 +545,7 @@ class StringMatch {
 					}
 					case L_ESC -> {
 						if (poffset + 1 == p.length()) {
-							throw new LuaError("malformed pattern (ends with '%')");
+							throw new LuaError("malformed pattern (ends with '%')", state.allocationTracker);
 						}
 						switch (p.charAt(poffset + 1)) {
 							case 'b' -> {
@@ -557,7 +557,7 @@ class StringMatch {
 							case 'f' -> {
 								poffset += 2;
 								if (poffset == p.length() || p.charAt(poffset) != '[') {
-									throw new LuaError("missing '[' after '%f' in pattern");
+									throw new LuaError("missing '[' after '%f' in pattern", state.allocationTracker);
 								}
 								int ep = classend(poffset);
 								int previous = (soffset == 0) ? 0 : s.charAt(soffset - 1);
@@ -650,7 +650,7 @@ class StringMatch {
 			int res;
 			int level = this.level;
 			if (level >= MAX_CAPTURES) {
-				throw new LuaError("too many captures");
+				throw new LuaError("too many captures", state.allocationTracker);
 			}
 			cinit[level] = soff;
 			clen[level] = what;
@@ -685,7 +685,7 @@ class StringMatch {
 		int matchbalance(int soff, int poff) throws LuaError {
 			final int plen = p.length();
 			if (poff == plen || poff + 1 == plen) {
-				throw new LuaError("unbalanced pattern");
+				throw new LuaError("unbalanced pattern", state.allocationTracker);
 			}
 			if (soff >= s.length() || s.charAt(soff) != p.charAt(poff)) {
 				return -1;

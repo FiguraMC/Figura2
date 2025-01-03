@@ -108,13 +108,13 @@ public final class LuaInteger extends LuaNumber {
 	}
 
 	@Override
-	public LuaString checkLuaString() {
-		return LuaString.valueOf(Integer.toString(v));
+	public LuaString checkLuaString(LuaState state) {
+		return LuaString.valueOf(state.allocationTracker, Integer.toString(v));
 	}
 
 	@Override
-	public LuaValue toLuaString() {
-		return LuaString.valueOf(Integer.toString(v));
+	public LuaValue toLuaString(LuaState state) {
+		return LuaString.valueOf(state.allocationTracker, Integer.toString(v));
 	}
 
 	public int hashCode() {
@@ -127,22 +127,22 @@ public final class LuaInteger extends LuaNumber {
 	}
 
 	@Override
-	public int checkInteger() {
+	public int checkInteger(LuaState state) {
 		return v;
 	}
 
 	@Override
-	public long checkLong() {
+	public long checkLong(LuaState state) {
 		return v;
 	}
 
 	@Override
-	public double checkDouble() {
+	public double checkDouble(LuaState state) {
 		return v;
 	}
 
 	@Override
-	public String checkString() {
+	public String checkString(LuaState state) {
 		return String.valueOf(v);
 	}
 

@@ -24,9 +24,11 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
+import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaBytecodeFormat.*;
@@ -58,6 +60,8 @@ final class BytecodeLoader {
 	private int luacSizeofSizeT;
 	private int luacNumberFormat;
 
+	private final LuaState state;
+
 	/**
 	 * input stream from which we are loading
 	 */
@@ -68,7 +72,8 @@ final class BytecodeLoader {
 	 *
 	 * @param stream The stream to read from
 	 */
-	BytecodeLoader(InputReader stream) {
+	BytecodeLoader(LuaState state, InputReader stream) {
+		this.state = state;
 		is = stream;
 	}
 
@@ -167,9 +172,10 @@ final class BytecodeLoader {
 		int size = luacSizeofSizeT == 8 ? (int) loadInt64() : loadInt();
 		if (size == 0) return null;
 
+		if (state.allocationTracker != null) state.allocationTracker.allocate(size);
 		byte[] bytes = new byte[size];
 		readFully(bytes, 0, size);
-		return LuaString.valueOf(bytes, 0, bytes.length - 1);
+		return LuaString.valueOf(null, bytes, 0, bytes.length - 1);
 	}
 
 	/**
@@ -273,14 +279,15 @@ final class BytecodeLoader {
 
 		// See LoadDebug
 		var source = loadString();
-		if (source == null) source = LuaString.valueOf("=?");
+		if (source == null) source = LuaString.valueOf(state.allocationTracker, "=?");
 
 		int[] lineInfo = loadIntArray();
 		LocalVariable[] locals = loadLocals();
 		loadUpvaluesNames(upvalues);
 
 		return new Prototype(
-			source, LoadState.getShortName(source),
+			state,
+			source, LoadState.getShortName(source, state.allocationTracker),
 			constants, code, children, numParams, isVarArg, maxStackSize, upvalues,
 			lineDefined, lastLineDefined, lineInfo, NOINTS, locals
 		);

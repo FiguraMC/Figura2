@@ -15,7 +15,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * Perform a protected call, installing a given error handler.
  */
 public class ProtectedCall {
-	private static final LuaValue ERROR_IN_HANDLER = ValueFactory.valueOf("error in error handling");
+	private static final LuaValue ERROR_IN_HANDLER = ValueFactory.valueOf("error in error handling", null);
 
 	private final LuaValue errorFunction;
 	private final DebugFrame currentFrame;
@@ -133,7 +133,7 @@ public class ProtectedCall {
 		// And mark us as being in the error handler.
 		isError = true;
 
-		LuaError luaError = LuaError.wrap(error);
+		LuaError luaError = LuaError.wrap(error, state.allocationTracker);
 		luaError.fillTraceback(state);
 
 		LuaValue value;

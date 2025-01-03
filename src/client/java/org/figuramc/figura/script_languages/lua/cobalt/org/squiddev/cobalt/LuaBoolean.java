@@ -74,7 +74,7 @@ public final class LuaBoolean extends LuaValue {
 	}
 
 	@Override
-	public boolean checkBoolean() {
+	public boolean checkBoolean(LuaState state) {
 		return value;
 	}
 
