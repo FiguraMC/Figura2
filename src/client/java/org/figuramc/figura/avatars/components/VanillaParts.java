@@ -40,7 +40,6 @@ public class VanillaParts implements AvatarComponent {
         // Depends on Textures and EntityUser
         Textures texturesComponent = self.assertDependency(Textures.class, getClass());
         entityUserComponent = self.assertDependency(EntityUser.class, getClass());
-        @Nullable Scripts scriptsComponent = self.optionalDependency(Scripts.class, getClass());
         // Store entries in partNameMap
         for (var entry : materials.vanillaPartRoots().entrySet()) {
             VanillaRootModelPart part = new VanillaRootModelPart(entry.getValue(), texturesComponent.textures);

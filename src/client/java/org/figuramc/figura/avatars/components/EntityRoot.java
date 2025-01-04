@@ -10,7 +10,10 @@ import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class EntityRoot implements AvatarComponent {
 
@@ -20,20 +23,13 @@ public class EntityRoot implements AvatarComponent {
     public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
         // Depends on Textures component
         Textures texturesComponent = self.assertDependency(Textures.class, getClass());
-        @Nullable Scripts scriptsComponent = self.optionalDependency(Scripts.class, getClass());
-
         // Create the model part from materials
         modelPart = new RootModelPart(materials.entityRoot(), texturesComponent.textures, false);
+    }
 
-//        // If we have a script, then...
-//        if (scriptsComponent != null) {
-//            // Add the model part to the Avatar
-//            scriptsComponent.globals.get_avatar().entityRoot = this.modelPart;
-//            // Inc, since avatar holds a reference
-//            try {
-//                modelPart.inc(scriptsComponent.scriptInstance.limiter);
-//            } catch (TooMuchHeapMemoryException ex) { throw new AvatarLoadingException(ex); }
-//        }
+    // Ensure called after initialize()
+    public @NotNull RootModelPart getModelPart() {
+        return Objects.requireNonNull(modelPart);
     }
 
     // Render the entity root.

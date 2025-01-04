@@ -1,17 +1,15 @@
 package org.figuramc.figura.script_hooks;
 
+import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+
 /**
  * An interface to be implemented by any language to be added.
  * The mod itself will only depend upon this interface, and not implementation
  * details of any one runtime.
+ *
+ * Script Runtimes are memory-countable and will be used as tracing roots.
  */
-public interface ScriptRuntime {
-
-    /**
-     * Add the given user script into the runtime. The script has a name and associated data.
-     * In the case of string-based languages, the data will probably be UTF-8 encoded text(? todo explain more).
-     */
-    void addScript(String name, byte[] data);
+public interface ScriptRuntime extends MemoryCountable {
 
     /**
      * Run the snippet of code which was typed into chat through "/figura run".
@@ -19,6 +17,12 @@ public interface ScriptRuntime {
      * an error to chat here if the language doesn't easily support a REPL.
      */
     void runCode(String snippet) throws ScriptError;
+
+    /**
+     * Run when the Avatar is destroyed. Should clean up any native resources used
+     * by the runtime.
+     */
+    void destroy();
 
     void init() throws ScriptError; // Runs once on Avatar creation
     void tick() throws ScriptError; // Runs every tick (regardless of whether user is loaded or not)

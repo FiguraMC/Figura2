@@ -491,6 +491,10 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 		return this == NIL ? defval : checkThread(state);
 	}
 
+	public final <T> T optUserdata(LuaState state, Class<T> targetClass, T defval) throws LuaError {
+		return this == NIL ? defval : checkUserdata(state, targetClass);
+	}
+
 	/**
 	 * Perform argument check that this is not nil or none.
 	 *
@@ -685,6 +689,12 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	public LuaThread checkThread(LuaState state) throws LuaError {
 		throw ErrorFactory.argError(state, this, "thread");
 	}
+
+	// Check that this is a userdata wrapping a T, and return that T.
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError {
+		throw ErrorFactory.argError(state, this, "userdata(" + targetClass.getSimpleName() + ")");
+	}
+
 	//endregion
 
 	// varargs references

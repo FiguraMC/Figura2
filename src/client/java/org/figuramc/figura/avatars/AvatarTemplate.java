@@ -22,8 +22,8 @@ public class AvatarTemplate<K> {
         Collections.addAll(this.components, components);
     }
 
-    public static final AvatarTemplate<UUID> LOCAL_PLAYER_AVATAR = new AvatarTemplate<>(Scripts::new, Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new);
-    public static final AvatarTemplate<UUID> CEM_AVATAR = new AvatarTemplate<>(Scripts::new, Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new);
+    public static final AvatarTemplate<UUID> LOCAL_PLAYER_AVATAR = new AvatarTemplate<>(Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new, Scripts::new);
+    public static final AvatarTemplate<UUID> CEM_AVATAR = new AvatarTemplate<>(Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new, Scripts::new);
 
 
     public Avatar<K> construct(K user, AvatarMaterials materials) throws AvatarLoadingException {

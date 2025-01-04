@@ -75,6 +75,9 @@ public class Avatar<K> {
         if (allocationTracker != null)
             allocationTracker.addRoot(root);
     }
+    public @Nullable AllocationTracker getAllocationTracker() {
+        return allocationTracker;
+    }
 
     // Error out the avatar with the given message and reason.
     // The reason will be shown to chat (TODO only if host), and printed in more detail in the console.

@@ -57,6 +57,14 @@ public class LuaUserdata extends MarkedLuaValue {
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError {
+		if (targetClass.isInstance(instance))
+			return (T) instance;
+		return super.checkUserdata(state, targetClass);
+	}
+
+	@Override
 	public final LuaTable getMetatable(LuaState state) {
 		return metatable;
 	}
