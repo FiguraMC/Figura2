@@ -78,17 +78,11 @@ public class Scripts implements AvatarComponent {
      */
     private static List<ScriptRuntime> sortScripts(AvatarMaterials materials, Avatar<?> avatar) throws AvatarLoadingException {
         Map<ScriptRuntimeType, Map<String, byte[]>> scriptsByType = new HashMap<>();
-        Map<String, ScriptRuntimeType> extensionCache = new HashMap<>();
         for (var script : materials.scripts()) {
             String ext = IOUtils.getExtension(script.name());
             if (ext == null) throw new AvatarLoadingException("Script file \"" + script.name() + "\" has no extension.");
-            ScriptRuntimeType runtime = extensionCache.computeIfAbsent(ext, extension ->
-                    ScriptRuntimeType.ALL_RUNTIME_TYPES.values().stream()
-                            .filter(t -> t.isValidExtension(extension))
-                            .findFirst().orElse(null)
-            );
-            if (runtime == null)
-                throw new AvatarLoadingException("Unrecognized script file extension: " + IOUtils.getExtension(script.name()));
+            ScriptRuntimeType runtime = ScriptRuntimeType.TYPE_BY_EXTENSION.get(ext);
+            if (runtime == null) throw new AvatarLoadingException("Unrecognized script file extension: \"." + IOUtils.getExtension(script.name()) + "\"");
             // Otherwise, insert it to the result map.
             scriptsByType
                     .computeIfAbsent(runtime, t -> new HashMap<>())

@@ -7,7 +7,6 @@ import org.figuramc.figura.model.optimized.OptimizedRendering;
 import org.figuramc.figura.model.optimized.PartDataStorageBuffer;
 import org.figuramc.figura.model.optimized.RenderingMode;
 import org.figuramc.figura.model.texture.AvatarTexture;
-import org.figuramc.figura.script_hooks.ScriptAllow;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
@@ -512,29 +511,27 @@ public class FiguraModelPart extends MarkedObjectBase {
 
     // // // // // // HIERARCHY // // // // // //
 
-    @ScriptAllow
     public List<FiguraModelPart> getChildren() {
         return children; // Should we copy here? Or no?
     }
-    @ScriptAllow
     public String getName() { return name; }
 
     // // // // // // MANIPULATION/RENDERING // // // // // //
 
-    @ScriptAllow public void setOrigin(Vector3f origin) { this.transform.setOrigin(origin); }
-    @ScriptAllow public void setPosition(Vector3f position) { this.transform.setPosition(position); }
-    @ScriptAllow public void setRotation(Vector3f euler) { this.transform.setRotationEulerDeg(euler); }
-    @ScriptAllow public void setQuaternion(Quaternionf quaternion) { this.transform.setRotation(quaternion); }
-    @ScriptAllow public void setScale(Vector3f scale) { this.transform.setScale(scale); }
-    @ScriptAllow public void setVisible(boolean visible) { this.transform.setVisible(visible); }
+    public void setOrigin(Vector3f origin) { this.transform.setOrigin(origin); }
+    public void setPosition(Vector3f position) { this.transform.setPosition(position); }
+    public void setRotation(Vector3f euler) { this.transform.setRotationEulerDeg(euler); }
+    public void setQuaternion(Quaternionf quaternion) { this.transform.setRotation(quaternion); }
+    public void setScale(Vector3f scale) { this.transform.setScale(scale); }
+    public void setVisible(boolean visible) { this.transform.setVisible(visible); }
 
     // // // // // // CALLBACKS // // // // // //
 
     // TODO
 
-//    @ScriptAllow public void addPreRenderCallback(ScriptFunction function) {}
-//    @ScriptAllow public void addMidRenderCallback(ScriptFunction function) {}
-//    @ScriptAllow public void addPostRenderCallback(ScriptFunction function) {}
+//    public void addPreRenderCallback(ScriptFunction function) {}
+//    public void addMidRenderCallback(ScriptFunction function) {}
+//    public void addPostRenderCallback(ScriptFunction function) {}
 
     // // // // // // MEMORY LIMITING // // // // // //
 

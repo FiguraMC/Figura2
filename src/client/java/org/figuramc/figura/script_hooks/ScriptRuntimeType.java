@@ -6,12 +6,14 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_languages.lua.LuaRuntime;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.StringUtils;
+import oshi.util.tuples.Pair;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * One of these should exist for every language the mod supports.
@@ -21,20 +23,36 @@ import java.util.concurrent.ConcurrentHashMap;
 public interface ScriptRuntimeType {
 
     /**
-     * The collection of ALL Script Runtime Types, stored by name.
+     * All runtime types. Order doesn't matter.
      */
-    Map<String, ScriptRuntimeType> ALL_RUNTIME_TYPES = new LinkedHashMap<>() {{
-       put("Lua", new ScriptRuntimeType() {
+    List<ScriptRuntimeType> ALL_RUNTIME_TYPES = List.of(
+       new ScriptRuntimeType() {
            @Override
            public ScriptRuntime newRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException {
                return new LuaRuntime(avatar, scripts);
            }
+
            @Override
-           public boolean isValidExtension(String extension) {
-               return "lua".equals(extension);
+           public String name() {
+               return "Lua";
            }
-       });
-    }};
+
+           @Override
+           public List<String> validFileExtensions() {
+               return List.of("lua");
+           }
+       }
+    );
+
+    /**
+     * Helper map which sends file extension -> runtime type.
+     */
+    Map<String, ScriptRuntimeType> TYPE_BY_EXTENSION =
+            ALL_RUNTIME_TYPES.stream()
+                    .map(t -> new Pair<>(t, t.validFileExtensions()))
+                    .flatMap(p -> p.getB().stream()
+                            .map(ext -> new Pair<>(p.getA(), ext)))
+                    .collect(Collectors.toMap(Pair::getB, Pair::getA));
 
     /**
      * Create a new ScriptRuntime in the given Avatar.
@@ -42,8 +60,13 @@ public interface ScriptRuntimeType {
     ScriptRuntime newRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException;
 
     /**
-     * Return true if this file extension should be part of this runtime type.
+     * Get the name of this runtime type
      */
-    boolean isValidExtension(String extension);
+    String name();
+
+    /**
+     * Return all valid file extensions for this runtime type.
+     */
+    List<String> validFileExtensions();
 
 }

@@ -14,11 +14,8 @@ import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaC;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaInterpretedFunction;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptAction;
-import org.joml.Vector3d;
 import org.joml.Vector3f;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
@@ -31,7 +28,14 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     private final Avatar<?> avatar;
     private final LuaState state;
 
-    private static final LuaString REQUIRE_KEY = LuaString.valueOf(null, "figura_require");
+    // Figura metatable reference, for creating/converting objects
+    private final FiguraMetatables metatables;
+
+    // Keys to the registry
+    public static final LuaString REQUIRE_KEY = LuaString.valueOf(null, "figura_require");
+
+    // Keep references to event objects
+    private final LuaValue tick, render;
 
     /**
      * The starting point for the creation of a Lua Runtime.
@@ -39,7 +43,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     public LuaRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException {
         // Save avatar
         this.avatar = avatar;
-        // LuaError can happen at any time, so wrap the whole thing :P
+        // LuaError can happen at basically any time, so wrap the whole thing :P
         try {
             // Create the LuaState.
             this.state = LuaState.builder()
@@ -50,31 +54,20 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
                     .allocationTracker(avatar.getAllocationTracker()) // Pass the allocation tracker
                     .build();
 
-            // Temp placeholder api, for some funsies?
-            AllocationTracker t = avatar.getAllocationTracker();
-            EntityRoot entityRoot = avatar.optionalDependency(EntityRoot.class, Scripts.class);
-            if (entityRoot != null) {
-                state.globals().rawset("models", userdataOf(entityRoot.getModelPart(), tableOf(t, Constants.INDEX, tableOf(
-                        t,
-                        LuaString.valueOf(t, "setPos"), LibFunction.createV((state, args) -> {
-                            FiguraModelPart part = args.arg(1).checkUserdata(state, FiguraModelPart.class);
-                            Vector3f pos = new Vector3f(
-                                    (float) args.arg(2).checkDouble(state),
-                                    (float) args.arg(3).checkDouble(state),
-                                    (float) args.arg(4).checkDouble(state)
-                            );
-                            part.setPosition(pos);
-                            return Constants.NONE;
-                        })
-                ))));
-            }
-            state.globals().rawset("time", LibFunction.create(state -> {
-                return LuaDouble.valueOf(Minecraft.getInstance().level.getGameTime());
-            }));
+            // Add types with metatables
+            this.metatables = new FiguraMetatables(state);
+
+            // Add lua-based APIs
+
+            // Event / events:
+            LuaTable defaultEvents = EventsAPI.init(state, "tick", "render");
+            tick = defaultEvents.rawget("tick");
+            render = defaultEvents.rawget("render");
 
             // Define require() using the passed scripts:
             // Fill in the require data table in the registry.
             // Use a registry table for memory tracing
+            // TODO move to new file so i dont have to look at it
             LuaTable requireTable = state.registry().getSubTable(REQUIRE_KEY);
             for (var script : scripts.entrySet()) {
                 String name = script.getKey();
@@ -105,14 +98,24 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
 
     }
 
+    private void call(LuaValue event, String name, Varargs args) throws ScriptError {
+        try {
+            Dispatch.invoke(state, event, args);
+        } catch (LuaError luaError) {
+            throw new ScriptError("Error in Lua during \"" + name + "\" event", luaError);
+        } catch (UnwindThrowable impossible) {
+            throw new IllegalStateException("Should be impossible. Bug in Figura, please report!", impossible);
+        }
+    }
+
     @Override
     public void tick() throws ScriptError {
-
+        call(tick, "tick", Constants.NONE);
     }
 
     @Override
     public void render(float tickDelta) throws ScriptError {
-
+        call(render, "render", LuaDouble.valueOf(tickDelta));
     }
 
     @Override
@@ -124,6 +127,9 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
         counter.trace(state, depth);
+        counter.trace(metatables, depth);
+        counter.trace(tick, depth);
+        counter.trace(render, depth);
         return 64; // Idk, random guess
     }
 

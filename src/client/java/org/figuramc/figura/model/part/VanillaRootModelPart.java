@@ -2,7 +2,6 @@ package org.figuramc.figura.model.part;
 
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.model.texture.AvatarTexture;
-import org.figuramc.figura.script_hooks.ScriptAllow;
 import org.figuramc.figura.script_hooks.ScriptCallback;
 import net.minecraft.util.Mth;
 import org.joml.Vector3f;
@@ -44,31 +43,31 @@ public class VanillaRootModelPart extends RootModelPart {
 
     // Functions involving the extra transforms
 
-    @ScriptAllow public void setVanillaOrigin(Vector3f origin) { this.originOffset.set(origin); }
-    @ScriptAllow public void setVanillaRotation(Vector3f euler) { this.rotationOffset.set(euler).mul(Mth.DEG_TO_RAD); }
-    @ScriptAllow public void setVanillaScale(Vector3f scale) { this.scaleMultiplier.set(scale); }
-    @ScriptAllow public void setVanillaPosition(Vector3f position) { this.positionOffset.set(position); }
-    @ScriptAllow public void setVanillaVisible(boolean visible) { this.visible = visible; }
+    public void setVanillaOrigin(Vector3f origin) { this.originOffset.set(origin); }
+    public void setVanillaRotation(Vector3f euler) { this.rotationOffset.set(euler).mul(Mth.DEG_TO_RAD); }
+    public void setVanillaScale(Vector3f scale) { this.scaleMultiplier.set(scale); }
+    public void setVanillaPosition(Vector3f position) { this.positionOffset.set(position); }
+    public void setVanillaVisible(boolean visible) { this.visible = visible; }
 
-    @ScriptAllow public boolean getVanillaVisible() { return this.visible; }
+    public boolean getVanillaVisible() { return this.visible; }
 
     // Functions for cancelling the vanilla transforms
 
-    @ScriptAllow public void setCancelVanillaOrigin(boolean cancel) { this.cancelVanillaOrigin = cancel; }
-    @ScriptAllow public void setCancelVanillaRotation(boolean cancel) { this.cancelVanillaRotation = cancel; }
-    @ScriptAllow public void setCancelVanillaScale(boolean cancel) { this.cancelVanillaScale = cancel; }
+    public void setCancelVanillaOrigin(boolean cancel) { this.cancelVanillaOrigin = cancel; }
+    public void setCancelVanillaRotation(boolean cancel) { this.cancelVanillaRotation = cancel; }
+    public void setCancelVanillaScale(boolean cancel) { this.cancelVanillaScale = cancel; }
 
-    @ScriptAllow public boolean getCancelVanillaOrigin() { return this.cancelVanillaOrigin; }
-    @ScriptAllow public boolean getCancelVanillaRotation() { return this.cancelVanillaRotation; }
-    @ScriptAllow public boolean getCancelVanillaScale() { return this.cancelVanillaScale; }
+    public boolean getCancelVanillaOrigin() { return this.cancelVanillaOrigin; }
+    public boolean getCancelVanillaRotation() { return this.cancelVanillaRotation; }
+    public boolean getCancelVanillaScale() { return this.cancelVanillaScale; }
 
     // Getting the stored vanilla values
 
-    @ScriptAllow public Vector3f getStoredVanillaOrigin() { return new Vector3f(storedVanillaOrigin); }
-    @ScriptAllow public Vector3f getStoredVanillaRotation() { return new Vector3f(storedVanillaRotation).mul(Mth.RAD_TO_DEG); } // Convert to degrees
-    @ScriptAllow public Vector3f getStoredVanillaScale() { return new Vector3f(storedVanillaScale); }
+    public Vector3f getStoredVanillaOrigin() { return new Vector3f(storedVanillaOrigin); }
+    public Vector3f getStoredVanillaRotation() { return new Vector3f(storedVanillaRotation).mul(Mth.RAD_TO_DEG); } // Convert to degrees
+    public Vector3f getStoredVanillaScale() { return new Vector3f(storedVanillaScale); }
 
     // Render callbacks
-    @ScriptAllow public void addVanillaRenderCallback(ScriptCallback callback) { vanillaRenderCallbacks.add(callback); }
+    public void addVanillaRenderCallback(ScriptCallback callback) { vanillaRenderCallbacks.add(callback); }
 
 }

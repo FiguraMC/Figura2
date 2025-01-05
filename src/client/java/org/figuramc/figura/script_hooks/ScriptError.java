@@ -6,5 +6,6 @@ package org.figuramc.figura.script_hooks;
 public class ScriptError extends Exception {
 
     public ScriptError(String message) { super(message); }
+    public ScriptError(String message, Throwable cause) { super(message, cause); }
 
 }
