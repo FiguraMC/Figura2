@@ -14,109 +14,114 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 
 public class Vector4API {
 
+    // Wrap a Vector4d into a userdata given the metatables
+    public static LuaUserdata wrap(Vector4d vec, FiguraMetatables metatables) {
+        return userdataOf(vec, metatables.vec4);
+    }
+
     // Return a LuaTable which acts as the metatable for this type
     public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables) throws LuaError {
         AllocationTracker t = state.allocationTracker;
-        LuaTable methods = tableOf(t);
         LuaTable metatable = tableOf(t);
 
         // Methods
 
         // In-place mutation
+
         /* add */ {
-            methods.rawset(valueOf("add", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("add", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).add(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            methods.rawset(valueOf("addX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("addX", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x += v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("addY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("addY", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y += v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("addZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("addZ", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z += v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("addW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("addW", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w += v2.checkDouble(s);
                 return v1;
             }));
         }
         /* sub */ {
-            methods.rawset(valueOf("sub", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("sub", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).sub(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            methods.rawset(valueOf("subX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("subX", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x -= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("subY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("subY", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y -= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("subZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("subZ", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z -= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("subW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("subW", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w -= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* mul (and scale) */ {
-            methods.rawset(valueOf("mul", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mul", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).mul(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            methods.rawset(valueOf("scale", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("scale", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).mul(v2.checkDouble(s));
                 return v1;
             }));
-            methods.rawset(valueOf("mulX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mulX", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x *= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("mulY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mulY", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y *= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("mulZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mulZ", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z *= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("mulW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mulW", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w *= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* div */ {
-            methods.rawset(valueOf("div", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("div", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).div(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            methods.rawset(valueOf("divX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("divX", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x /= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("divY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("divY", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y /= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("divZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("divZ", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z /= v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("divW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("divW", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w /= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* mod */ {
-            methods.rawset(valueOf("mod", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("mod", t), LibFunction.create((s, v1, v2) -> {
                 Vector4d a = v1.checkUserdata(s, Vector4d.class);
                 Vector4d b = v2.checkUserdata(s, Vector4d.class);
                 a.set(
@@ -127,56 +132,56 @@ public class Vector4API {
                 );
                 return v1;
             }));
-            methods.rawset(valueOf("modX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("modX", t), LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.x = OperationHelper.mod(vec.x, v2.checkDouble(s));
                 return v1;
             }));
-            methods.rawset(valueOf("modY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("modY", t), LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.y = OperationHelper.mod(vec.y, v2.checkDouble(s));
                 return v1;
             }));
-            methods.rawset(valueOf("modZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("modZ", t), LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.z = OperationHelper.mod(vec.z, v2.checkDouble(s));
                 return v1;
             }));
-            methods.rawset(valueOf("modW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("modW", t), LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.w = OperationHelper.mod(vec.w, v2.checkDouble(s));
                 return v1;
             }));
         }
         /* set */ {
-            methods.rawset(valueOf("set", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("set", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).set(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            methods.rawset(valueOf("setX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("setX", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x = v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("setY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("setY", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y = v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("setZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("setZ", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z = v2.checkDouble(s);
                 return v1;
             }));
-            methods.rawset(valueOf("setW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset(valueOf("setW", t), LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w = v2.checkDouble(s);
                 return v1;
             }));
         }
         // Normalize this vector.
-        methods.rawset(valueOf("normalize", t), LibFunction.create((s, v) -> {
+        metatable.rawset(valueOf("normalize", t), LibFunction.create((s, v) -> {
             v.checkUserdata(s, Vector4d.class).normalize();
             return v;
         }));
-        // Clamp this vector's length between min and max. Both args optional.
-        methods.rawset(valueOf("clamp", t), LibFunction.create((s, v, optmin, optmax) -> {
+        // Clamp this vector's length between min and max. Both args are optional.
+        metatable.rawset(valueOf("clamp", t), LibFunction.create((s, v, optmin, optmax) -> {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
@@ -191,27 +196,27 @@ public class Vector4API {
         // Other special operations that don't mutate
 
         // Dot product of this vector with another
-        methods.rawset(valueOf("dot", t), LibFunction.create((s, v1, v2) ->
+        metatable.rawset(valueOf("dot", t), LibFunction.create((s, v1, v2) ->
                 valueOf(v1.checkUserdata(s, Vector4d.class).dot(v2.checkUserdata(s, Vector4d.class)))
         ));
         // Copy this vector
-        methods.rawset(valueOf("copy", t), LibFunction.create((s, v) ->
+        metatable.rawset(valueOf("copy", t), LibFunction.create((s, v) ->
                 userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)), metatable)
         ));
         // Get a normalized copy of this vector
-        methods.rawset(valueOf("unit", t), LibFunction.create((s, v) ->
+        metatable.rawset(valueOf("unit", t), LibFunction.create((s, v) ->
                 userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatable)
         ));
         // Length
-        methods.rawset(valueOf("len", t), LibFunction.create((s, v) ->
+        metatable.rawset(valueOf("len", t), LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
         // Length squared
-        methods.rawset(valueOf("len2", t), LibFunction.create((s, v) ->
+        metatable.rawset(valueOf("len2", t), LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).lengthSquared())
         ));
         // Get a copy with length clamped between min and max. Both args are optional.
-        methods.rawset(valueOf("clamped", t), LibFunction.create((s, v, optmin, optmax) -> {
+        metatable.rawset(valueOf("clamped", t), LibFunction.create((s, v, optmin, optmax) -> {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
@@ -223,9 +228,9 @@ public class Vector4API {
             return v;
         }));
         // Return the number of elements in the vector.
-        methods.rawset(valueOf("count", t), LibFunction.create(s -> valueOf(4)));
+        metatable.rawset(valueOf("count", t), LibFunction.create(s -> valueOf(4)));
         // Unpack the elements of the vector into Lua varargs.
-        methods.rawset(valueOf("unpack", t), LibFunction.createV((s, args) -> {
+        metatable.rawset(valueOf("unpack", t), LibFunction.createV((s, args) -> {
             Vector4d vec = args.first().checkUserdata(s, Vector4d.class);
             return varargsOf(valueOf(vec.x), valueOf(vec.y), valueOf(vec.z), valueOf(vec.w));
         }));
@@ -282,6 +287,8 @@ public class Vector4API {
         metatable.rawset(LEN, LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
+        // Type name, used in error messages
+        metatable.rawset(NAME, valueOf("Vec4", t));
 
         // Returns whether all components are less than or equal to the other. (<= and >= operators)
         metatable.rawset(LE, LibFunction.create((s, v1, v2) -> {
@@ -300,9 +307,8 @@ public class Vector4API {
                 valueOf(v1.checkUserdata(s, Vector4d.class).equals(v2.checkUserdata(s, Vector4d.class)))
         ));
 
-        // Indexing. Check methods first, otherwise turn into swizzle.
-        metatable.rawset(INDEX, methods);
-        methods.setMetatable(state, tableOf(t, INDEX, LibFunction.create((s, v, k) -> {
+        // Indexing. Check metatable first, otherwise turn into swizzle.
+        metatable.rawset(INDEX, LibFunction.create((s, v, k) -> {
             Vector4d self = v.checkUserdata(s, Vector4d.class);
             // Numeric key, index it like an array
             if (k.type() == TNUMBER) {
@@ -314,29 +320,39 @@ public class Vector4API {
                     default -> throw ErrorFactory.argError(s, k, "integer 1 to 4");
                 });
             }
-            // Key should be a string, do some swizzling
+            // Key should be a string
             LuaString key = k.checkLuaString(s);
+            // Check if it's a method, if so return it
+            LuaValue method = metatable.rawget(key);
+            if (!method.isNil()) { return method; }
+            // Otherwise, get the swizzle going
             @Nullable AllocationTracker tr = s.allocationTracker;
-            return switch (key.length()) {
-                case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0), tr));
-                case 2 -> userdataOf(new Vector2d(
-                        getSwizzle(self, (char) key.charAt(0), tr),
-                        getSwizzle(self, (char) key.charAt(1), tr)
-                ), metatables.vec2);
-                case 3 -> userdataOf(new Vector3d(
-                        getSwizzle(self, (char) key.charAt(0), tr),
-                        getSwizzle(self, (char) key.charAt(1), tr),
-                        getSwizzle(self, (char) key.charAt(2), tr)
-                ), metatables.vec3);
-                case 4 -> userdataOf(new Vector4d(
-                        getSwizzle(self, (char) key.charAt(0), tr),
-                        getSwizzle(self, (char) key.charAt(1), tr),
-                        getSwizzle(self, (char) key.charAt(2), tr),
-                        getSwizzle(self, (char) key.charAt(3), tr)
-                ), metatable);
-                default -> throw new LuaError("Invalid swizzle - length must be 1 to 4 chars, got '" + k + "'", tr);
-            };
-        })));
+            try {
+                return switch (key.length()) {
+                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0), tr));
+                    // TODO use Vector2dAPI.wrap() instead of raw userdataOf() for cleanness
+                    case 2 -> userdataOf(new Vector2d(
+                            getSwizzle(self, (char) key.charAt(0), tr),
+                            getSwizzle(self, (char) key.charAt(1), tr)
+                    ), metatables.vec2);
+                    case 3 -> userdataOf(new Vector3d(
+                            getSwizzle(self, (char) key.charAt(0), tr),
+                            getSwizzle(self, (char) key.charAt(1), tr),
+                            getSwizzle(self, (char) key.charAt(2), tr)
+                    ), metatables.vec3);
+                    case 4 -> userdataOf(new Vector4d(
+                            getSwizzle(self, (char) key.charAt(0), tr),
+                            getSwizzle(self, (char) key.charAt(1), tr),
+                            getSwizzle(self, (char) key.charAt(2), tr),
+                            getSwizzle(self, (char) key.charAt(3), tr)
+                    ), metatable);
+                    default -> NIL; // Not a swizzle, return nil
+                };
+            } catch (InvalidSwizzleException ex) {
+                // If swizzle failed, just return nil
+                return NIL;
+            }
+        }));
 
         // Newindex, always swizzle.
         metatable.rawset(NEWINDEX, LibFunction.create((s, vec, key, value) -> {
@@ -391,7 +407,7 @@ public class Vector4API {
     // underscore = 0
     // i = 1
     // capital letters negate the value
-    private static double getSwizzle(Vector4d v, char c, @Nullable AllocationTracker tracker) throws LuaError {
+    private static double getSwizzle(Vector4d v, char c, @Nullable AllocationTracker tracker) throws LuaError, InvalidSwizzleException {
         return switch (c) {
             case '_' -> 0;
             case 'i' -> 1;
@@ -404,7 +420,7 @@ public class Vector4API {
             case 'Y', 'G', 'V' -> -v.y;
             case 'Z', 'B' -> -v.z;
             case 'W', 'A' -> -v.w;
-            default -> throw new LuaError("Invalid swizzle character to Vec4: '" + c + "'", tracker);
+            default -> throw new InvalidSwizzleException(); // Signal to caller to return nil
         };
     }
     private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError {
@@ -418,8 +434,9 @@ public class Vector4API {
             case 'Y', 'G', 'V' -> v.y = -num;
             case 'Z', 'B' -> v.z = -num;
             case 'W', 'A' -> v.w = -num;
-            default -> throw new LuaError("Invalid swizzle character to Vec4: '" + c + "'", tracker);
+            default -> throw new LuaError("Invalid swizzle character to Vec4: '" + c + "'", tracker); // Swizzle assignment should error on invalid
         }
     }
+    private static class InvalidSwizzleException extends Exception {}
 
 }
