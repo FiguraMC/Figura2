@@ -386,36 +386,38 @@ public class Vector4API {
     // Swizzle helper functions, get/set.
 
     // x,y,z,w work as expected for swizzle
+    // r,g,b,a = x,y,z,w
+    // u,v = x,y
     // underscore = 0
-    // u = 1
+    // i = 1
     // capital letters negate the value
     private static double getSwizzle(Vector4d v, char c, @Nullable AllocationTracker tracker) throws LuaError {
         return switch (c) {
             case '_' -> 0;
-            case 'u' -> 1;
-            case 'x' -> v.x;
-            case 'y' -> v.y;
-            case 'z' -> v.z;
-            case 'w' -> v.w;
-            case 'U' -> -1;
-            case 'X' -> -v.x;
-            case 'Y' -> -v.y;
-            case 'Z' -> -v.z;
-            case 'W' -> -v.w;
+            case 'i' -> 1;
+            case 'I' -> -1;
+            case 'x', 'r', 'u' -> v.x;
+            case 'y', 'g', 'v' -> v.y;
+            case 'z', 'b' -> v.z;
+            case 'w', 'a' -> v.w;
+            case 'X', 'R', 'U' -> -v.x;
+            case 'Y', 'G', 'V' -> -v.y;
+            case 'Z', 'B' -> -v.z;
+            case 'W', 'A' -> -v.w;
             default -> throw new LuaError("Invalid swizzle character to Vec4: '" + c + "'", tracker);
         };
     }
     private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError {
         switch (c) {
             case '_' -> {}
-            case 'x' -> v.x = num;
-            case 'y' -> v.y = num;
-            case 'z' -> v.z = num;
-            case 'w' -> v.w = num;
-            case 'X' -> v.x = -num;
-            case 'Y' -> v.y = -num;
-            case 'Z' -> v.z = -num;
-            case 'W' -> v.w = -num;
+            case 'x', 'r', 'u' -> v.x = num;
+            case 'y', 'g', 'v' -> v.y = num;
+            case 'z', 'b' -> v.z = num;
+            case 'w', 'a' -> v.w = num;
+            case 'X', 'R', 'U' -> v.x = -num;
+            case 'Y', 'G', 'V' -> v.y = -num;
+            case 'Z', 'B' -> v.z = -num;
+            case 'W', 'A' -> v.w = -num;
             default -> throw new LuaError("Invalid swizzle character to Vec4: '" + c + "'", tracker);
         }
     }
