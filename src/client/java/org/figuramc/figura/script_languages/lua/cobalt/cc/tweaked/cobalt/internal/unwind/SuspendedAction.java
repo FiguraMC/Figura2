@@ -5,6 +5,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Unwin
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Varargs;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.unwind.SuspendedFunction;
+import org.jetbrains.annotations.Contract;
 
 /**
  * A functional interface which starts a task.
@@ -25,6 +26,7 @@ public interface SuspendedAction<T> {
 	 * @throws LuaError        If the function threw a runtime error.
 	 * @throws UnwindThrowable If the function yielded.
 	 */
+	@Contract("_, _ -> _")
 	static Varargs run(DebugFrame frame, SuspendedAction<Varargs> action) throws LuaError, UnwindThrowable {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}
@@ -40,6 +42,7 @@ public interface SuspendedAction<T> {
 	 * @return The result of evaluating this function.
 	 * @throws LuaError If the function threw a runtime error.
 	 */
+	@Contract("_ -> _")
 	static <T> T noYield(SuspendedAction<T> action) throws LuaError {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}
@@ -55,6 +58,7 @@ public interface SuspendedAction<T> {
 	 * @return A {@link SuspendedFunction}, which can be later invoked.
 	 * @see org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.SuspendedVarArgFunction
 	 */
+	@Contract("_ -> _")
 	static <T> SuspendedFunction<T> toFunction(SuspendedAction<T> action) {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}

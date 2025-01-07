@@ -1,0 +1,10 @@
+
+The license in this directory, prefixed with "COBALT", applies only to code contained inside this directory.
+The code here is a *modified* version of code located at the following URL:
+
+https://github.com/cc-tweaked/Cobalt/
+
+The MIT license for Cobalt is included here as per its requirements.
+
+Note that not all the code in this directory is created by the authors of Cobalt; some of it is modified.
+The MIT license's lack of warranty or liability is hereby extended to these modifications as well.

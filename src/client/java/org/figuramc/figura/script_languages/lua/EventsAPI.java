@@ -18,14 +18,14 @@ public class EventsAPI {
 
     /**
      * Runs the "events" script in the given state, and create several default events.
-     * These default events are then returned in the array.
+     * These default events are then returned in the table.
      * Make sure to run this before any user scripts are added.
      */
     public static LuaTable init(LuaState state, String... defaultEvents) throws AvatarLoadingException {
         try(InputStream input = FiguraModClient.class.getResourceAsStream("/assets/figura/scripts/lua/events.lua")) {
             // Compile the file
             if (input == null) throw new AvatarLoadingException("Figura was unable to find \"events.lua\"? Likely bug in Figura, please report.");
-            LuaClosure c = LoadState.load(state, input, "Figura %% Events", state.globals());
+            LuaClosure c = LoadState.load(state, input, "=Figura::events", state.globals());
             // Tell the file what events we want
             LuaString[] eventNames = new LuaString[defaultEvents.length];
             for (int i = 0; i < defaultEvents.length; i++)
@@ -38,7 +38,7 @@ public class EventsAPI {
         } catch (CompileException shouldNotHappen) {
             throw new AvatarLoadingException("Figura internal \"events.lua\" failed to compile! Likely bug in Figura, please report.", shouldNotHappen);
         } catch (LuaError e) {
-            throw new AvatarLoadingException("Error while initializing Figura internam \"events.lua\". Likely bug in Figura, please report.", e);
+            throw new AvatarLoadingException("Error while initializing Figura internal \"events.lua\". Likely bug in Figura, please report.", e);
         }
     }
 

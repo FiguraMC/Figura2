@@ -38,6 +38,11 @@ loom {
 
 }
 
+configurations {
+	// Cobalt instrumentation
+	cobaltBuildTools
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -52,9 +57,12 @@ dependencies {
 
 	// Cobalt (lua) dependencies:
 	compileOnly "org.checkerframework:checker-qual:3.36.0"
+	"cobaltBuildTools" project(":cobalt-build-tools")
 
 	// Utils
 	include(implementation("com.moulberry:mixinconstraints:1.0.1"))
+
+
 }
 
 processResources {
@@ -62,6 +70,28 @@ processResources {
 
 	filesMatching("fabric.mod.json") {
 		expand "version": project.version
+	}
+}
+
+// Cobalt instrumentation gradle task
+if (true) {
+	var cobaltDirectory = project.layout.buildDirectory.dir("classes/java/client/org/figuramc/figura/script_languages/lua").get()
+
+	var instrumentClient = tasks.register("InstrumentForCobalt", JavaExec.class, {
+		dependsOn(tasks.compileClientJava)
+
+		inputs.dir(cobaltDirectory).withPropertyName("inputDir")
+		outputs.dir(cobaltDirectory).withPropertyName("outputDir")
+
+		javaLauncher = javaToolchains.launcherFor(java.toolchain)
+		mainClass = "cc.tweaked.cobalt.build.MainKt"
+	 	classpath = configurations.cobaltBuildTools
+
+		args = List.of(cobaltDirectory)
+	})
+
+	tasks.compileJava {
+		finalizedBy(instrumentClient)
 	}
 }
 
@@ -74,12 +104,10 @@ java {
 	// if it is present.
 	// If you remove this line, sources will not be generated.
 	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {
+	dependsOn(tasks."InstrumentForCobalt")
 	from("LICENSE") {
 		rename { "${it}_${project.base.archivesName.get()}"}
 	}

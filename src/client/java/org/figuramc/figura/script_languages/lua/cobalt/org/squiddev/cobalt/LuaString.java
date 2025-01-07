@@ -333,6 +333,19 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		return equals(bytes(), offset, s.bytes(), s.offset, length);
 	}
 
+	// Figura function
+	// Not sure about how to handle encodings...
+	public boolean equals(String javaString) {
+		int c = javaString.length();
+		if (this.length != c) return false;
+		byte[] bytes = bytes(); // Get bytes, compare to chars
+		int o = this.offset;
+		for (int i = 0; i < c; i++)
+			if ((bytes[o + i] & 0xFF) != javaString.charAt(i))
+				return false;
+		return true;
+	}
+
 	public static boolean equals(LuaString a, int aOffset, LuaString b, int bOffset, int length) {
 		return equals(a.bytes(), a.offset + aOffset, b.bytes(), b.offset + bOffset, length);
 	}
@@ -340,6 +353,22 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	private static boolean equals(byte[] a, int aOffset, byte[] b, int bOffset, int length) {
 		return Arrays.equals(a, aOffset, aOffset + length, b, bOffset, bOffset + length);
 	}
+
+	// Figura function
+	// Check if it ends with the given java string, java string must be ascii
+	public boolean endsWith(String javaString) {
+		assert javaString.chars().allMatch(c -> c < 128);
+		int c = javaString.length();
+		int o = this.length - c;
+		if (o < 0) return false;
+		o += this.offset;
+		byte[] bytes = bytes();
+		for (int i = 0; i < c; i++)
+			if ((bytes[o + i] & 0xFF) != javaString.charAt(i))
+				return false;
+		return true;
+	}
+
 
 	@Override
 	public int hashCode() {

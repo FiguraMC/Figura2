@@ -219,6 +219,7 @@ final class Lex {
 		LuaString interned = strings.get(ByteBuffer.wrap(bytes, offset, len));
 		if (interned == null) {
 			// must copy bytes, since bytes could be from reusable buffer
+			if (state.allocationTracker != null) state.allocationTracker.allocate(len);
 			byte[] slice = new byte[len];
 			System.arraycopy(bytes, offset, slice, 0, len);
 			strings.put(ByteBuffer.wrap(slice), interned = LuaString.valueOf(slice));
@@ -227,6 +228,7 @@ final class Lex {
 	}
 
 	LuaString newString(String value) {
+		if (state.allocationTracker != null) state.allocationTracker.allocate(value.length());
 		byte[] contents = new byte[value.length()];
 		LuaString.encode(value, contents, 0);
 		var buffer = ByteBuffer.wrap(contents);

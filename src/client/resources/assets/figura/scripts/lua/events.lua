@@ -61,7 +61,7 @@ function Event:__call(...)
   while t do
     -- If we're not waiting on the function, run it.
     -- Otherwise, decrement the wait time.
-    if t[1] <= 0 then
+    if t[1] <= 1 then -- wait(1) in a loop means we should run it every tick
         -- Resume the coroutine
         local success, res = coroutine.resume(t[3], ...)
         -- Propagate the error, if any

@@ -7,5 +7,5 @@ https://github.com/cc-tweaked/Cobalt/
 The MIT license for Cobalt is included as per its requirements, 
 as well as the license for Google's double-conversion library which Cobalt uses.
 
-Note that not all of the code in this directory is created by the authors of Cobalt; some of it is modified. 
+Note that not all the code in this directory is created by the authors of Cobalt; some of it is modified.
 The MIT license's lack of warranty or liability is hereby extended to these modifications as well.

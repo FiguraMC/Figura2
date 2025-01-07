@@ -41,7 +41,7 @@ public class FiguraModelPart extends MarkedObjectBase {
     public final String name;
     public final PartTransform transform = new PartTransform(); // The transform of this model part
 //    private List<Animator> animators; // The animators which affect this model part
-    private final ArrayList<FiguraModelPart> children; // The children of this model part in the hierarchy tree
+    public final ArrayList<FiguraModelPart> children; // The children of this model part in the hierarchy tree
     private final float[] vertices; // The vertices making up the cubes and meshes of the model part
     private @Nullable List<RenderType> renderTypes; // The render types which this part should be rendered with. If null, inherit, if non-null, override (assuming priority is high enough!)
     private int renderTypePriority; // If the render type priority is higher than the parent's, `this.renderTypes` can replace the current set of render types.
@@ -61,7 +61,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         name = materials.name();
         this.parent = parent;
         transform.setOrigin(materials.origin());
-        transform.setRotationEulerDeg(materials.rotation());
+        transform.setEulerDeg(materials.rotation());
         // Get children
         children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, textures, this, forceCompatible));
 
@@ -505,33 +505,6 @@ public class FiguraModelPart extends MarkedObjectBase {
             f.call(args);
     }
 
-    // // // // // //           // // // // // //
-    // // // // // // SCRIPTING // // // // // //
-    // // // // // //           // // // // // //
-
-    // // // // // // HIERARCHY // // // // // //
-
-    public List<FiguraModelPart> getChildren() {
-        return children; // Should we copy here? Or no?
-    }
-    public String getName() { return name; }
-
-    // // // // // // MANIPULATION/RENDERING // // // // // //
-
-    public void setOrigin(Vector3f origin) { this.transform.setOrigin(origin); }
-    public void setPosition(Vector3f position) { this.transform.setPosition(position); }
-    public void setRotation(Vector3f euler) { this.transform.setRotationEulerDeg(euler); }
-    public void setQuaternion(Quaternionf quaternion) { this.transform.setRotation(quaternion); }
-    public void setScale(Vector3f scale) { this.transform.setScale(scale); }
-    public void setVisible(boolean visible) { this.transform.setVisible(visible); }
-
-    // // // // // // CALLBACKS // // // // // //
-
-    // TODO
-
-//    public void addPreRenderCallback(ScriptFunction function) {}
-//    public void addMidRenderCallback(ScriptFunction function) {}
-//    public void addPostRenderCallback(ScriptFunction function) {}
 
     // // // // // // MEMORY LIMITING // // // // // //
 

@@ -3,10 +3,7 @@ package org.figuramc.figura.model.part;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.util.Mth;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
+import org.joml.*;
 
 /**
  * Data representing the customizations of a FiguraModelPart.
@@ -16,7 +13,13 @@ public class PartTransform {
 
     private final Vector3f origin = new Vector3f(); // Origin is the pivot point and also a translation. Same as blockbench
     private final Vector3f position = new Vector3f();
-    private final Quaternionf rotation = new Quaternionf();
+
+    // Quaternion and rotation are kept in sync constantly.
+    // Whenever one is updated, the other is as well.
+    // This is to make the code more similar to THREE.js which is used by Blockbench.
+    private final Quaternionf quaternion = new Quaternionf();
+    private final Vector3f rotation = new Vector3f(); // ZYX euler angles in radians
+
     private final Vector3f scale = new Vector3f(1, 1, 1);
 
     private final Matrix4f positionMatrix = new Matrix4f();
@@ -25,57 +28,66 @@ public class PartTransform {
     private boolean visible = true;
 
     private boolean needsMatrixUpdate = false; // Whether the position and normal matrices need to be recalculated.
-    private boolean isDirty = false;
-    private boolean isIdentity = true; // Whether this has never been changed, so we can assume it's the identity transform. Most changes set this to false.
+    private boolean isDirty = false; // Whether the transform was changed at all since last time, including via setMatrix (which wouldn't cause a matrix update). Needed for GPU upload.
+    private boolean isIdentity = true; // Whether this was ever modified away from the identity matrix. If it never was, we can skip a matrix multiply.
 
     // Getters and setters
-    public void setOrigin(Vector3f origin) { this.origin.set(origin); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && origin.x == 0 && origin.y == 0 && origin.z == 0; }
-    public void setOrigin(float x, float y, float z) { this.origin.set(x, y, z); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && x == 0 && y == 0 && z == 0; }
+    public void setOrigin(Vector3f origin) { this.origin.set(origin); markDirty(); }
+    public void setOrigin(float x, float y, float z) { this.origin.set(x, y, z); markDirty(); }
     public Vector3f getOrigin() { return origin; }
 
-    public void setPosition(Vector3f pos) { this.position.set(pos); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && pos.x == 0 && pos.y == 0 && pos.z == 0; }
-    public void setPosition(float x, float y, float z) { this.position.set(x, y, z); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && x == 0 && y == 0 && z == 0; }
+    public void setPosition(Vector3f pos) { this.position.set(pos); markDirty(); }
+    public void setPosition(float x, float y, float z) { this.position.set(x, y, z); markDirty(); }
     public Vector3f getPosition() { return position; }
 
-    public void setScale(Vector3f scale) { this.scale.set(scale); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && scale.x == 1 && scale.y == 1 && scale.z == 1; }
-    public void setScale(float x, float y, float z) { this.scale.set(x, y, z); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && x == 1 && y == 1 && z == 1; }
+    public void setScale(Vector3f scale) { this.scale.set(scale); markDirty(); }
+    public void setScale(float x, float y, float z) { this.scale.set(x, y, z); markDirty(); }
     public Vector3f getScale() { return scale; }
 
-    public void setRotation(Quaternionf rotation) { this.rotation.set(rotation); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && rotation.x == 0 && rotation.y == 0 && rotation.z == 0 && rotation.w == 1; }
-    public void setRotation(float x, float y, float z, float w) { this.rotation.set(x, y, z, w); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && x == 0 && y == 0 && z == 0 && w == 1; }
-    public void setRotationEulerRad(Vector3f euler) { this.rotation.rotationZYX(euler.z, euler.y, euler.x); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && euler.x == 0 && euler.y == 0 && euler.z == 0; }
-    public void setRotationEulerRad(float x, float y, float z) { this.rotation.rotationZYX(z, y, x); this.needsMatrixUpdate = true; isDirty = true; isIdentity = isIdentity && x == 0 && y == 0 && z == 0; }
-    public void setRotationEulerDeg(Vector3f euler) { float s = Mth.PI / 180; setRotationEulerRad(euler.x*s, euler.y*s, euler.z*s); }
-    public void setRotationEulerDeg(float x, float y, float z) { float s = Mth.PI / 180; setRotationEulerRad(x*s, y*s, z*s); }
-    public Quaternionf getRotation() { return rotation; }
+    public void setEulerRad(Vector3f euler) { this.rotation.set(euler); this.quaternion.rotationZYX(euler.z, euler.y, euler.x); markDirty(); }
+    public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); this.quaternion.rotationZYX(z, y, x); markDirty(); }
+    public void setEulerDeg(Vector3f euler) { setEulerRad(euler.x * Mth.DEG_TO_RAD, euler.y * Mth.DEG_TO_RAD, euler.z * Mth.DEG_TO_RAD); }
+    public void setEulerDeg(float x, float y, float z) { setEulerRad(x * Mth.DEG_TO_RAD, y * Mth.DEG_TO_RAD, z * Mth.DEG_TO_RAD); }
+    public void setQuaternion(Quaternionf quat) { this.quaternion.set(quat).getEulerAnglesZYX(rotation); markDirty(); }
+    public void setQuaternion(float x, float y, float z, float w) { this.quaternion.set(x, y, z, w).getEulerAnglesZYX(rotation); markDirty(); }
+    public Vector3f getEulerRad() { return rotation; }
+    public Quaternionf getQuaternion() { return quaternion; }
 
     public void setVisible(boolean visible) { this.visible = visible; this.isDirty = true; }
     public boolean getVisible() { return this.visible; }
 
     // Set position matrix and recompute normal matrix from it. Sets needsMatrixUpdate to false.
-    public void setMatrix(Matrix4f positionMatrix) { this.positionMatrix.set(positionMatrix); this.positionMatrix.normal(normalMatrix); this.needsMatrixUpdate = false; isDirty = true; isIdentity = false; }
+    public void setMatrix(Matrix4f positionMatrix) { this.positionMatrix.set(positionMatrix); this.positionMatrix.normal(normalMatrix); markDirtyNoMatrix(); }
 
     // Set position matrix without recomputing normal matrix. Sets needsMatrixUpdate to false.
-    public void setPositionMatrix(Matrix4f positionMatrix) { this.positionMatrix.set(positionMatrix); this.needsMatrixUpdate = false; isDirty = true; isIdentity = false; }
+    public void setPositionMatrix(Matrix4f positionMatrix) { this.positionMatrix.set(positionMatrix); markDirtyNoMatrix(); }
 
     // Recalculate things if needed, then set the normal matrix.
-    public void setNormalMatrix(Matrix3f normalMatrix) { recalculateIfNeeded(); this.normalMatrix.set(normalMatrix); this.needsMatrixUpdate = false; isDirty = true; isIdentity = false; }
+    public void setNormalMatrix(Matrix3f normalMatrix) { recalculateIfNeeded(); this.normalMatrix.set(normalMatrix); markDirtyNoMatrix(); }
 
     public void reset() {
         origin.zero();
         position.zero();
-        rotation.identity();
+        rotation.zero();
+        quaternion.identity();
         scale.set(1, 1, 1);
         positionMatrix.identity();
         normalMatrix.identity();
         visible = true;
         needsMatrixUpdate = false;
-        // Do not reset isDirty!
-        isIdentity = true;
+        isIdentity = true; // Is now identity
+        isDirty = true; // It changed
     }
 
-    public void markDirty() {
+    public final void markDirty() {
+        this.needsMatrixUpdate = true;
         this.isDirty = true;
+        this.isIdentity = false;
+    }
+
+    public final void markDirtyNoMatrix() {
+        this.isDirty = true;
+        this.isIdentity = false;
     }
 
     public boolean fetchDirty() {
@@ -89,7 +101,7 @@ public class PartTransform {
             // Compute position matrix
             positionMatrix
                     .translation(origin.x / 16, origin.y / 16, origin.z / 16)
-                    .rotate(rotation)
+                    .rotate(quaternion)
                     .scale(scale)
                     .translate(position.x / 16, position.y / 16, position.z / 16);
             // Compute normal matrix

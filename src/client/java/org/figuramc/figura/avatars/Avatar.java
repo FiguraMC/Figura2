@@ -55,16 +55,18 @@ public class Avatar<K> {
     }
 
     // If an instance of "before" appears earlier than any instance of "self", return it.
-    // If one appears after, error.
+    // If one appears after self, error.
     // If none exists at all, return null.
     @SuppressWarnings("unchecked")
     public <T extends AvatarComponent> @Nullable T optionalDependency(Class<T> before, Class<? extends AvatarComponent> self) {
+        boolean foundSelf = false;
         for (AvatarComponent component : components) {
-            if (before.isAssignableFrom(component.getClass())) {
+            if (before.isInstance(component)) {
+                if (foundSelf) throw new IllegalStateException("Invalid state in Avatar construction - component \"" + self.getSimpleName() + "\" depends on component \"" + before.getSimpleName() + "\" before it!");
                 return (T) component;
             }
             if (component.getClass() == self) {
-                throw new IllegalStateException("Invalid state in Avatar construction - component \"" + self.getSimpleName() + "\" depends on component \"" + before.getSimpleName() + "\" before it!");
+                foundSelf = true;
             }
         }
         return null;

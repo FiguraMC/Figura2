@@ -279,11 +279,11 @@ public final class LuaThread extends MarkedLuaValue {
 		throw UnwindThrowable.resume(thread, args);
 	}
 
-	public static Varargs runMain(LuaState state, LuaFunction function) throws LuaError {
+	public static Varargs runMain(LuaState state, LuaValue function) throws LuaError {
 		return run(state, state.getMainThread(), function, Constants.NONE);
 	}
 
-	public static Varargs runMain(LuaState state, LuaFunction function, Varargs args) throws LuaError {
+	public static Varargs runMain(LuaState state, LuaValue function, Varargs args) throws LuaError {
 		return run(state, state.getMainThread(), function, args);
 	}
 
@@ -299,11 +299,11 @@ public final class LuaThread extends MarkedLuaValue {
 		return run(thread.luaState, thread, null, args);
 	}
 
-	private static Varargs run(final LuaState state, LuaThread thread, LuaFunction function, Varargs args) throws LuaError {
+	private static Varargs run(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError {
 		return loop(state, thread, function, args);
 	}
 
-	private static Varargs loop(final LuaState state, LuaThread thread, LuaFunction function, Varargs args) throws LuaError {
+	private static Varargs loop(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError {
 		LuaError le = null;
 		do {
 			final DebugState ds = thread.debugState;
@@ -315,7 +315,7 @@ public final class LuaThread extends MarkedLuaValue {
 					thread.status = Status.RUNNING;
 
 					// We only want to execute the function the first time, so null it out
-					LuaFunction toExecute = function;
+					LuaValue toExecute = function;
 					function = null;
 
 					try {

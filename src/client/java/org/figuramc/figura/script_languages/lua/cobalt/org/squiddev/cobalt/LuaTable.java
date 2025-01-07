@@ -178,8 +178,7 @@ public final class LuaTable extends MarkedLuaValue {
 	 * @param value the value to use, can be {@link Constants#NIL}, must not be null
 	 */
 	public void rawset(String key, LuaValue value) {
-		// String is discarded immediately, it's rawset
-		rawsetImpl(ValueFactory.valueOf(key, null), value);
+		rawsetImpl(ValueFactory.valueOf(key, allocTracker), value);
 	}
 
 	/**

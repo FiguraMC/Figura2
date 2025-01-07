@@ -29,99 +29,99 @@ public class Vector4API {
         // In-place mutation
 
         /* add */ {
-            metatable.rawset(valueOf("add", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("add", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).add(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            metatable.rawset(valueOf("addX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("addX", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x += v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("addY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("addY", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y += v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("addZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("addZ", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z += v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("addW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("addW", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w += v2.checkDouble(s);
                 return v1;
             }));
         }
         /* sub */ {
-            metatable.rawset(valueOf("sub", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("sub", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).sub(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            metatable.rawset(valueOf("subX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("subX", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x -= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("subY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("subY", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y -= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("subZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("subZ", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z -= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("subW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("subW", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w -= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* mul (and scale) */ {
-            metatable.rawset(valueOf("mul", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mul", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).mul(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            metatable.rawset(valueOf("scale", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("scale", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).mul(v2.checkDouble(s));
                 return v1;
             }));
-            metatable.rawset(valueOf("mulX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mulX", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x *= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("mulY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mulY", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y *= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("mulZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mulZ", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z *= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("mulW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mulW", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w *= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* div */ {
-            metatable.rawset(valueOf("div", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("div", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).div(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            metatable.rawset(valueOf("divX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("divX", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x /= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("divY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("divY", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y /= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("divZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("divZ", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z /= v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("divW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("divW", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w /= v2.checkDouble(s);
                 return v1;
             }));
         }
         /* mod */ {
-            metatable.rawset(valueOf("mod", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("mod", LibFunction.create((s, v1, v2) -> {
                 Vector4d a = v1.checkUserdata(s, Vector4d.class);
                 Vector4d b = v2.checkUserdata(s, Vector4d.class);
                 a.set(
@@ -132,56 +132,56 @@ public class Vector4API {
                 );
                 return v1;
             }));
-            metatable.rawset(valueOf("modX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("modX", LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.x = OperationHelper.mod(vec.x, v2.checkDouble(s));
                 return v1;
             }));
-            metatable.rawset(valueOf("modY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("modY", LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.y = OperationHelper.mod(vec.y, v2.checkDouble(s));
                 return v1;
             }));
-            metatable.rawset(valueOf("modZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("modZ", LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.z = OperationHelper.mod(vec.z, v2.checkDouble(s));
                 return v1;
             }));
-            metatable.rawset(valueOf("modW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("modW", LibFunction.create((s, v1, v2) -> {
                 Vector4d vec = v1.checkUserdata(s, Vector4d.class);
                 vec.w = OperationHelper.mod(vec.w, v2.checkDouble(s));
                 return v1;
             }));
         }
         /* set */ {
-            metatable.rawset(valueOf("set", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("set", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).set(v2.checkUserdata(s, Vector4d.class));
                 return v1;
             }));
-            metatable.rawset(valueOf("setX", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("setX", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).x = v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("setY", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("setY", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).y = v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("setZ", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("setZ", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).z = v2.checkDouble(s);
                 return v1;
             }));
-            metatable.rawset(valueOf("setW", t), LibFunction.create((s, v1, v2) -> {
+            metatable.rawset("setW", LibFunction.create((s, v1, v2) -> {
                 v1.checkUserdata(s, Vector4d.class).w = v2.checkDouble(s);
                 return v1;
             }));
         }
         // Normalize this vector.
-        metatable.rawset(valueOf("normalize", t), LibFunction.create((s, v) -> {
+        metatable.rawset("normalize", LibFunction.create((s, v) -> {
             v.checkUserdata(s, Vector4d.class).normalize();
             return v;
         }));
         // Clamp this vector's length between min and max. Both args are optional.
-        metatable.rawset(valueOf("clamp", t), LibFunction.create((s, v, optmin, optmax) -> {
+        metatable.rawset("clamp", LibFunction.create((s, v, optmin, optmax) -> {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
@@ -196,27 +196,27 @@ public class Vector4API {
         // Other special operations that don't mutate
 
         // Dot product of this vector with another
-        metatable.rawset(valueOf("dot", t), LibFunction.create((s, v1, v2) ->
+        metatable.rawset("dot", LibFunction.create((s, v1, v2) ->
                 valueOf(v1.checkUserdata(s, Vector4d.class).dot(v2.checkUserdata(s, Vector4d.class)))
         ));
         // Copy this vector
-        metatable.rawset(valueOf("copy", t), LibFunction.create((s, v) ->
+        metatable.rawset("copy", LibFunction.create((s, v) ->
                 userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)), metatable)
         ));
         // Get a normalized copy of this vector
-        metatable.rawset(valueOf("unit", t), LibFunction.create((s, v) ->
+        metatable.rawset("unit", LibFunction.create((s, v) ->
                 userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatable)
         ));
         // Length
-        metatable.rawset(valueOf("len", t), LibFunction.create((s, v) ->
+        metatable.rawset("len", LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
         // Length squared
-        metatable.rawset(valueOf("len2", t), LibFunction.create((s, v) ->
+        metatable.rawset("len2", LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).lengthSquared())
         ));
         // Get a copy with length clamped between min and max. Both args are optional.
-        metatable.rawset(valueOf("clamped", t), LibFunction.create((s, v, optmin, optmax) -> {
+        metatable.rawset("clamped", LibFunction.create((s, v, optmin, optmax) -> {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
@@ -228,9 +228,9 @@ public class Vector4API {
             return v;
         }));
         // Return the number of elements in the vector.
-        metatable.rawset(valueOf("count", t), LibFunction.create(s -> valueOf(4)));
+        metatable.rawset("count", LibFunction.create(s -> valueOf(4)));
         // Unpack the elements of the vector into Lua varargs.
-        metatable.rawset(valueOf("unpack", t), LibFunction.createV((s, args) -> {
+        metatable.rawset("unpack", LibFunction.createV((s, args) -> {
             Vector4d vec = args.first().checkUserdata(s, Vector4d.class);
             return varargsOf(valueOf(vec.x), valueOf(vec.y), valueOf(vec.z), valueOf(vec.w));
         }));
@@ -309,6 +309,11 @@ public class Vector4API {
 
         // Indexing. Check metatable first, otherwise turn into swizzle.
         metatable.rawset(INDEX, LibFunction.create((s, v, k) -> {
+            // Check if it's a method, if so return it
+            LuaValue method = metatable.rawget(k);
+            if (!method.isNil()) return method;
+
+            // Otherwise, custom index
             Vector4d self = v.checkUserdata(s, Vector4d.class);
             // Numeric key, index it like an array
             if (k.type() == TNUMBER) {
@@ -320,31 +325,27 @@ public class Vector4API {
                     default -> throw ErrorFactory.argError(s, k, "integer 1 to 4");
                 });
             }
-            // Key should be a string
+            // Key should be a string then
             LuaString key = k.checkLuaString(s);
-            // Check if it's a method, if so return it
-            LuaValue method = metatable.rawget(key);
-            if (!method.isNil()) { return method; }
             // Otherwise, get the swizzle going
-            @Nullable AllocationTracker tr = s.allocationTracker;
             try {
                 return switch (key.length()) {
-                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0), tr));
+                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0)));
                     // TODO use Vector2dAPI.wrap() instead of raw userdataOf() for cleanness
                     case 2 -> userdataOf(new Vector2d(
-                            getSwizzle(self, (char) key.charAt(0), tr),
-                            getSwizzle(self, (char) key.charAt(1), tr)
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1))
                     ), metatables.vec2);
                     case 3 -> userdataOf(new Vector3d(
-                            getSwizzle(self, (char) key.charAt(0), tr),
-                            getSwizzle(self, (char) key.charAt(1), tr),
-                            getSwizzle(self, (char) key.charAt(2), tr)
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1)),
+                            getSwizzle(self, (char) key.charAt(2))
                     ), metatables.vec3);
                     case 4 -> userdataOf(new Vector4d(
-                            getSwizzle(self, (char) key.charAt(0), tr),
-                            getSwizzle(self, (char) key.charAt(1), tr),
-                            getSwizzle(self, (char) key.charAt(2), tr),
-                            getSwizzle(self, (char) key.charAt(3), tr)
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1)),
+                            getSwizzle(self, (char) key.charAt(2)),
+                            getSwizzle(self, (char) key.charAt(3))
                     ), metatable);
                     default -> NIL; // Not a swizzle, return nil
                 };
@@ -407,7 +408,7 @@ public class Vector4API {
     // underscore = 0
     // i = 1
     // capital letters negate the value
-    private static double getSwizzle(Vector4d v, char c, @Nullable AllocationTracker tracker) throws LuaError, InvalidSwizzleException {
+    private static double getSwizzle(Vector4d v, char c) throws InvalidSwizzleException {
         return switch (c) {
             case '_' -> 0;
             case 'i' -> 1;

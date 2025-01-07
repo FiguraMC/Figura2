@@ -122,7 +122,9 @@ public class AvatarSubManager<K> {
      */
     public synchronized void cancelInProgress(K key) {
         CompletableFuture<Avatar<K>> oldTask = inProgressAvatars.remove(key);
-        if (oldTask != null) oldTask.whenComplete((avatar, error) -> avatar.destroy());
+        if (oldTask != null) oldTask.whenComplete((avatar, error) -> {
+            if (avatar != null) avatar.destroy();
+        });
     }
 
     /**
