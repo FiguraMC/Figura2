@@ -71,6 +71,10 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             tick = defaultEvents.rawget("tick");
             render = defaultEvents.rawget("render");
 
+            // Benchmark testers
+            state.globals().rawset("micros", LibFunction.create(s -> LuaDouble.valueOf(System.nanoTime() / 1000d)));
+            state.globals().rawset("print", LibFunction.create((s, v) -> { System.out.println(v); return Constants.NIL; }));
+
             // Define require() using the passed scripts:
             // Fill in the require data table in the registry.
             // Use a registry table for memory tracing
