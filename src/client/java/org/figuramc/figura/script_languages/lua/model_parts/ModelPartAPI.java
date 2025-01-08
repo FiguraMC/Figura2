@@ -8,8 +8,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
 import org.joml.Vector3d;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NIL;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
 
 public class ModelPartAPI {
@@ -142,6 +141,8 @@ public class ModelPartAPI {
             }
             return result;
         }));
+
+        metatable.rawset(NAME, valueOf("ModelPart", t));
 
         // Special __index: gets child by name if it's not a method
         metatable.rawset(INDEX, LibFunction.create((s, p, k) -> {

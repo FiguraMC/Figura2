@@ -7,7 +7,8 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaSt
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 import org.jetbrains.annotations.Nullable;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.tableOf;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 
 public class RootModelPartAPI {
 
@@ -17,6 +18,7 @@ public class RootModelPartAPI {
         LuaTable metatable = tableOf(t);
         FiguraMetatables.setupInheritance(metatable, metatables.modelPart);
 
+        metatable.rawset(NAME, valueOf("RootModelPart", t));
 
         return metatable;
     }

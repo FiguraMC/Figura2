@@ -201,11 +201,11 @@ public class Vector4API {
         ));
         // Copy this vector
         metatable.rawset("copy", LibFunction.create((s, v) ->
-                userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)), metatable)
+                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)), metatables)
         ));
         // Get a normalized copy of this vector
         metatable.rawset("unit", LibFunction.create((s, v) ->
-                userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatable)
+                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatables)
         ));
         // Length (or use the # operator!)
         metatable.rawset("len", LibFunction.create((s, v) ->
@@ -220,10 +220,10 @@ public class Vector4API {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
-            if (len2 < min*min) return userdataOf(new Vector4d(vec).normalize(min), metatable);
+            if (len2 < min*min) return wrap(new Vector4d(vec).normalize(min), metatables);
             else {
                 double max = optmax.optDouble(s, Double.NaN);
-                if (len2 > max*max) return userdataOf(new Vector4d(vec).normalize(max), metatable);
+                if (len2 > max*max) return wrap(new Vector4d(vec).normalize(max), metatables);
             }
             return v;
         }));
@@ -243,44 +243,44 @@ public class Vector4API {
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return userdataOf(new Vector4d(a).add(b), metatable);
+            return wrap(new Vector4d(a).add(b), metatables);
         }));
         metatable.rawset(SUB, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return userdataOf(new Vector4d(a).sub(b), metatable);
+            return wrap(new Vector4d(a).sub(b), metatables);
         }));
         metatable.rawset(MUL, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return userdataOf(new Vector4d(a).mul(b), metatable);
+            return wrap(new Vector4d(a).mul(b), metatables);
         }));
         metatable.rawset(DIV, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return userdataOf(new Vector4d(a).div(b), metatable);
+            return wrap(new Vector4d(a).div(b), metatables);
         }));
         metatable.rawset(MOD, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return userdataOf(new Vector4d(
+            return wrap(new Vector4d(
                     OperationHelper.mod(a.x, b.x),
                     OperationHelper.mod(a.y, b.y),
                     OperationHelper.mod(a.z, b.z),
                     OperationHelper.mod(a.w, b.w)
-            ), metatable);
+            ), metatables);
         }));
         metatable.rawset(UNM, LibFunction.create((s, v) -> {
             Vector4d a = v.checkUserdata(s, Vector4d.class);
-            return userdataOf(new Vector4d(a).negate(), metatable);
+            return wrap(new Vector4d(a).negate(), metatables);
         }));
 
         // # operator can also be used for vector length.
@@ -331,22 +331,21 @@ public class Vector4API {
             try {
                 return switch (key.length()) {
                     case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0)));
-                    // TODO use Vector2dAPI.wrap() instead of raw userdataOf() for cleanness
-                    case 2 -> userdataOf(new Vector2d(
+                    case 2 -> Vector2API.wrap(new Vector2d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1))
-                    ), metatables.vec2);
-                    case 3 -> userdataOf(new Vector3d(
+                    ), metatables);
+                    case 3 -> Vector3API.wrap(new Vector3d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1)),
                             getSwizzle(self, (char) key.charAt(2))
-                    ), metatables.vec3);
-                    case 4 -> userdataOf(new Vector4d(
+                    ), metatables);
+                    case 4 -> Vector4API.wrap(new Vector4d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1)),
                             getSwizzle(self, (char) key.charAt(2)),
                             getSwizzle(self, (char) key.charAt(3))
-                    ), metatable);
+                    ), metatables);
                     default -> NIL; // Not a swizzle, return nil
                 };
             } catch (InvalidSwizzleException ex) {
