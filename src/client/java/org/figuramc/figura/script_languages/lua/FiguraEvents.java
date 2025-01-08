@@ -25,7 +25,7 @@ public class FiguraEvents {
         try(InputStream input = FiguraModClient.class.getResourceAsStream("/assets/figura/scripts/lua/events.lua")) {
             // Compile the file
             if (input == null) throw new AvatarLoadingException("Figura was unable to find \"events.lua\"? Likely bug in Figura, please report.");
-            LuaClosure c = LoadState.load(state, input, "=Figura::events", state.globals());
+            LuaClosure c = LoadState.load(state, input, "=EVENTS", state.globals());
             // Tell the file what events we want
             LuaString[] eventNames = new LuaString[defaultEvents.length];
             for (int i = 0; i < defaultEvents.length; i++)

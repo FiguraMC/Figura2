@@ -65,7 +65,7 @@ function Event:__call(...)
         -- Resume the coroutine
         local success, res = coroutine.resume(t[3], ...)
         -- Propagate the error, if any
-        if not success then error(res, 2) end
+        if not success then error(res, 0) end
         -- If we returned, delete or refresh
         if coroutine.status(t[3]) == "dead" then
           -- If there's no func, or if it returned DELETE, then delete.

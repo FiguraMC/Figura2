@@ -87,7 +87,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     public void init() throws ScriptError {
         // TODO maybe add some kind of auto scripts behavior? For now it just does require 'main.lua'
         try {
-            LuaClosure entrypoint = LoadState.load(state, new ByteArrayInputStream("require 'main.lua'".getBytes(StandardCharsets.UTF_8)), "=Figura::Entrypoint", state.globals());
+            LuaClosure entrypoint = LoadState.load(state, new ByteArrayInputStream("require 'main.lua'".getBytes(StandardCharsets.UTF_8)), "=ENTRYPOINT", state.globals());
             LuaThread.runMain(state, entrypoint);
         } catch (LuaError luaError) {
             throw new ScriptError("Error in Lua during init", luaError);
