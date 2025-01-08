@@ -12,10 +12,7 @@ import java.util.Stack;
 public class FiguraModClient implements ClientModInitializer {
 
     // The stack of Avatars rendering. This is peeked by the vanilla ModelPart rendering mixins.
-    // Push null if there's no Avatar in the circumstance.
     public static final Stack<@Nullable Avatar<?>> AVATAR_RENDERING_STACK = new Stack<>();
-    // Cursed deferred rendering queue, required because of vanilla part mixin business
-//    public static final Queue<Consumer<MultiBufferSource>> DEFERRED_AVATAR_RENDERING_QUEUE = new ArrayDeque<>();
 
     public static boolean LOADED_TEST_AVATAR = false;
 
@@ -25,7 +22,7 @@ public class FiguraModClient implements ClientModInitializer {
         ConfigManager.init();
 
         // Initialize OptimizedRendering on render thread later
-        // Initializing it right now will crash the game with an EXCEPTION_ACCESS_VIOLATION so be careful
+        // Initializing it right now will segfault the game with an EXCEPTION_ACCESS_VIOLATION so be careful
         RenderSystem.recordRenderCall(OptimizedRendering::init);
     }
 

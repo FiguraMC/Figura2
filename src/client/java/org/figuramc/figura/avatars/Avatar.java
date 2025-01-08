@@ -91,8 +91,8 @@ public class Avatar<K> {
         for (AvatarComponent component : components)
             component.onError(reason);
         // Report the error to user
-        ChatUtils.reportErrorWithReason(message, reason);
         FiguraMod.LOGGER.error("Avatar with user (" + user + ") encountered an error: ", reason);
+        ChatUtils.reportErrorWithReason(message, reason);
     }
 
     // We want to use this function only when necessary; for most usages, the fact

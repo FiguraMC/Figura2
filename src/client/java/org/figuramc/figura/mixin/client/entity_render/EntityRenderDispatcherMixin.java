@@ -35,7 +35,7 @@ public class EntityRenderDispatcherMixin {
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
         if (avatar != null)
             if (FiguraModClient.AVATAR_RENDERING_STACK.pop() != avatar)
-                throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in the mod, or a compat issue!");
+                throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in Figura, or a compat issue!");
 
         // Also, flush the deferred render queue!
         DeferredVanillaPartRenderQueue.flush(multiBufferSource);
