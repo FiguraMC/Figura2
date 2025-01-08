@@ -62,6 +62,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             // Other
             FiguraRequire.createRequire(state, scripts); // Setup require()
             FiguraMath.init(state, metatables);
+            FiguraTable.init(state);
 
             // Set up events (also fetch the event objects for calling later):
             LuaTable defaultEvents = FiguraEvents.init(state, "tick", "render");
@@ -69,7 +70,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             render = defaultEvents.rawget("render");
 
             // Benchmark testers, todo remove
-            state.globals().rawset("micros", LibFunction.create(s -> LuaDouble.valueOf(System.nanoTime() / 1000d)));
+            state.globals().rawset("micros", LibFunction.create(s -> ValueFactory.valueOf(System.nanoTime() / 1000d)));
             state.globals().rawset("print", LibFunction.create((s, v) -> { System.out.println(v); return Constants.NIL; }));
 
             // Add global variable "models" because why not. Also todo make more organized.
