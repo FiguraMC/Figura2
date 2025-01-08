@@ -5,7 +5,7 @@ import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
-import org.figuramc.figura.script_languages.lua.math.Vector3API;
+import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
 import org.joml.Vector3d;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;

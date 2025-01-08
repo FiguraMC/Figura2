@@ -1,6 +1,5 @@
 package org.figuramc.figura.script_languages.lua;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
@@ -8,10 +7,9 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
-import org.figuramc.figura.script_languages.lua.math.Vector4API;
+import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
 import org.figuramc.figura.script_languages.lua.model_parts.RootModelPartAPI;
-import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
 

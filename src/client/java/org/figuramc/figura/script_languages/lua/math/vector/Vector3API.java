@@ -1,4 +1,4 @@
-package org.figuramc.figura.script_languages.lua.math;
+package org.figuramc.figura.script_languages.lua.math.vector;
 
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaUserdata;

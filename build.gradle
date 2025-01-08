@@ -62,7 +62,6 @@ dependencies {
 	// Utils
 	include(implementation("com.moulberry:mixinconstraints:1.0.1"))
 
-
 }
 
 processResources {

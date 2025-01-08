@@ -14,7 +14,7 @@ import java.io.InputStream;
  * Events logic in another class for safe keeping.
  * Uses 'events.lua' resource to define most logic in Lua directly.
  */
-public class EventsAPI {
+public class FiguraEvents {
 
     /**
      * Runs the "events" script in the given state, and create several default events.

@@ -34,20 +34,17 @@ public class AvatarSubManager<K> {
 
                     // For now, we'll ALWAYS report to chat/console.
                     // Maybe later we'll disable this for multiplayer avatars (whenever we get to that lol)
-                    if (cause instanceof AvatarImportingException) {
-                        ChatUtils.reportErrorWithReason(Component.literal("Failed to load avatar!"), cause, false); // TODO Translate
-                        FiguraMod.LOGGER.error("Failed to load avatar!", cause);
-                    } else {
-                        ChatUtils.unexpectedError(cause);
-                        FiguraMod.LOGGER.error("Unexpected internal error!", cause);
+                    switch (cause) {
+                        case AvatarImportingException importingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to import avatar"), cause); // TODO Translate
+                        case AvatarLoadingException loadingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to load avatar"), cause); // TODO Translate
+                        default -> ChatUtils.unexpectedError("avatar loading", cause);
                     }
 
                     // Cancel the in-progress Avatar, since it errored
                     cancelInProgress(key);
                     continue;
                 } catch (Throwable unexpected) {
-                    ChatUtils.unexpectedError(unexpected);
-                    FiguraMod.LOGGER.error("Unexpected internal error!", unexpected);
+                    ChatUtils.unexpectedError("avatar loading", unexpected);
                     cancelInProgress(key);
                     continue;
                 }

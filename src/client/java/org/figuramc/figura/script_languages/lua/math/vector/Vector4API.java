@@ -1,4 +1,4 @@
-package org.figuramc.figura.script_languages.lua.math;
+package org.figuramc.figura.script_languages.lua.math.vector;
 
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
@@ -207,7 +207,7 @@ public class Vector4API {
         metatable.rawset("unit", LibFunction.create((s, v) ->
                 userdataOf(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatable)
         ));
-        // Length
+        // Length (or use the # operator!)
         metatable.rawset("len", LibFunction.create((s, v) ->
                 valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
