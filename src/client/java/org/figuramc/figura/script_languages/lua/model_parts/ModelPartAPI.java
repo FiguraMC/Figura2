@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.model_parts;
 
+import net.minecraft.util.Mth;
 import org.figuramc.figura.model.part.*;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
@@ -66,26 +67,10 @@ public class ModelPartAPI {
             }
             return args.first();
         }));
-        metatable.rawset("scale", LibFunction.createV((s, args) -> {
-            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
-            switch (args.count()) {
-                case 1 -> { return Vector3API.wrap(new Vector3d(part.transform.getScale()), metatables); }
-                case 2 -> {
-                    Vector3d vec = args.arg(2).checkUserdata(s, Vector3d.class);
-                    part.transform.setScale((float) vec.x, (float) vec.y, (float) vec.z);
-                }
-                case 4 -> part.transform.setScale(
-                        (float) args.arg(2).checkDouble(s),
-                        (float) args.arg(3).checkDouble(s),
-                        (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:scale(): expected 0, 1, or 3", s.allocationTracker);
-            }
-            return args.first();
-        }));
         metatable.rawset("rot", LibFunction.createV((s, args) -> {
             FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
             switch (args.count()) {
-                case 1 -> { return Vector3API.wrap(new Vector3d(part.transform.getEulerRad()).mul(180 / Math.PI), metatables); }
+                case 1 -> { return Vector3API.wrap(new Vector3d(part.transform.getEulerRad()).mul(Mth.RAD_TO_DEG), metatables); }
                 case 2 -> {
                     Vector3d vec = args.arg(2).checkUserdata(s, Vector3d.class);
                     part.transform.setEulerDeg((float) vec.x, (float) vec.y, (float) vec.z);
@@ -118,6 +103,31 @@ public class ModelPartAPI {
 //        metatable.rawset("quat", LibFunction.createV((s, args) -> {
 //            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
 //        }));
+        metatable.rawset("scale", LibFunction.createV((s, args) -> {
+            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
+            switch (args.count()) {
+                case 1 -> { return Vector3API.wrap(new Vector3d(part.transform.getScale()), metatables); }
+                case 2 -> {
+                    Vector3d vec = args.arg(2).checkUserdata(s, Vector3d.class);
+                    part.transform.setScale((float) vec.x, (float) vec.y, (float) vec.z);
+                }
+                case 4 -> part.transform.setScale(
+                        (float) args.arg(2).checkDouble(s),
+                        (float) args.arg(3).checkDouble(s),
+                        (float) args.arg(4).checkDouble(s));
+                default -> throw new LuaError("Invalid number of args to ModelPart:scale(): expected 0, 1, or 3", s.allocationTracker);
+            }
+            return args.first();
+        }));
+        metatable.rawset("vis", LibFunction.createV((s, args) -> {
+            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
+            switch (args.count()) {
+                case 1 -> { return valueOf(part.transform.getVisible()); }
+                case 2 -> part.transform.setVisible(args.arg(2).checkBoolean(s));
+                default -> throw new LuaError("Invalid number of args to ModelPart:vis(): expected 0 or 1", s.allocationTracker);
+            }
+            return args.first();
+        }));
 
         // Other operations
 

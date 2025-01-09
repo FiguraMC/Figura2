@@ -14,6 +14,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.network.chat.Component;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -126,38 +127,42 @@ public class ModelPartRenderMixin {
             // Apply transforms!
 
             // Origin:
-            if (currentModelPart.getCancelVanillaOrigin()) {
+            Vector3f origin = currentModelPart.vanillaTransform.getOrigin();
+            if (currentModelPart.cancelVanillaOrigin) {
                 // Affect only by offsets
-                poseStack.translate(currentModelPart.originOffset.x * inv / 16, currentModelPart.originOffset.y * inv / 16, currentModelPart.originOffset.z / 16);
-                tempMatrixStack.translate(currentModelPart.originOffset.x / 16, currentModelPart.originOffset.y / 16 + yOffset, currentModelPart.originOffset.z / 16);
+                poseStack.translate(origin.x * inv / 16, origin.y * inv / 16, origin.z / 16);
+                tempMatrixStack.translate(origin.x / 16, origin.y / 16 + yOffset, origin.z / 16);
             } else {
                 // Affect by vanilla AND offsets
-                poseStack.translate((this.x + currentModelPart.originOffset.x * inv) / 16, (this.y + currentModelPart.originOffset.y * inv) / 16, (this.z + currentModelPart.originOffset.z) / 16);
-                tempMatrixStack.translate((this.x * inv + currentModelPart.originOffset.x) / 16, (this.y * inv + currentModelPart.originOffset.y) / 16 + yOffset, (this.z + currentModelPart.originOffset.z) / 16);
+                poseStack.translate((this.x + origin.x * inv) / 16, (this.y + origin.y * inv) / 16, (this.z + origin.z) / 16);
+                tempMatrixStack.translate((this.x * inv + origin.x) / 16, (this.y * inv + origin.y) / 16 + yOffset, (this.z + origin.z) / 16);
             }
             // Rotation:
-            if (currentModelPart.getCancelVanillaRotation()) {
+            Vector3f rotation = currentModelPart.vanillaTransform.getEulerRad();
+            if (currentModelPart.cancelVanillaRotation) {
                 // Affect only by offset
-                poseStack.mulPose(tempQuat.rotationZYX(currentModelPart.rotationOffset.z, currentModelPart.rotationOffset.y * inv, currentModelPart.rotationOffset.x * inv));
-                tempMatrixStack.rotate(tempQuat.rotationZYX(currentModelPart.rotationOffset.z, currentModelPart.rotationOffset.y, currentModelPart.rotationOffset.x));
+                poseStack.mulPose(tempQuat.rotationZYX(rotation.z, rotation.y * inv, rotation.x * inv));
+                tempMatrixStack.rotate(tempQuat.rotationZYX(rotation.z, rotation.y, rotation.x));
             } else {
                 // Affect by vanilla AND offsets
-                poseStack.mulPose(tempQuat.rotationZYX(this.zRot + currentModelPart.rotationOffset.z, this.yRot + currentModelPart.rotationOffset.y * inv, this.xRot + currentModelPart.rotationOffset.x * inv));
-                tempMatrixStack.rotate(tempQuat.rotationZYX(this.zRot + currentModelPart.rotationOffset.z, this.yRot * inv + currentModelPart.rotationOffset.y, this.xRot * inv + currentModelPart.rotationOffset.x));
+                poseStack.mulPose(tempQuat.rotationZYX(this.zRot + rotation.z, this.yRot + rotation.y * inv, this.xRot + rotation.x * inv));
+                tempMatrixStack.rotate(tempQuat.rotationZYX(this.zRot + rotation.z, this.yRot * inv + rotation.y, this.xRot * inv + rotation.x));
             }
             // Scale:
-            if (currentModelPart.getCancelVanillaScale()) {
+            Vector3f scale = currentModelPart.vanillaTransform.getScale();
+            if (currentModelPart.cancelVanillaScale) {
                 // Affect only by multiplier
-                poseStack.scale(currentModelPart.scaleMultiplier.x, currentModelPart.scaleMultiplier.y, currentModelPart.scaleMultiplier.z);
-                tempMatrixStack.scale(currentModelPart.scaleMultiplier.x, currentModelPart.scaleMultiplier.y, currentModelPart.scaleMultiplier.z);
+                poseStack.scale(scale.x, scale.y, scale.z);
+                tempMatrixStack.scale(scale.x, scale.y, scale.z);
             } else {
                 // Affect by vanilla AND multiplier
-                poseStack.scale(this.xScale * currentModelPart.scaleMultiplier.x, this.yScale * currentModelPart.scaleMultiplier.y, this.zScale * currentModelPart.scaleMultiplier.z);
-                tempMatrixStack.scale(this.xScale * currentModelPart.scaleMultiplier.x, this.yScale * currentModelPart.scaleMultiplier.y, this.zScale * currentModelPart.scaleMultiplier.z);
+                poseStack.scale(this.xScale * scale.x, this.yScale * scale.y, this.zScale * scale.z);
+                tempMatrixStack.scale(this.xScale * scale.x, this.yScale * scale.y, this.zScale * scale.z);
             }
             // Position (has no vanilla analogue to cancel):
-            poseStack.translate(currentModelPart.positionOffset.x * inv, currentModelPart.positionOffset.y * inv, currentModelPart.positionOffset.z);
-            tempMatrixStack.translate(currentModelPart.positionOffset.x, currentModelPart.positionOffset.y, currentModelPart.positionOffset.z);
+            Vector3f position = currentModelPart.vanillaTransform.getPosition();
+            poseStack.translate(position.x * inv, position.y * inv, position.z);
+            tempMatrixStack.translate(position.x, position.y, position.z);
 
             // Cancel the vanilla code
             ci.cancel();
@@ -184,7 +189,7 @@ public class ModelPartRenderMixin {
     )
     private void maybeCancelVanillaRender(PoseStack.Pose pose, VertexConsumer vertexConsumer, int i, int j, int k, CallbackInfo ci) {
         // If the model part's vanilla transform is invisible, cancel out!
-        if (currentModelPart != null && !currentModelPart.getVanillaVisible())
+        if (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())
             ci.cancel();
     }
 

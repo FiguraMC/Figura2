@@ -17,6 +17,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.network.chat.Component;
 import org.apache.commons.lang3.ArrayUtils;
 import org.joml.Quaternionf;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -121,38 +122,42 @@ public class SodiumEntityRendererMixin {
             // Apply transforms!
 
             // Origin:
-            if (currentModelPart.getCancelVanillaOrigin()) {
+            Vector3f origin = currentModelPart.vanillaTransform.getOrigin();
+            if (currentModelPart.cancelVanillaOrigin) {
                 // Affect only by offsets
-                poseStack.translate(currentModelPart.originOffset.x * inv / 16, currentModelPart.originOffset.y * inv / 16, currentModelPart.originOffset.z / 16);
-                tempMatrixStack.translate(currentModelPart.originOffset.x / 16, currentModelPart.originOffset.y / 16 + yOffset, currentModelPart.originOffset.z / 16);
+                poseStack.translate(origin.x * inv / 16, origin.y * inv / 16, origin.z / 16);
+                tempMatrixStack.translate(origin.x / 16, origin.y / 16 + yOffset, origin.z / 16);
             } else {
                 // Affect by vanilla AND offsets
-                poseStack.translate((instance.x + currentModelPart.originOffset.x * inv) / 16, (instance.y + currentModelPart.originOffset.y * inv) / 16, (instance.z + currentModelPart.originOffset.z) / 16);
-                tempMatrixStack.translate((instance.x * inv + currentModelPart.originOffset.x) / 16, (instance.y * inv + currentModelPart.originOffset.y) / 16 + yOffset, (instance.z + currentModelPart.originOffset.z) / 16);
+                poseStack.translate((instance.x + origin.x * inv) / 16, (instance.y + origin.y * inv) / 16, (instance.z + origin.z) / 16);
+                tempMatrixStack.translate((instance.x * inv + origin.x) / 16, (instance.y * inv + origin.y) / 16 + yOffset, (instance.z + origin.z) / 16);
             }
             // Rotation:
-            if (currentModelPart.getCancelVanillaRotation()) {
+            Vector3f rotation = currentModelPart.vanillaTransform.getEulerRad();
+            if (currentModelPart.cancelVanillaRotation) {
                 // Affect only by offset
-                poseStack.mulPose(tempQuat.rotationZYX(currentModelPart.rotationOffset.z, currentModelPart.rotationOffset.y * inv, currentModelPart.rotationOffset.x * inv));
-                tempMatrixStack.rotate(tempQuat.rotationZYX(currentModelPart.rotationOffset.z, currentModelPart.rotationOffset.y, currentModelPart.rotationOffset.x));
+                poseStack.mulPose(tempQuat.rotationZYX(rotation.z, rotation.y * inv, rotation.x * inv));
+                tempMatrixStack.rotate(tempQuat.rotationZYX(rotation.z, rotation.y, rotation.x));
             } else {
                 // Affect by vanilla AND offsets
-                poseStack.mulPose(tempQuat.rotationZYX(instance.zRot + currentModelPart.rotationOffset.z, instance.yRot + currentModelPart.rotationOffset.y * inv, instance.xRot + currentModelPart.rotationOffset.x * inv));
-                tempMatrixStack.rotate(tempQuat.rotationZYX(instance.zRot + currentModelPart.rotationOffset.z, instance.yRot * inv + currentModelPart.rotationOffset.y, instance.xRot * inv + currentModelPart.rotationOffset.x));
+                poseStack.mulPose(tempQuat.rotationZYX(instance.zRot + rotation.z, instance.yRot + rotation.y * inv, instance.xRot + rotation.x * inv));
+                tempMatrixStack.rotate(tempQuat.rotationZYX(instance.zRot + rotation.z, instance.yRot * inv + rotation.y, instance.xRot * inv + rotation.x));
             }
             // Scale:
-            if (currentModelPart.getCancelVanillaScale()) {
+            Vector3f scale = currentModelPart.vanillaTransform.getScale();
+            if (currentModelPart.cancelVanillaScale) {
                 // Affect only by multiplier
-                poseStack.scale(currentModelPart.scaleMultiplier.x, currentModelPart.scaleMultiplier.y, currentModelPart.scaleMultiplier.z);
-                tempMatrixStack.scale(currentModelPart.scaleMultiplier.x, currentModelPart.scaleMultiplier.y, currentModelPart.scaleMultiplier.z);
+                poseStack.scale(scale.x, scale.y, scale.z);
+                tempMatrixStack.scale(scale.x, scale.y, scale.z);
             } else {
                 // Affect by vanilla AND multiplier
-                poseStack.scale(instance.xScale * currentModelPart.scaleMultiplier.x, instance.yScale * currentModelPart.scaleMultiplier.y, instance.zScale * currentModelPart.scaleMultiplier.z);
-                tempMatrixStack.scale(instance.xScale * currentModelPart.scaleMultiplier.x, instance.yScale * currentModelPart.scaleMultiplier.y, instance.zScale * currentModelPart.scaleMultiplier.z);
+                poseStack.scale(instance.xScale * scale.x, instance.yScale * scale.y, instance.zScale * scale.z);
+                tempMatrixStack.scale(instance.xScale * scale.x, instance.yScale * scale.y, instance.zScale * scale.z);
             }
             // Position (has no vanilla analogue to cancel):
-            poseStack.translate(currentModelPart.positionOffset.x * inv, currentModelPart.positionOffset.y * inv, currentModelPart.positionOffset.z);
-            tempMatrixStack.translate(currentModelPart.positionOffset.x, currentModelPart.positionOffset.y, currentModelPart.positionOffset.z);
+            Vector3f position = currentModelPart.vanillaTransform.getPosition();
+            poseStack.translate(position.x * inv, position.y * inv, position.z);
+            tempMatrixStack.translate(position.x, position.y, position.z);
 
         } else {
             // Otherwise, just do the usual
@@ -180,7 +185,7 @@ public class SodiumEntityRendererMixin {
     )
     private static void maybeCancelVanillaRender(PoseStack.Pose matrices, VertexBufferWriter writer, ModelCuboid[] cuboids, int light, int overlay, int color, CallbackInfo ci) {
         // If the model part's vanilla transform is invisible, cancel out!
-        if (currentModelPart != null && !currentModelPart.getVanillaVisible())
+        if (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())
             ci.cancel();
     }
 

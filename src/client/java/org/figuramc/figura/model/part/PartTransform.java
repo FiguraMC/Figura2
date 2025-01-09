@@ -51,6 +51,7 @@ public class PartTransform {
     public void setQuaternion(Quaternionf quat) { this.quaternion.set(quat).getEulerAnglesZYX(rotation); markDirty(); }
     public void setQuaternion(float x, float y, float z, float w) { this.quaternion.set(x, y, z, w).getEulerAnglesZYX(rotation); markDirty(); }
     public Vector3f getEulerRad() { return rotation; }
+    public Vector3f getEulerDeg() { return new Vector3f(rotation).mul(Mth.RAD_TO_DEG); }
     public Quaternionf getQuaternion() { return quaternion; }
 
     public void setVisible(boolean visible) { this.visible = visible; this.isDirty = true; }

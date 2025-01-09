@@ -10,6 +10,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
 import org.figuramc.figura.script_languages.lua.model_parts.RootModelPartAPI;
+import org.figuramc.figura.script_languages.lua.model_parts.VanillaModelPartAPI;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
 
@@ -42,7 +43,7 @@ public class FiguraMetatables extends MarkedObjectBase {
         // Model part
         modelPart = ModelPartAPI.createMetatable(state, this);
         rootModelPart = RootModelPartAPI.createMetatable(state, this);
-        vanillaRootModelPart = rootModelPart;
+        vanillaRootModelPart = VanillaModelPartAPI.createMetatable(state, this);
         worldRootModelPart = rootModelPart;
         customItemModelPart = rootModelPart;
     }
@@ -60,7 +61,7 @@ public class FiguraMetatables extends MarkedObjectBase {
                 return SuspendedAction.run(di, () -> Dispatch.invoke(s, superIndexFunc, args));
             }));
         } else {
-            // Superclass doesn't have an __index, so we can just set __index to the superclass metatable.
+            // Superclass doesn't have an __index function, so we can just set __index to the superclass metatable.
             subclassMetatable.rawset(INDEX, superclassMetatable);
         }
     }
