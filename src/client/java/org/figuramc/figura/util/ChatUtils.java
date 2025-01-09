@@ -19,6 +19,7 @@ public class ChatUtils {
      */
     public static void reportErrorWithReason(MutableComponent primaryMessage, @Nullable Throwable reason) {
         MutableComponent msg = primaryMessage.withStyle(ChatFormatting.RED);
+        Throwable firstReason = reason;
         if (reason == null)
             msg = msg.append(" ").append(Component.literal("[No reason given]").withStyle(ChatFormatting.AQUA)); // TODO translatable
         else {
@@ -40,7 +41,7 @@ public class ChatUtils {
         }
         Minecraft.getInstance().gui.getChat().addMessage(msg);
         // Also report to logger
-        FiguraMod.LOGGER.error(primaryMessage.tryCollapseToString(), reason);
+        FiguraMod.LOGGER.error(primaryMessage.tryCollapseToString(), firstReason);
     }
 
     public static void unexpectedError(String during, Throwable reason) {

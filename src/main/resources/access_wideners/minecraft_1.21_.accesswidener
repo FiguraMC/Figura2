@@ -12,6 +12,9 @@ accessible field net/minecraft/client/renderer/texture/TextureManager byPath Lja
 # Grabbing render layers from a LivingEntityRenderer
 accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
 
+# Constructing new render layers
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+
 # Getting data of vanilla model parts
 accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;
 accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;

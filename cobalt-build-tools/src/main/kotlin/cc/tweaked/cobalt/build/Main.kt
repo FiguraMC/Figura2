@@ -29,7 +29,7 @@ fun main(args: Array<String>) {
 	} while (!tempDir.endsWith("java"))
 
 	println("Class prefix: $classPrefix")
-	tempDir = tempDir.resolve("temp")
+	tempDir = tempDir.resolve("FIGURA_COBALT_temp")
 	println("Temp directory: $tempDir")
 
 
