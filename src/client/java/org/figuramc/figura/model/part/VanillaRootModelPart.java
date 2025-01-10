@@ -37,7 +37,4 @@ public class VanillaRootModelPart extends RootModelPart {
         vanillaTransform.setVisible(!materials.replaceRoot().getValue());
     }
 
-    // Render callbacks
-    public void addVanillaRenderCallback(ScriptCallback callback) { vanillaRenderCallbacks.add(callback); }
-
 }

@@ -40,13 +40,12 @@ public class SodiumEntityRendererMixin {
 
     @Inject(method = "render", at = @At("HEAD"))
     private static void preRender(PoseStack matrixStack, VertexBufferWriter writer, ModelPart part, int light, int overlay, int color, CallbackInfo ci) {
-        if (FiguraModClient.AVATAR_RENDERING_STACK.isEmpty()) { resetVars(); return; }
         Avatar<?> peeked = FiguraModClient.AVATAR_RENDERING_STACK.peek();
         if (peeked == null) { resetVars(); return; }
         VanillaParts vanillaParts = peeked.getComponent(VanillaParts.class);
         if (vanillaParts == null) { resetVars(); return; }
         VanillaRootModelPart modelPart = vanillaParts.partMap.get(part);
-        if (modelPart == null) { resetVars(); return; }
+        if (!vanillaParts.cancelAllModelParts && modelPart == null) { resetVars(); return; }
         currentAvatar = peeked;
         currentModelPart = modelPart;
         currentVanillaParts = vanillaParts;
@@ -184,8 +183,8 @@ public class SodiumEntityRendererMixin {
             cancellable = true
     )
     private static void maybeCancelVanillaRender(PoseStack.Pose matrices, VertexBufferWriter writer, ModelCuboid[] cuboids, int light, int overlay, int color, CallbackInfo ci) {
-        // If the model part's vanilla transform is invisible, cancel out!
-        if (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())
+        // If all model parts are hidden, or the model part's vanilla transform is invisible, cancel out!
+        if (currentVanillaParts != null && (currentVanillaParts.cancelAllModelParts || (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())))
             ci.cancel();
     }
 

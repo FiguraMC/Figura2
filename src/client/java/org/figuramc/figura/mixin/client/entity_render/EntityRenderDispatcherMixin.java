@@ -1,5 +1,7 @@
 package org.figuramc.figura.mixin.client.entity_render;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
@@ -23,20 +25,14 @@ public class EntityRenderDispatcherMixin {
 
     // x, y, z are the entity's position in world space relative to the camera.
     // Not relevant to the mixin, just felt like explaining it.
-    @Inject(method = "render", at = @At("HEAD"))
-    public void pushAvatar(Entity entity, double x, double y, double z, float yaw, float tickDelta, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
+    @WrapMethod(method = "render")
+    public void pushPopAvatar(Entity entity, double d, double e, double f, float g, float h, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, Operation<Void> original) {
+        // Push the avatar before rendering, and pop afterward.
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
-        if (avatar != null)
-            FiguraModClient.AVATAR_RENDERING_STACK.push(avatar);
-    }
-
-    @Inject(method = "render", at = @At("RETURN"))
-    public void popAvatar(Entity entity, double x, double y, double z, float yaw, float tickDelta, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
-        Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
-        if (avatar != null)
-            if (FiguraModClient.AVATAR_RENDERING_STACK.pop() != avatar)
-                throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in Figura, or a compat issue!");
-
+        FiguraModClient.AVATAR_RENDERING_STACK.push(avatar);
+        original.call(entity, d, e, f, g, h, poseStack, multiBufferSource, i);
+        if (FiguraModClient.AVATAR_RENDERING_STACK.pop() != avatar)
+            throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in Figura, or a compat issue!");
         // Also, flush the deferred render queue!
         DeferredVanillaPartRenderQueue.flush(multiBufferSource);
     }

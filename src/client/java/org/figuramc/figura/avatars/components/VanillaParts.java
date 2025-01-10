@@ -1,5 +1,6 @@
 package org.figuramc.figura.avatars.components;
 
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
@@ -12,6 +13,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -24,21 +26,28 @@ import java.util.Map;
  */
 public class VanillaParts implements AvatarComponent {
 
-    public boolean isLivingEntityRenderer; // Whether this uses a LivingEntityRenderer
+    // Whether this uses a LivingEntityRenderer
+    public boolean isLivingEntityRenderer;
+    // Whether to cancel all vanilla model part rendering
+    public boolean cancelAllModelParts;
 
-    // Mapping from vanilla model parts to the corresponding FiguraModelPart. Refreshes on resource reload.
+    // Mapping from vanilla model parts to the corresponding FiguraModelPart. Refreshes occasionally.
     public final Map<ModelPart, VanillaRootModelPart> partMap = new IdentityHashMap<>();
-    // Does not refresh. Can eventually change through scripts though.
+    // Does not refresh, can only be added to. Can eventually change through scripts though.
     // Note: Values in this map don't necessarily always have a corresponding value in partMap; since there might
     // not be a `ModelPart` that connects to it. However, compat with other mods can involve looking at this map.
     public final Map<String, VanillaRootModelPart> partNameMap = new HashMap<>();
 
+    // Whether a part map refresh is needed. Starts true.
+    private boolean needsPartMapRefresh = true;
+
+    private Textures texturesComponent;
     private EntityUser entityUserComponent;
 
     @Override
     public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
         // Depends on Textures and EntityUser
-        Textures texturesComponent = self.assertDependency(Textures.class, getClass());
+        texturesComponent = self.assertDependency(Textures.class, getClass());
         entityUserComponent = self.assertDependency(EntityUser.class, getClass());
         // Store entries in partNameMap
         for (var entry : materials.vanillaPartRoots().entrySet()) {
@@ -50,7 +59,8 @@ public class VanillaParts implements AvatarComponent {
     // Regenerate the part map when the entity user changes
     @Override
     public boolean tick() {
-        if (entityUserComponent.changed()) {
+        // If we need a refresh, or the entity changed, regenerate.
+        if (needsPartMapRefresh || entityUserComponent.changed()) {
             regeneratePartMap();
         }
         return false;
@@ -78,17 +88,25 @@ public class VanillaParts implements AvatarComponent {
         });
         // Set the variable for whether it's a living entity
         isLivingEntityRenderer = renderer instanceof LivingEntityRenderer<?,?>;
+        // Mark as not needing a refresh
+        needsPartMapRefresh = false;
     }
 
-    // If the setup is valid, updates the part map. Returns true if successful.
-    public boolean updatePartMap(String name, VanillaRootModelPart value) {
-        Entity entity = entityUserComponent.getEntity();
-        if (entity == null) return false;
-        EntityRenderer<?> renderer = RenderUtils.getRenderer(entity);
-        @Nullable ModelPart vanillaModelPart = ModelPartTracker.getModelPartByName(renderer, name);
-        if (vanillaModelPart == null) return false;
-        partMap.put(vanillaModelPart, value);
-        return true;
+    // Get the part with the given name, if any. If there is none, add a new,
+    // empty part to partNameMap with the given name and return it.
+    public VanillaRootModelPart getOrCreatePart(String name) {
+        VanillaRootModelPart part = partNameMap.get(name);
+        if (part != null) return part;
+        // Create new part with empty, default materials, store in map, and return
+        VanillaRootModelPart newPart = new VanillaRootModelPart(emptyMaterials, texturesComponent.textures);
+        partNameMap.put(name, newPart);
+        // We need a refresh!
+        needsPartMapRefresh = true;
+        return newPart;
     }
+    private static final AvatarMaterials.VanillaRootPartMaterials emptyMaterials = new AvatarMaterials.VanillaRootPartMaterials(
+            new AvatarMaterials.ModelPartMaterials("root", new Vector3f(), new Vector3f(), List.of(), -1, List.of(), List.of()),
+            new MutableBoolean(false)
+    );
 
 }

@@ -43,13 +43,12 @@ public class ModelPartRenderMixin {
     )
     public void preRender(PoseStack poseStack, VertexConsumer vertexConsumer, int light, int overlay, int color, CallbackInfo ci) {
         // At the start of the render, fetch the corresponding Avatar if there is one
-        if (FiguraModClient.AVATAR_RENDERING_STACK.isEmpty()) { resetVars(); return; }
         Avatar<?> peeked = FiguraModClient.AVATAR_RENDERING_STACK.peek();
         if (peeked == null) { resetVars(); return; }
         VanillaParts vanillaParts = peeked.getComponent(VanillaParts.class);
         if (vanillaParts == null) { resetVars(); return; }
         VanillaRootModelPart modelPart = vanillaParts.partMap.get(this);
-        if (modelPart == null) { resetVars(); return; }
+        if (!vanillaParts.cancelAllModelParts && modelPart == null) { resetVars(); return; }
         // All checks are passed, let's go
         currentAvatar = peeked;
         currentModelPart = modelPart;
@@ -188,8 +187,8 @@ public class ModelPartRenderMixin {
             cancellable = true
     )
     private void maybeCancelVanillaRender(PoseStack.Pose pose, VertexConsumer vertexConsumer, int i, int j, int k, CallbackInfo ci) {
-        // If the model part's vanilla transform is invisible, cancel out!
-        if (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())
+        // If all model parts are hidden, or the model part's vanilla transform is invisible, cancel out!
+        if (currentVanillaParts != null && (currentVanillaParts.cancelAllModelParts || (currentModelPart != null && !currentModelPart.vanillaTransform.getVisible())))
             ci.cancel();
     }
 

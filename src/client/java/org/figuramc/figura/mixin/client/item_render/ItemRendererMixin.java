@@ -1,14 +1,8 @@
 package org.figuramc.figura.mixin.client.item_render;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
-import org.figuramc.figura.FiguraModClient;
-import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.avatars.components.CustomItems;
-import org.figuramc.figura.model.optimized.RenderingMode;
-import org.figuramc.figura.model.part.CustomItemModelPart;
-import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransform;
@@ -17,12 +11,17 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.figuramc.figura.FiguraModClient;
+import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.components.CustomItems;
+import org.figuramc.figura.model.optimized.RenderingMode;
+import org.figuramc.figura.model.part.CustomItemModelPart;
+import org.figuramc.figura.model.part.RootModelPart;
+import org.figuramc.figura.script_hooks.ScriptError;
+import org.figuramc.figura.util.FiguraMatrixStack;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemRenderer.class)
 public class ItemRendererMixin {
@@ -30,15 +29,28 @@ public class ItemRendererMixin {
     @Unique private static final FiguraMatrixStack MATRIX_STACK = new FiguraMatrixStack();
     @Unique private static final Quaternionf TEMP_QUAT = new Quaternionf(); // Temporary for calculations
 
-    @Inject(method = "render", at = @At("HEAD"), cancellable = true)
-    public void renderCustomItem(ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay, BakedModel bakedModel, CallbackInfo ci) {
+    @WrapMethod(method = "render")
+    public void renderCustomItem(ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j, BakedModel bakedModel, Operation<Void> original) {
+        Avatar<?> peekedAvatar = FiguraModClient.AVATAR_RENDERING_STACK.peek();
+        // Push null, so that model parts inside this item are not considered part of the enclosing avatar's vanilla model...
+        FiguraModClient.AVATAR_RENDERING_STACK.push(null);
+        // Try to override with a figura custom part:
+        boolean overrode = tryFiguraOverride(peekedAvatar, itemStack, itemDisplayContext, bl, poseStack, multiBufferSource, i, j, bakedModel);
+        // If we didn't override, then call the original method
+        if (!overrode) original.call(itemStack, itemDisplayContext, bl, poseStack, multiBufferSource, i, j, bakedModel);
+        // Finally, pop the stack and assert.
+        if (FiguraModClient.AVATAR_RENDERING_STACK.pop() != null)
+            throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in Figura, or a compat issue!");
+    }
+
+    // Try figura override. Return true if successfully overrode with a figura part, false otherwise.
+    @Unique
+    private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay, BakedModel bakedModel) {
         // Look for an overriding model part
-        if (FiguraModClient.AVATAR_RENDERING_STACK.isEmpty()) return;
-        Avatar<?> avatar = FiguraModClient.AVATAR_RENDERING_STACK.peek();
         CustomItems itemsComponent;
-        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.class)) == null) return;
+        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.class)) == null) return false;
         RootModelPart modelPart = itemsComponent.getModelPart(itemStack, itemDisplayContext);
-        if (modelPart == null) return;
+        if (modelPart == null) return false;
         // If we found one, render it:
         MATRIX_STACK.setFromVanilla(poseStack);
         if (modelPart instanceof CustomItemModelPart customModel) {
@@ -66,9 +78,8 @@ public class ItemRendererMixin {
         } catch (Throwable other) {
             avatar.error(Component.literal("Unexpected error during model part rendering"), other);
         }
-
-        // And cancel out of the original rendering
-        ci.cancel();
+        // Successfully overrode it!
+        return true;
     }
 
     /**

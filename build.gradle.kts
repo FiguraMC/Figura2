@@ -52,7 +52,7 @@ dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft("com.mojang:minecraft:${stonecutter.current.project}")
 	mappings(loom.officialMojangMappings())
-	modImplementation("net.fabricmc:fabric-loader:0.15.11")
+	modImplementation("net.fabricmc:fabric-loader:0.16.10")
 
 	modCompileOnly("maven.modrinth:sodium:mc1.21-0.5.11")
 	modCompileOnly("maven.modrinth:iris:1.7.3+1.21")

@@ -4,7 +4,9 @@ import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
 import org.figuramc.figura.avatars.components.Scripts;
+import org.figuramc.figura.avatars.components.VanillaParts;
 import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
@@ -78,6 +80,44 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             state.globals().rawset("models", models);
             if (avatar.optionalDependency(EntityRoot.class, Scripts.class) != null)
                 models.rawset("entity", ModelPartAPI.wrap(avatar.assertDependency(EntityRoot.class, Scripts.class).getModelPart(), metatables));
+
+            // Create "vanilla" table if we have vanilla parts
+            if (avatar.optionalDependency(VanillaParts.class, Scripts.class) != null) {
+                VanillaParts component = avatar.assertDependency(VanillaParts.class, Scripts.class);
+
+                // vanilla
+                LuaTable vanilla = ValueFactory.tableOf(state.allocationTracker);
+                state.globals().rawset("vanilla", vanilla);
+
+                // vanilla.cancelAllParts(). 0 arg getter, 1 arg setter.
+                vanilla.rawset("cancelAllParts", LibFunction.createV((s, args) -> {
+                    switch (args.count()) {
+                        case 0 -> { return ValueFactory.valueOf(component.cancelAllModelParts); }
+                        case 1 -> component.cancelAllModelParts = args.first().checkBoolean(s);
+                        default -> throw new LuaError("Invalid number of args to cancelAllParts(): expected 0 or 1", s.allocationTracker);
+                    }
+                    return Constants.NONE;
+                }));
+
+                // vanilla.parts
+                LuaTable parts = ValueFactory.tableOf(state.allocationTracker);
+                vanilla.rawset("parts", parts);
+                // Fill it with current parts:
+                for (var entry : component.partNameMap.entrySet())
+                    parts.rawset(entry.getKey(), ModelPartAPI.wrap(entry.getValue(), metatables));
+                // Add __index which will create a new part if none exists:
+                LuaTable partsMetatable = ValueFactory.tableOf(state.allocationTracker);
+                partsMetatable.rawset("__index", LibFunction.create((s, self, key) -> {
+                    String name = key.checkString(s);
+                    // If we don't already have a part for this key, create a new one
+                    VanillaRootModelPart newRoot = component.getOrCreatePart(name);
+                    // Store it back in the table for next time, and return it
+                    LuaValue wrapped = ModelPartAPI.wrap(newRoot, metatables);
+                    parts.rawset(key, wrapped);
+                    return wrapped;
+                }));
+                parts.setMetatable(state, partsMetatable);
+            }
 
         } catch (LuaError error) {
             throw new AvatarLoadingException("Problem instantiating the Lua runtime", error);
