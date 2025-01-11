@@ -31,7 +31,7 @@
 			"environment": "client"
 		}
 	],
-	"accessWidener": "access_wideners/minecraft_${mcVersion}_.accesswidener",
+	"accessWidener": "figura.accesswidener",
 	"depends": {
 		"fabricloader": ">=0.15.11",
 		"minecraft": "~1.21",

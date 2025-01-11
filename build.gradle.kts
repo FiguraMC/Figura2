@@ -1,23 +1,15 @@
 plugins {
-	id("fabric-loom") version "1.6-SNAPSHOT"
+	id("fabric-loom") version "1.9-SNAPSHOT"
 	id("maven-publish")
 }
 
-//version = project.mod_version
-//group = project.maven_group
-//
+version = "${property("mod_version")}+mc${property("mc_version")}"
+group = property("mod_group").toString()
+base { archivesName = "${property("mod_id")}" }
+
 //base {
 //	archivesName = project.archives_base_name
 //}
-
-class ModData {
-	val id = property("mod.id").toString()
-	val name = property("mod.name").toString()
-	val version = property("mod.version").toString()
-	val group = property("mod.group").toString()
-}
-val mod = ModData()
-val mcVersion = stonecutter.current.version
 
 repositories {
 	// Add repositories to retrieve artifacts from in here.
@@ -33,7 +25,7 @@ repositories {
 loom {
     splitEnvironmentSourceSets()
 
-	accessWidenerPath = rootProject.file("src/main/resources/access_wideners/minecraft_${mcVersion}_.accesswidener")
+	accessWidenerPath = rootProject.file("src/main/resources/figura.accesswidener")
 
 	mods {
 		create("figura") {
@@ -50,15 +42,19 @@ val cobaltBuildTools by configurations.creating {
 
 dependencies {
 	// To change the versions see the gradle.properties file
-	minecraft("com.mojang:minecraft:${stonecutter.current.project}")
+	minecraft("com.mojang:minecraft:${property("mc_version")}")
 	mappings(loom.officialMojangMappings())
-	modImplementation("net.fabricmc:fabric-loader:0.16.10")
+	modImplementation("net.fabricmc:fabric-loader:${property("fabric_loader_version")}")
 
-	modCompileOnly("maven.modrinth:sodium:mc1.21-0.5.11")
-	modCompileOnly("maven.modrinth:iris:1.7.3+1.21")
+	modCompileOnly("maven.modrinth:sodium:${property("sodium_version")}")
+	modCompileOnly("maven.modrinth:iris:${property("iris_version")}")
 
 	// Fabric API (specific modules we want)
-	include(modImplementation(fabricApi.module("fabric-api-base", "0.100.7+1.21"))!!)
+	fun fabric(vararg modules: String) {
+		for (module in modules)
+			include(modImplementation(fabricApi.module(module, "${property("fabric_api_version")}"))!!)
+	}
+	fabric("fabric-api-base")
 
 	// Cobalt (lua) dependencies:
 	compileOnly("org.checkerframework:checker-qual:3.36.0")
@@ -70,10 +66,7 @@ dependencies {
 
 tasks.processResources {
 	// Text replacement mappings
-	val map = mapOf(
-		"version" to mod.version,
-		"mcVersion" to mcVersion
-	)
+	val map = mapOf("version" to project.version)
 	// Caching
 	map.forEach(inputs::property)
 	// Replace
