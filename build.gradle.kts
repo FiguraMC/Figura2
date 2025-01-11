@@ -41,6 +41,10 @@ loom {
 			sourceSet(sourceSets["client"])
 		}
 	}
+
+	runConfigs.configureEach {
+		ideConfigGenerated(true)
+	}
 }
 
 val cobaltBuildTools by configurations.creating {
@@ -96,6 +100,10 @@ val instrumentForCobalt = tasks.register("InstrumentForCobalt", JavaExec::class)
 }
 tasks["compileClientJava"].finalizedBy(instrumentForCobalt)
 tasks.jar { dependsOn(instrumentForCobalt) }
+
+tasks.named("runClient") {
+	dependsOn(instrumentForCobalt)
+}
 
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
