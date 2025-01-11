@@ -87,8 +87,10 @@ val instrumentForCobalt = tasks.register("InstrumentForCobalt", JavaExec::class)
 
 	args = listOf(luaDirectory.asFile.absolutePath)
 }
-tasks["compileClientJava"].finalizedBy(instrumentForCobalt)
 tasks.jar { dependsOn(instrumentForCobalt) }
+tasks.named("clientClasses") {
+	dependsOn(instrumentForCobalt)
+}
 
 java {
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
