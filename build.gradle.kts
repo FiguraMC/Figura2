@@ -87,7 +87,7 @@ val instrumentForCobalt = tasks.register("InstrumentForCobalt", JavaExec::class)
 
 	args = listOf(luaDirectory.asFile.absolutePath)
 }
-tasks["compileClientJava"].finalizedBy(instrumentForCobalt)
+tasks.named("clientClasses") { dependsOn(instrumentForCobalt) }
 tasks.jar { dependsOn(instrumentForCobalt) }
 
 java {
