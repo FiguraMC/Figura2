@@ -36,6 +36,6 @@ public class AtlasedAvatarTexture extends AvatarTexture {
     }
     @Override public int getWidth() { return this.locationInAtlas.getWidth(); }
     @Override public int getHeight() { return this.locationInAtlas.getHeight(); }
-    @Override public int getPixelRGBA(int x, int y) { return texturesComponent.atlas.image.getPixelRGBA(this.locationInAtlas.getX() + x, this .locationInAtlas.getY() + y); }
+    @Override public int getPixelRGBA(int x, int y) { return texturesComponent.atlas.image.getPixelABGR(this.locationInAtlas.getX() + x, this .locationInAtlas.getY() + y); }
 
 }

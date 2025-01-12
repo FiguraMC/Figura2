@@ -36,7 +36,7 @@ import java.util.function.Supplier;
 public class ClientLevelMixin {
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void resetLoaded(ClientPacketListener clientPacketListener, ClientLevel.ClientLevelData clientLevelData, ResourceKey resourceKey, Holder holder, int i, int j, Supplier supplier, LevelRenderer levelRenderer, boolean bl, long l, CallbackInfo ci) {
+    private void resetLoaded(ClientPacketListener clientPacketListener, ClientLevel.ClientLevelData clientLevelData, ResourceKey resourceKey, Holder holder, int i, int j, LevelRenderer levelRenderer, boolean bl, long l, int k, CallbackInfo ci) {
         FiguraModClient.LOADED_TEST_AVATAR = false;
     }
 
@@ -59,16 +59,16 @@ public class ClientLevelMixin {
             // Also export some stuff for testing
             try {
                 Path exportsFolder = FiguraDir.EXPORTS.get();
-                JsonObject playerExport = BBModelExporter.exportPlayer("slim_player", true);
+                JsonObject playerExport = BBModelExporter.exportPlayer("slim_player", true, BBModelExporter.ONLY_SUPPORTED);
                 Files.writeString(exportsFolder.resolve("slim_player.bbmodel"), playerExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject foxExport = BBModelExporter.exportEntity("fox", EntityType.FOX);
+                JsonObject foxExport = BBModelExporter.exportEntity("fox", EntityType.FOX, BBModelExporter.ALL_PARTS);
                 Files.writeString(exportsFolder.resolve("fox.bbmodel"), foxExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject endCrystalExport = BBModelExporter.exportEntity("end_crystal", EntityType.END_CRYSTAL);
+                JsonObject endCrystalExport = BBModelExporter.exportEntity("end_crystal", EntityType.END_CRYSTAL, BBModelExporter.ALL_PARTS);
                 Files.writeString(exportsFolder.resolve("end_crystal.bbmodel"), endCrystalExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject enderDragonExport = BBModelExporter.exportEntity("ender_dragon", EntityType.ENDER_DRAGON);
+                JsonObject enderDragonExport = BBModelExporter.exportEntity("ender_dragon", EntityType.ENDER_DRAGON, BBModelExporter.ALL_PARTS);
                 Files.writeString(exportsFolder.resolve("ender_dragon.bbmodel"), enderDragonExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
             } catch (IOException e) {

@@ -19,10 +19,10 @@ public class ModelPartTrackingMixin implements ModelPartTrackingAccess {
      * Adds "name" and "parent" fields to the model part. We attempt to
      * set these, whenever possible, when creating the model part.
      */
-    @Unique
-    public @Nullable String modelPartName;
-    @Unique
-    public @Nullable ModelPart parent;
+    @Unique public @Nullable String modelPartName;
+    // Alias set by ModelPartTracker
+    @Unique public @Nullable String alias;
+    @Unique public @Nullable ModelPart parent;
 
     // Inject into constructor:
     @SuppressWarnings("UnreachableCode")
@@ -38,16 +38,10 @@ public class ModelPartTrackingMixin implements ModelPartTrackingAccess {
         }
     }
 
-    @Override
-    public @Nullable String figura$getName() {
-        return modelPartName;
-    }
-    @Override
-    public void figura$setName(String name) {
-        modelPartName = name;
-    }
-    @Override
-    public @Nullable ModelPart figura$getParent() {
-        return parent;
-    }
+    @Override public void figura$setName(String name) { modelPartName = name; }
+    @Override public @Nullable String figura$getName() { return modelPartName; }
+    @Override public String figura$getAlias() { return alias; }
+    @Override public void figura$setAlias(String alias) { this.alias = alias; }
+    @Override public @Nullable ModelPart figura$getParent() { return parent; }
+
 }

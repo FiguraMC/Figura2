@@ -14,10 +14,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ItemInHandRendererMixin {
 
     @Inject(method = "renderHandsWithItems", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;endBatch()V"))
-    private void flushRenderQueueAfterHands(float f, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, LocalPlayer localPlayer, int i, CallbackInfo ci) {
+    private void flushRenderQueueAfterHands(float tickDelta, PoseStack poseStack, MultiBufferSource.BufferSource bufferSource, LocalPlayer localPlayer, int i, CallbackInfo ci) {
         // Flush the queue here, BEFORE we end batch. The vanilla hand might be rendered, and we need to flush now before the global state
         // corresponding to "first-person hand rendering" is undone.
-        DeferredVanillaPartRenderQueue.flush(bufferSource);
+        DeferredVanillaPartRenderQueue.flush(bufferSource, tickDelta);
     }
 
 }

@@ -57,10 +57,6 @@ public class FiguraTextureAtlas extends AbstractTexture {
         }
     }
 
-    // No need to implement load(), as we control this atlas ourselves!
-    @Override
-    public void load(ResourceManager resourceManager) throws IOException {}
-
     @Override
     public void close() {
         if (isClosed) return;

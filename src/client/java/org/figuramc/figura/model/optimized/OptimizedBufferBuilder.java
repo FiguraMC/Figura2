@@ -1,5 +1,6 @@
 package org.figuramc.figura.model.optimized;
 
+import com.mojang.blaze3d.buffers.BufferUsage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import org.figuramc.figura.util.FiguraMatrixStack;
@@ -28,7 +29,7 @@ public class OptimizedBufferBuilder implements MultiBufferSource {
         return buffers.computeIfAbsent(renderType, t -> {
             ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(1024);
             BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, VertexFormat.Mode.QUADS, OptimizedRendering.OPTIMIZED_FORMAT);
-            VertexBuffer vertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC); // We live in hope
+            VertexBuffer vertexBuffer = new VertexBuffer(BufferUsage.STATIC_WRITE); // We live in hope
             return new BufferState(byteBufferBuilder, bufferBuilder, vertexBuffer);
         }).bufferBuilder();
     }

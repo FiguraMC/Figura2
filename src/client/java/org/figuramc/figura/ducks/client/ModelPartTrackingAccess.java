@@ -7,5 +7,9 @@ import org.jetbrains.annotations.Nullable;
 public interface ModelPartTrackingAccess {
     @Nullable String figura$getName();
     void figura$setName(String name);
+
+    @Nullable String figura$getAlias();
+    void figura$setAlias(String alias);
+
     @Nullable ModelPart figura$getParent();
 }

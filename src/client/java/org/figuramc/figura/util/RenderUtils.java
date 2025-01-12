@@ -22,13 +22,13 @@ public class RenderUtils {
             RenderSystem.recordRenderCall(r);
     }
 
-    public static <T extends Entity> EntityRenderer<? super T> getRenderer(T entity) {
+    public static <T extends Entity> EntityRenderer<? super T, ?> getRenderer(T entity) {
         return Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
     }
 
     public static @Nullable EntityModel<?> getModel(Entity entity) {
-        EntityRenderer<?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
-        if (renderer instanceof LivingEntityRenderer<?,?> living) {
+        EntityRenderer<?,?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
+        if (renderer instanceof LivingEntityRenderer<?,?,?> living) {
             return living.getModel();
         }
         return null;

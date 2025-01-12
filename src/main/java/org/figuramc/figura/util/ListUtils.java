@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -157,22 +158,22 @@ public class ListUtils {
         return -1;
     }
 
-    public static <T, K, E extends Throwable> LinkedHashMap<K, T> associateBy(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
-        LinkedHashMap<K, T> res = new LinkedHashMap<>();
+    public static <T, K, E extends Throwable> HashMap<K, T> associateBy(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
+        HashMap<K, T> res = new HashMap<>();
         for (T elem : list)
             res.put(keyFunc.apply(elem), elem);
         return res;
     }
 
-    public static <T, K, V, E extends Throwable> LinkedHashMap<K, V> associateByTo(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc, ThrowingFunction<T, V, E> valueFunc) throws E {
-        LinkedHashMap<K, V> res = new LinkedHashMap<>();
+    public static <T, K, V, E extends Throwable> HashMap<K, V> associateByTo(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc, ThrowingFunction<T, V, E> valueFunc) throws E {
+        HashMap<K, V> res = new HashMap<>();
         for (T elem : list)
             res.put(keyFunc.apply(elem), valueFunc.apply(elem));
         return res;
     }
 
-    public static <T, K, E extends Throwable> LinkedHashMap<K, List<T>> associateByAndMerge(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
-        LinkedHashMap<K, List<T>> res = new LinkedHashMap<>();
+    public static <T, K, E extends Throwable> HashMap<K, List<T>> associateByAndMerge(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
+        HashMap<K, List<T>> res = new HashMap<>();
         for (T elem : list) {
             res.computeIfAbsent(keyFunc.apply(elem), k -> new ArrayList<>()).add(elem);
         }

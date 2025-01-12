@@ -6,7 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransform;
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -14,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.CustomItems;
+import org.figuramc.figura.ducks.client.ItemStackRenderStateAccess;
 import org.figuramc.figura.model.optimized.RenderingMode;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
@@ -21,31 +22,51 @@ import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ItemRenderer.class)
-public class ItemRendererMixin {
+// Add a field containing the ItemStack itself, so we can access it
+@Mixin(ItemStackRenderState.class)
+public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
 
+    // New field for storing the item stack itself, and getter/setter
+    @Unique public ItemStack itemStack;
+    @Override public ItemStack figura$getItemStack() { return itemStack; }
+    @Override public void figura$setItemStack(ItemStack itemStack) { this.itemStack = itemStack; }
+
+    // Shadowed
+    @Shadow ItemDisplayContext displayContext;
+    @Shadow boolean isLeftHand;
+
+    // Static math classes for not allocating
     @Unique private static final FiguraMatrixStack MATRIX_STACK = new FiguraMatrixStack();
     @Unique private static final Quaternionf TEMP_QUAT = new Quaternionf(); // Temporary for calculations
 
     @WrapMethod(method = "render")
-    public void renderCustomItem(ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j, BakedModel bakedModel, Operation<Void> original) {
+    public void renderWrap(PoseStack poseStack, MultiBufferSource multiBufferSource, int i, int j, Operation<Void> original) {
         Avatar<?> peekedAvatar = FiguraModClient.AVATAR_RENDERING_STACK.peek();
         // Push null, so that model parts inside this item are not considered part of the enclosing avatar's vanilla model...
         FiguraModClient.AVATAR_RENDERING_STACK.push(null);
         // Try to override with a figura custom part:
-        boolean overrode = tryFiguraOverride(peekedAvatar, itemStack, itemDisplayContext, bl, poseStack, multiBufferSource, i, j, bakedModel);
+        boolean overrode = tryFiguraOverride(peekedAvatar, itemStack, displayContext, isLeftHand, poseStack, multiBufferSource, i, j);
         // If we didn't override, then call the original method
-        if (!overrode) original.call(itemStack, itemDisplayContext, bl, poseStack, multiBufferSource, i, j, bakedModel);
+        if (!overrode) original.call(poseStack, multiBufferSource, i, j);
         // Finally, pop the stack and assert.
         if (FiguraModClient.AVATAR_RENDERING_STACK.pop() != null)
             throw new IllegalStateException("Illegal Avatar rendering stack manipulation - either a bug in Figura, or a compat issue!");
     }
 
+    @Inject(method = "clear", at = @At("HEAD"))
+    public void alsoClearItemStack(CallbackInfo ci) {
+        itemStack = null;
+    }
+
     // Try figura override. Return true if successfully overrode with a figura part, false otherwise.
     @Unique
-    private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay, BakedModel bakedModel) {
+    private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay) {
         // Look for an overriding model part
         CustomItems itemsComponent;
         if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.class)) == null) return false;
@@ -65,7 +86,7 @@ public class ItemRendererMixin {
             }
             MATRIX_STACK.translate(-0.5f, -0.5f, -0.5f);
         }
-        float tickDelta = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
+        float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
         try {
             if (RenderingMode.isOptimized())
                 modelPart.renderOptimized(MATRIX_STACK, tickDelta);
@@ -86,21 +107,22 @@ public class ItemRendererMixin {
      * Copy-pasted from ItemTransform class, changed to use our custom matrix stack to avoid allocating
      */
     @Unique
-    private static void applyTransform(ItemTransform transform, boolean bl) {
+    private static void applyTransform(ItemTransform transform, boolean isLeftHanded) {
         if (transform == ItemTransform.NO_TRANSFORM) {
             return;
         }
         float f = transform.rotation.x();
         float g = transform.rotation.y();
         float h = transform.rotation.z();
-        if (bl) {
+        if (isLeftHanded) {
             g = -g;
             h = -h;
         }
-        int i = bl ? -1 : 1;
+        int i = isLeftHanded ? -1 : 1;
         MATRIX_STACK.translate((float)i * transform.translation.x(), transform.translation.y(), transform.translation.z());
         MATRIX_STACK.rotate(TEMP_QUAT.rotationXYZ(f * ((float)Math.PI / 180), g * ((float)Math.PI / 180), h * ((float)Math.PI / 180)));
         MATRIX_STACK.scale(transform.scale.x(), transform.scale.y(), transform.scale.z());
     }
+
 
 }

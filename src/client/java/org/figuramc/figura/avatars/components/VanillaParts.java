@@ -1,6 +1,8 @@
 package org.figuramc.figura.avatars.components;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.figuramc.figura.FiguraMod;
+import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
@@ -79,15 +81,19 @@ public class VanillaParts implements AvatarComponent {
         if (entity == null) return;
         // (Re)generate the part map
         partMap.clear();
-        EntityRenderer<?> renderer = RenderUtils.getRenderer(entity);
-        List<ModelPart> vanillaModelParts = ModelPartTracker.traceEntityRenderer(renderer);
-        vanillaModelParts.stream().flatMap(ModelPart::getAllParts).forEach(vanillaPart -> {
-            String fullName = ModelPartTracker.getFullName(vanillaPart, "/");
-            VanillaRootModelPart part = partNameMap.get(fullName);
-            if (part != null) partMap.put(vanillaPart, part);
-        });
+        EntityRenderer<?,?> renderer = RenderUtils.getRenderer(entity);
+
+        // Iterate the part name map
+        for (var partByName : partNameMap.entrySet()) {
+            String name = partByName.getKey();
+            VanillaRootModelPart figuraPart = partByName.getValue();
+            // If there's a corresponding vanilla part, use it
+            @Nullable ModelPart vanillaPart = ModelPartTracker.getModelPartByName(renderer, name);
+            if (vanillaPart != null) partMap.put(vanillaPart, figuraPart);
+            else FiguraMod.LOGGER.warn("Part with vanilla root \"" + name + "\" does not have an analogue");
+        }
         // Set the variable for whether it's a living entity
-        isLivingEntityRenderer = renderer instanceof LivingEntityRenderer<?,?>;
+        isLivingEntityRenderer = renderer instanceof LivingEntityRenderer<?,?,?>;
         // Mark as not needing a refresh
         needsPartMapRefresh = false;
     }

@@ -32,7 +32,7 @@ public class DeferredVanillaPartRenderQueue {
     }
 
     private static final FiguraMatrixStack MATRIX_STACK = new FiguraMatrixStack();
-    public static void flush(MultiBufferSource bufferSource) {
+    public static void flush(MultiBufferSource bufferSource, float tickDelta) {
         for (int i = 0; i < curIndex; i++) {
             QueueEntry entry = ENTRIES.get(i);
             MATRIX_STACK.peekPosition().set(entry.posMatrix);
@@ -42,7 +42,6 @@ public class DeferredVanillaPartRenderQueue {
             // but in this case it's very beneficial.
             if (!entry.avatar.isErrored()) {
                 try {
-                    float tickDelta = Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(true);
                     entry.modelPart.renderImmediate(bufferSource, MATRIX_STACK, tickDelta, entry.light, entry.overlay);
                 } catch (ScriptError ex) {
                     entry.avatar.error(Component.literal("Error inside model part render callback"), ex);

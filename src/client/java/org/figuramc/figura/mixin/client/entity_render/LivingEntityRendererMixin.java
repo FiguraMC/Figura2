@@ -1,8 +1,10 @@
 package org.figuramc.figura.mixin.client.entity_render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
+import org.figuramc.figura.ducks.client.EntityRenderStateAccess;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
 import org.figuramc.figura.util.FiguraMatrixStack;
@@ -32,10 +34,12 @@ public class LivingEntityRendererMixin {
      */
     @SuppressWarnings("UnreachableCode")
     @Inject(
-            method = "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;getRenderType(Lnet/minecraft/world/entity/LivingEntity;ZZZ)Lnet/minecraft/client/renderer/RenderType;")
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;getRenderType(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;ZZZ)Lnet/minecraft/client/renderer/RenderType;")
     )
-    public void onRenderLivingEntity(LivingEntity livingEntity, float entityYaw, float tickDelta, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
+    public void onRenderLivingEntity(LivingEntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
+        // Fetch entity
+        LivingEntity livingEntity = (LivingEntity) ((EntityRenderStateAccess) renderState).figura$getEntity();
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(livingEntity.getUUID());
         if (avatar == null)  { CemManager.tryGetCem(livingEntity); return; }
         EntityRoot root = avatar.getComponent(EntityRoot.class);
@@ -49,9 +53,10 @@ public class LivingEntityRendererMixin {
         matrixStack.translate(0, 1.500f, 0);
         matrixStack.scale(-1, -1, 1);
         // Grab the overlay:
-        float whiteOverlayProgress = ((LivingEntityRenderer) (Object) this).getWhiteOverlayProgress(livingEntity, tickDelta);
-        int overlayCoords = LivingEntityRenderer.getOverlayCoords(livingEntity, whiteOverlayProgress);
+        float whiteOverlayProgress = ((LivingEntityRenderer) (Object) this).getWhiteOverlayProgress(renderState);
+        int overlayCoords = LivingEntityRenderer.getOverlayCoords(renderState, whiteOverlayProgress);
         // Render
+        float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
         root.render(avatar, tickDelta, multiBufferSource, matrixStack, light, overlayCoords);
     }
 }

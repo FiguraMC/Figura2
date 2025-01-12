@@ -18,6 +18,7 @@ import org.joml.Vector3f;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * This class is responsible for exporting a given entity type
@@ -35,19 +36,24 @@ import java.util.UUID;
  */
 public class BBModelExporter {
 
-    public static JsonObject exportEntity(String modelName, EntityType<?> entityType) {
-        EntityRenderer<?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().renderers.get(entityType);
-        return fromEntityRenderer(modelName, renderer);
+    public static final Predicate<ModelPart> ALL_PARTS = p -> true;
+    public static final Predicate<ModelPart> NO_PARTS = p -> false;
+    public static final Predicate<ModelPart> ONLY_SUPPORTED = p -> ModelPartTracker.getAlias(p) != null;
+
+    // onlySupported - whether to export only supported parents, or EVERYTHING
+    public static JsonObject exportEntity(String modelName, EntityType<?> entityType, Predicate<ModelPart> predicate) {
+        EntityRenderer<?,?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().renderers.get(entityType);
+        return fromEntityRenderer(modelName, renderer, predicate);
     }
 
-    public static JsonObject exportPlayer(String modelName, boolean slim) {
+    public static JsonObject exportPlayer(String modelName, boolean slim, Predicate<ModelPart> predicate) {
         PlayerSkin.Model model = slim ? PlayerSkin.Model.SLIM : PlayerSkin.Model.WIDE;
-        EntityRenderer<?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().playerRenderers.get(model);
-        return fromEntityRenderer(modelName, renderer);
+        EntityRenderer<?,?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().playerRenderers.get(model);
+        return fromEntityRenderer(modelName, renderer, predicate);
     }
 
-    private static JsonObject fromEntityRenderer(String modelName, EntityRenderer<?> renderer) {
-        boolean isLivingEntity = renderer instanceof LivingEntityRenderer<?, ?>;
+    private static JsonObject fromEntityRenderer(String modelName, EntityRenderer<?,?> renderer, Predicate<ModelPart> predicate) {
+        boolean isLivingEntity = renderer instanceof LivingEntityRenderer<?,?,?>;
         // Create the json object
         JsonObject bbmodel = new JsonObject();
         // Metadata
@@ -70,7 +76,7 @@ public class BBModelExporter {
         List<ModelPart> vanillaModelParts = ModelPartTracker.traceEntityRenderer(renderer);
         for (ModelPart part : vanillaModelParts) {
             Vector3f originPos = new Vector3f(0, isLivingEntity ? 24 : 0, 0);
-            JsonObject jsonPart = processModelPart(part, elements, outliner, originPos, new Vector3f(), isLivingEntity);
+            JsonObject jsonPart = processModelPart(part, elements, outliner, originPos, new Vector3f(), isLivingEntity, predicate);
             if (jsonPart != null) outliner.add(jsonPart);
         }
         // Add them to the bbmodel
@@ -83,22 +89,43 @@ public class BBModelExporter {
     // Process a single model part and return a JsonObject which is a bbmodel group.
     // May modify the "elements" and "outliner" arrays in the process.
     // If this part has no cube children, returns null.
-    private static @Nullable JsonObject processModelPart(ModelPart vanillaPart, JsonArray elements, JsonArray outliner, Vector3f parentPos, Vector3f parentRot, boolean isLivingEntity) {
+    private static @Nullable JsonObject processModelPart(ModelPart vanillaPart, JsonArray elements, JsonArray outliner, Vector3f parentPos, Vector3f parentRot, boolean isLivingEntity, Predicate<ModelPart> predicate) {
+
+        boolean succeededPredicate = predicate.test(vanillaPart);
+
+        // If we failed the predicate, just recurse on the children and return null immediately.
+        if (!succeededPredicate) {
+            PartPose initialPose = vanillaPart.getInitialPose();
+            Vector3f pos = new Vector3f(initialPose.x(), initialPose.y(), initialPose.z());
+            Vector3f rotRadians = new Vector3f(initialPose.xRot(), initialPose.yRot(), initialPose.zRot());
+            for (ModelPart child : vanillaPart.children.values()) {
+                JsonObject jsonPart = processModelPart(child, elements, outliner, pos, rotRadians, isLivingEntity, predicate);
+                if (jsonPart != null) outliner.add(jsonPart);
+            }
+            return null;
+        }
+
         JsonObject partJson = new JsonObject();
 
-        // Get name
-        String name = ModelPartTracker.getName(vanillaPart);
-        partJson.addProperty("name", name);
-
-        // Get full name and store in the root key
-        String fullName = ModelPartTracker.getFullName(vanillaPart, "/");
-        partJson.addProperty(AvatarImporter.VANILLA_ROOT_KEY, fullName);
+        // Get full name or alias (alias preferred), and store in the root key
+        String fullNameOrAlias = ModelPartTracker.getAlias(vanillaPart);
+        boolean aliasFound = true;
+        if (fullNameOrAlias == null) {
+            // Otherwise fall back to full name.
+            aliasFound = false;
+            fullNameOrAlias = ModelPartTracker.getFullName(vanillaPart);
+        }
+        partJson.addProperty(AvatarImporter.VANILLA_ROOT_KEY, fullNameOrAlias);
         partJson.addProperty(AvatarImporter.VANILLA_ROOT_REPLACE_KEY, true); // Replacing by default seems best
+
+        // Get name
+        String name = aliasFound ? fullNameOrAlias : ModelPartTracker.getName(vanillaPart);
+        partJson.addProperty("name", name);
 
         // Get origin and rotation
         PartPose initialPose = vanillaPart.getInitialPose();
-        Vector3f pos = new Vector3f(initialPose.x, initialPose.y, initialPose.z);
-        Vector3f rotRadians = new Vector3f(initialPose.xRot, initialPose.yRot, initialPose.zRot);
+        Vector3f pos = new Vector3f(initialPose.x(), initialPose.y(), initialPose.z());
+        Vector3f rotRadians = new Vector3f(initialPose.xRot(), initialPose.yRot(), initialPose.zRot());
         if (isLivingEntity) {
             // Make adjustments for living entities
             pos.mul(-1, -1, 1);
@@ -120,12 +147,13 @@ public class BBModelExporter {
 
         // Process children:
         JsonArray children = new JsonArray();
-        // Process cubes
-        for (ModelPart.Cube cube : vanillaPart.cubes)
-            children.add(processCube(cube, elements, pos, isLivingEntity));
+        // Process cubes (if we succeeded)
+        if (succeededPredicate)
+            for (ModelPart.Cube cube : vanillaPart.cubes)
+                children.add(processCube(cube, elements, pos, isLivingEntity));
         // Process groups, add them to outliner instead
         for (ModelPart child : vanillaPart.children.values()) {
-            JsonObject jsonPart = processModelPart(child, elements, outliner, pos, rotRadians, isLivingEntity);
+            JsonObject jsonPart = processModelPart(child, elements, outliner, pos, rotRadians, isLivingEntity, predicate);
             if (jsonPart != null) outliner.add(jsonPart);
         }
         // Add children
@@ -153,21 +181,21 @@ public class BBModelExporter {
 //        int textureHeight = ((CubeTrackingAccess) cube).figura$getTextureHeight();
         for (ModelPart.Polygon quad : cube.polygons) {
             // Get UV coords
-            float u1 = quad.vertices[1].u;// * textureWidth;
-            float u2 = quad.vertices[0].u;// * textureWidth;
-            float v1 = quad.vertices[0].v;// * textureHeight;
-            float v2 = quad.vertices[2].v;// * textureHeight;
+            float u1 = quad.vertices()[1].u();// * textureWidth;
+            float u2 = quad.vertices()[0].u();// * textureWidth;
+            float v1 = quad.vertices()[0].v();// * textureHeight;
+            float v2 = quad.vertices()[2].v();// * textureHeight;
             // Update max and min x, y, z
-            for (ModelPart.Vertex vert : quad.vertices) {
-                minX = Math.min(minX, vert.pos.x);
-                minY = Math.min(minY, vert.pos.y);
-                minZ = Math.min(minZ, vert.pos.z);
-                maxX = Math.max(maxX, vert.pos.x);
-                maxY = Math.max(maxY, vert.pos.y);
-                maxZ = Math.max(maxZ, vert.pos.z);
+            for (ModelPart.Vertex vert : quad.vertices()) {
+                minX = Math.min(minX, vert.pos().x);
+                minY = Math.min(minY, vert.pos().y);
+                minZ = Math.min(minZ, vert.pos().z);
+                maxX = Math.max(maxX, vert.pos().x);
+                maxY = Math.max(maxY, vert.pos().y);
+                maxZ = Math.max(maxZ, vert.pos().z);
             }
             // Add face to json
-            Direction dir = Direction.getNearest(quad.normal.x, quad.normal.y, quad.normal.z).getOpposite();
+            Direction dir = Direction.getApproximateNearest(quad.normal().x, quad.normal().y, quad.normal().z).getOpposite();
             String key = dir.name().toLowerCase();
             JsonObject face = new JsonObject();
             face.add("uv", jsonArrayOf(u1, v1, u2, v2));

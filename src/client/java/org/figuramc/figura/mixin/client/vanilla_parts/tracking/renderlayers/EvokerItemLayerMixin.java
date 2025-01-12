@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(targets = "net.minecraft.client.renderer.entity.EvokerRenderer$1")
 public class EvokerItemLayerMixin {
     @Inject(method = "<init>", at = @At("RETURN"))
-    public void registerToTracker(EvokerRenderer evokerRenderer, RenderLayerParent renderLayerParent, ItemInHandRenderer itemInHandRenderer, CallbackInfo ci) {
+    public void registerToTracker(EvokerRenderer evokerRenderer, RenderLayerParent renderLayerParent, CallbackInfo ci) {
         ModelPartTracker.RENDER_LAYER_ALIASES.put((Class<? extends RenderLayer>) (Object) this.getClass(), "EvokerItem");
     }
 }

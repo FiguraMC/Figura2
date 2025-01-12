@@ -37,7 +37,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
 
     @Override public int getWidth() { return backingTexture.getWidth(); }
     @Override public int getHeight() { return backingTexture.getHeight(); }
-    @Override public int getPixelRGBA(int x, int y) { return backingTexture.image.getPixelRGBA(x, y); }
+    @Override public int getPixelRGBA(int x, int y) { return backingTexture.image.getPixelABGR(x, y); }
 
     // The actual AbstractTexture object backing this:
     private static class Backing extends AbstractTexture {
@@ -75,12 +75,6 @@ public class StandaloneAvatarTexture extends AvatarTexture {
         public int getHeight() { return image.getHeight(); }
 
         // Minecraft SimpleTexture class implementations:
-
-        // Don't implement.
-        // We don't get our textures from the resource manager,
-        // we get them from our own loading systems.
-        @Override
-        public void load(ResourceManager manager) throws IOException {}
 
         @Override
         public void close() {
