@@ -71,6 +71,8 @@ public class ClientLevelMixin {
                 JsonObject enderDragonExport = BBModelExporter.exportEntity("ender_dragon", EntityType.ENDER_DRAGON, BBModelExporter.ALL_PARTS);
                 Files.writeString(exportsFolder.resolve("ender_dragon.bbmodel"), enderDragonExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
+                JsonObject arrowExport = BBModelExporter.exportEntity("arrow", EntityType.ARROW, BBModelExporter.ALL_PARTS);
+                Files.writeString(exportsFolder.resolve("arrow.bbmodel"), arrowExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
                 FiguraMod.LOGGER.error("Failed to store file", e);
             }

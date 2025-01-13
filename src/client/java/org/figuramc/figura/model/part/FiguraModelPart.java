@@ -1,6 +1,7 @@
 package org.figuramc.figura.model.part;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.util.Mth;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.model.optimized.OptimizedBufferBuilder;
 import org.figuramc.figura.model.optimized.OptimizedRendering;
@@ -200,7 +201,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         Matrix4f transform = new Matrix4f()
                 .scale(1.0f / 16)
                 .translate(o.x, o.y, o.z)
-                .rotate(new Quaternionf().rotationZYX(r.z, r.y, r.x))
+                .rotate(new Quaternionf().rotationZYX(r.z * Mth.DEG_TO_RAD, r.y * Mth.DEG_TO_RAD, r.x * Mth.DEG_TO_RAD))
                 .translate(-o.x, -o.y, -o.z)
         ;
 
@@ -274,7 +275,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         Matrix4f transform = new Matrix4f()
                 .scale(1.0f / 16)
                 .translate(o.x, o.y, o.z)
-                .rotate(new Quaternionf().rotationXYZ(r.x, r.y, r.z)) // Meshes use XYZ rotation order! This is different from other part types!
+                .rotate(new Quaternionf().rotationXYZ(r.x * Mth.DEG_TO_RAD, r.y * Mth.DEG_TO_RAD, r.z * Mth.DEG_TO_RAD)) // Meshes use XYZ rotation order! This is different from other part types!
 //                .translate(-o.x, -o.y, -o.z) // Meshes use their origins as translations, unlike cubes which use them only as pivot points!
         ;
         Matrix3f normalMat = transform.normal(new Matrix3f());

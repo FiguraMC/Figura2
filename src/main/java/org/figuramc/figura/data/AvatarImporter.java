@@ -375,7 +375,7 @@ public class AvatarImporter {
                     String direction = DIRECTIONS[i];
                     JsonObject face = facesJson.getAsJsonObject(direction);
                     JsonElement tex = face.get("texture");
-                    if (!tex.isJsonNull()) {
+                    if (tex != null && !tex.isJsonNull()) {
                         int localTex = tex.getAsInt();
                         int mappedTex = localToGlobalTextureMapping.get(localTex);
                         AvatarMaterials.CubeFace[] facesForThisTexture = cubeFacesByTexture.computeIfAbsent(mappedTex, x -> new AvatarMaterials.CubeFace[6]);
