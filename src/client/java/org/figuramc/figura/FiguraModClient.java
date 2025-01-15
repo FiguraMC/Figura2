@@ -1,14 +1,9 @@
 package org.figuramc.figura;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import net.fabricmc.api.ClientModInitializer;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.config.ConfigManager;
-import org.figuramc.figura.model.optimized.OptimizedRendering;
-import net.fabricmc.api.ClientModInitializer;
 import org.figuramc.figura.util.NullEmptyStack;
-import org.jetbrains.annotations.Nullable;
-
-import java.util.Stack;
 
 public class FiguraModClient implements ClientModInitializer {
 
@@ -21,10 +16,6 @@ public class FiguraModClient implements ClientModInitializer {
     public void onInitializeClient() {
         FiguraMod.LOGGER.info("Hello from Figura, client side!");
         ConfigManager.init();
-
-        // Initialize OptimizedRendering on render thread later
-        // Initializing it right now will segfault the game with an EXCEPTION_ACCESS_VIOLATION so be careful
-        RenderSystem.recordRenderCall(OptimizedRendering::init);
     }
 
 

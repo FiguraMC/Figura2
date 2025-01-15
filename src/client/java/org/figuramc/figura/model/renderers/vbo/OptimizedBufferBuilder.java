@@ -1,12 +1,11 @@
-package org.figuramc.figura.model.optimized;
+package org.figuramc.figura.model.renderers.vbo;
 
 import com.mojang.blaze3d.buffers.BufferUsage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import org.joml.Matrix4f;
+import org.figuramc.figura.model.renderers.vanilla_optimized.OptimizedVanillaShaders;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +27,7 @@ public class OptimizedBufferBuilder implements MultiBufferSource {
         if (built) throw new IllegalStateException("Figura BufferSource was already built!");
         return buffers.computeIfAbsent(renderType, t -> {
             ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(1024);
-            BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, VertexFormat.Mode.QUADS, OptimizedRendering.OPTIMIZED_FORMAT);
+            BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, VertexFormat.Mode.QUADS, OptimizedVanillaShaders.FORMAT);
             VertexBuffer vertexBuffer = new VertexBuffer(BufferUsage.STATIC_WRITE); // We live in hope
             return new BufferState(byteBufferBuilder, bufferBuilder, vertexBuffer);
         }).bufferBuilder();
@@ -45,15 +44,14 @@ public class OptimizedBufferBuilder implements MultiBufferSource {
         }
     }
 
-    public void draw(FiguraMatrixStack baseMatrixStack) {
+    public void draw(Runnable setup, Runnable teardown) {
         if (!built) throw new IllegalStateException("Figura BufferSource not yet built!");
         for (var entry : buffers.entrySet()) {
             entry.getKey().setupRenderState();
             entry.getValue().vertexBuffer.bind();
-            // Cursed uniform setting
-            Matrix4f figuraRootMatrix = baseMatrixStack.peekPosition();
-            RenderSystem.getShader().getUniform("FiguraRootMatrix").set(figuraRootMatrix);
+            setup.run();
             entry.getValue().vertexBuffer.drawWithShader(RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
+            teardown.run();
             entry.getKey().clearRenderState();
         }
     }

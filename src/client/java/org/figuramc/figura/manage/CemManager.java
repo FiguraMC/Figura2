@@ -1,9 +1,12 @@
 package org.figuramc.figura.manage;
 
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatars.AvatarTemplate;
 import org.figuramc.figura.data.AvatarImporter;
+import org.figuramc.figura.data.AvatarImportingException;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.directory.FiguraDir;
+import org.figuramc.figura.util.ChatUtils;
 import org.figuramc.figura.util.exception.ExceptionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -17,6 +20,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The central point for CEM operations.
@@ -24,7 +28,7 @@ import java.util.concurrent.CompletionException;
  */
 public class CemManager {
 
-    private static final HashMap<EntityType<?>, @Nullable AvatarMaterials> IMPORTED_MATERIALS = new HashMap<>();
+    private static final ConcurrentHashMap<EntityType<?>, CompletableFuture<@Nullable AvatarMaterials>> IMPORTED_MATERIALS = new ConcurrentHashMap<>();
 
     public static void clear() {
         synchronized (IMPORTED_MATERIALS) {
@@ -33,35 +37,44 @@ public class CemManager {
     }
 
     // Tries to set up CEM for this entity.
-    // - If entity already has an avatar, does nothing
-    // - If the entity has an avatar loading in progress, does nothing
+    // We already know the entity doesn't have an avatar equipped.
+    // - If the entity already has an avatar loading in progress, does nothing
     // - If this entity type has no CEM in the folder, does nothing
+    // - Otherwise, will launch a task to give this entity its CEM avatar.
     public static void tryGetCem(Entity entity) {
         UUID uuid = entity.getUUID();
-        if (AvatarManager.ENTITY_AVATARS.get(uuid) != null) return;
         if (AvatarManager.ENTITY_AVATARS.isInProgress(uuid)) return;
         EntityType<?> type = entity.getType();
-        AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
-            AvatarMaterials materials;
-            synchronized (IMPORTED_MATERIALS) {
-                // Can't use computeIfAbsent, because want to store null values
-                if (!IMPORTED_MATERIALS.containsKey(type)) {
+        // Fetch the materials, or begin a task for them
+        CompletableFuture<@Nullable AvatarMaterials> materials = IMPORTED_MATERIALS.computeIfAbsent(type,
+                t -> CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
                     // Try to load for this type
-                    ResourceLocation entityTypeLocation = BuiltInRegistries.ENTITY_TYPE.getKey(type);
+                    ResourceLocation entityTypeLocation = BuiltInRegistries.ENTITY_TYPE.getKey(t);
                     String modId = entityTypeLocation.getNamespace();
                     String entityName = entityTypeLocation.getPath();
                     Path entityDir = FiguraDir.CEM.get().resolve(modId).resolve(entityName);
-                    if (!Files.exists(entityDir))
-                        IMPORTED_MATERIALS.put(type, null);
-                    else
-                        IMPORTED_MATERIALS.put(type, AvatarImporter.importFolder(entityDir));
-                }
-                materials = IMPORTED_MATERIALS.get(type);
+                    return Files.exists(entityDir) ? AvatarImporter.importFolder(entityDir) : null;
+                }, CompletionException::new)));
+        // If the task isn't complete yet, just return out.
+        if (!materials.isDone()) return;
+        try {
+            // Fetch the result. If this doesn't throw, then it completed without error.
+            @Nullable AvatarMaterials result = materials.getNow(null);
+            // If the result is null, this entity has no CEM, so just do nothing and return.
+            if (result == null) return;
+            // Otherwise, this entity has CEM, so launch a task to load it.
+            AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() ->
+                    AvatarTemplate.CEM_AVATAR.construct(uuid, result), CompletionException::new)));
+        } catch (CompletionException ex) {
+            Throwable cause = ex.getCause();
+            // For now, always report CEM errors to chat.
+            switch (cause) {
+                case AvatarImportingException importingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to import avatar"), cause); // TODO Translate
+                default -> ChatUtils.unexpectedError("CEM avatar import", cause);
             }
-            if (materials == null)
-                return null;
-            return AvatarTemplate.CEM_AVATAR.construct(uuid, materials);
-        }, CompletionException::new)));
+        } catch (Throwable unexpected) {
+            ChatUtils.unexpectedError("CEM avatar import", unexpected);
+        }
     }
 
 }

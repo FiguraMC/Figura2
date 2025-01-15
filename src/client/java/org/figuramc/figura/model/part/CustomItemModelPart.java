@@ -19,7 +19,7 @@ public class CustomItemModelPart extends RootModelPart {
     public final ItemTransforms itemTransforms;
 
     public CustomItemModelPart(AvatarMaterials.ModelPartMaterials materials, Map<ItemDisplayContext, AvatarMaterials.ItemPartTransform> transforms, List<AvatarTexture> textures) {
-        super(materials, textures, false);
+        super(materials, textures);
         this.itemTransforms = new ItemTransforms(
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_LEFT_HAND, transforms, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND),
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, transforms),

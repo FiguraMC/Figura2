@@ -1,4 +1,4 @@
-package org.figuramc.figura.model.optimized;
+package org.figuramc.figura.model.renderers.vbo;
 
 import org.figuramc.figura.util.exception.ThrowingConsumer;
 import org.lwjgl.BufferUtils;
@@ -37,13 +37,10 @@ public class PartDataStorageBuffer {
         updater.applyChanges(bufferHandle);
     }
 
-    // Bind the SSBO to the hardcoded index 0
-    public void bind() {
+    // Bind the SSBO to the given buffer index.
+    public void bind(int bufferIndex) {
         if (bufferHandle == -1) throw new IllegalStateException("Attempt to upload PartDataStorageBuffer that isn't created");
-        GL46.glBindBufferBase(GL46.GL_SHADER_STORAGE_BUFFER, 0, bufferHandle);
-        int err = GL46.glGetError();
-        if (err != GL46.GL_NO_ERROR)
-            throw new IllegalStateException("ERROR!!! " + err );
+        GL46.glBindBufferBase(GL46.GL_SHADER_STORAGE_BUFFER, bufferIndex, bufferHandle);
     }
 
     // Call this at the end or else memory leak

@@ -2,6 +2,7 @@ package org.figuramc.figura.util;
 
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.model.part.VanillaRootModelPart;
+import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.script_hooks.ScriptError;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -42,7 +43,7 @@ public class DeferredVanillaPartRenderQueue {
             // but in this case it's very beneficial.
             if (!entry.avatar.isErrored()) {
                 try {
-                    entry.modelPart.renderImmediate(bufferSource, MATRIX_STACK, tickDelta, entry.light, entry.overlay);
+                    FiguraRenderers.getCurrentRenderer().render(entry.modelPart, bufferSource, MATRIX_STACK, tickDelta, entry.light, entry.overlay);
                 } catch (ScriptError ex) {
                     entry.avatar.error(Component.literal("Error inside model part render callback"), ex);
                 } catch (StackOverflowError ex) {

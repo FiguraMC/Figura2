@@ -4,14 +4,13 @@ import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.optimized.RenderingMode;
+import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.util.FiguraMatrixStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
@@ -24,7 +23,7 @@ public class EntityRoot implements AvatarComponent {
         // Depends on Textures component
         Textures texturesComponent = self.assertDependency(Textures.class, getClass());
         // Create the model part from materials
-        modelPart = new RootModelPart(materials.entityRoot(), texturesComponent.textures, false);
+        modelPart = new RootModelPart(materials.entityRoot(), texturesComponent.textures);
     }
 
     // Ensure called after initialize()
@@ -35,10 +34,7 @@ public class EntityRoot implements AvatarComponent {
     // Render the entity root.
     public void render(Avatar<?> self, float tickDelta, MultiBufferSource bufferSource, FiguraMatrixStack matrixStack, int light, int overlay) {
         try {
-            if (RenderingMode.isOptimized())
-                modelPart.renderOptimized(matrixStack, tickDelta);
-            else
-                modelPart.renderImmediate(bufferSource, matrixStack, tickDelta, light, overlay);
+            FiguraRenderers.getCurrentRenderer().render(modelPart, bufferSource, matrixStack, tickDelta, light, overlay);
         } catch (ScriptError ex) {
             self.error(Component.literal("Error inside model part render callback"), ex);
         } catch (StackOverflowError ex) {

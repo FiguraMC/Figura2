@@ -23,7 +23,7 @@ public class AvatarTemplate<K> {
     }
 
     public static final AvatarTemplate<UUID> LOCAL_PLAYER_AVATAR = new AvatarTemplate<>(Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new, Scripts::new);
-    public static final AvatarTemplate<UUID> CEM_AVATAR = new AvatarTemplate<>(Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new, Scripts::new);
+    public static final AvatarTemplate<UUID> CEM_AVATAR = new AvatarTemplate<>(Textures::new, EntityRoot::new, EntityUser::new, VanillaParts::new, CustomItems::new, Scripts::new, CemSelfDeleter::new);
 
 
     public Avatar<K> construct(K user, AvatarMaterials materials) throws AvatarLoadingException {

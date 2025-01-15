@@ -1,6 +1,6 @@
 package org.figuramc.figura.script_hooks.mem_count;
 
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
 import java.util.Collections;
@@ -24,7 +24,7 @@ public class MemoryCounter {
     }
 
     // Trace an object.
-    public void trace(MemoryCountable traceable, int depth) {
+    public void trace(@Nullable MemoryCountable traceable, int depth) {
         if (traceable == null) return;
         if (depth == 0) deepTraced.addLast(traceable);
         else count += traceable.count(this, depth - 1);

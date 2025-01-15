@@ -1,8 +1,9 @@
-package org.figuramc.figura.model.optimized;
+package org.figuramc.figura.model.renderers.vbo;
 
 import org.figuramc.figura.util.FiguraMatrixStack;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
+import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
 
@@ -13,20 +14,23 @@ public class PartDataStruct {
 
     private static final int MAT4_SIZE = 4 * 4 * Float.BYTES;
     private static final int MAT3_SIZE = 3 * 4 * Float.BYTES; // 3x4 for alignment in opengl
+    private static final int VEC4_SIZE = 4 * Float.BYTES;
 
     // Size of a PartDataStruct in bytes
     public static final int SIZE =
-            // Position mat, normal mat
-            MAT4_SIZE + MAT3_SIZE
+            // Position mat, normal mat, color
+            MAT4_SIZE + MAT3_SIZE + VEC4_SIZE;
     ;
 
     private final Matrix4f transform = new Matrix4f();
     private final Matrix3f normalMat = new Matrix3f();
+    private final Vector4f colorMultiplier = new Vector4f();
 
-    public void fillFromStack(FiguraMatrixStack stack, boolean visible) {
+    public void fillFromStack(FiguraMatrixStack stack, Vector4f color, boolean visible) {
         if (visible) {
             this.transform.set(stack.peekPosition());
             this.normalMat.set(stack.peekNormal());
+            this.colorMultiplier.set(color);
         } else {
             // If invisible, turn the matrix into the zero-scale matrix
             this.transform.zero();
@@ -39,6 +43,7 @@ public class PartDataStruct {
         int index = partIndex * SIZE;
         transform.get(index, buffer); index += MAT4_SIZE;
         customGet3x4(normalMat, index, buffer); index += MAT3_SIZE; // 3x4 for alignment in opengl
+        colorMultiplier.get(index, buffer); index += VEC4_SIZE;
     }
 
     // Matrix3f.get3x4() is broken in Minecraft's version of joml lmao

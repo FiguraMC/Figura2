@@ -1,24 +1,16 @@
 package org.figuramc.figura.model.part;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.util.Mth;
 import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.model.optimized.OptimizedBufferBuilder;
-import org.figuramc.figura.model.optimized.OptimizedRendering;
-import org.figuramc.figura.model.optimized.PartDataStorageBuffer;
-import org.figuramc.figura.model.optimized.RenderingMode;
+import org.figuramc.figura.model.renderers.FiguraPartRenderer;
+import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.ListUtils;
-import org.figuramc.figura.util.FiguraMatrixStack;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
@@ -39,64 +31,58 @@ import java.util.Objects;
  */
 public class FiguraModelPart extends MarkedObjectBase {
 
+    // General info
     public final String name;
+    private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
+
+    // Structure / modifications
     public final PartTransform transform = new PartTransform(); // The transform of this model part
 //    private List<Animator> animators; // The animators which affect this model part
     public final ArrayList<FiguraModelPart> children; // The children of this model part in the hierarchy tree
-    private final float[] vertices; // The vertices making up the cubes and meshes of the model part
-    private @Nullable List<RenderType> renderTypes; // The render types which this part should be rendered with. If null, inherit, if non-null, override (assuming priority is high enough!)
-    private int renderTypePriority; // If the render type priority is higher than the parent's, `this.renderTypes` can replace the current set of render types.
 
-    // Script related variables:
-    private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
+    // Rendering
+    public @Nullable FiguraPartRenderer.NonRootState nonRootRenderState; // Temp state for the renderer to keep track of. Should be cleared when render type is modified.
+    public final float[] vertices; // The vertices making up the cubes and meshes of the model part
+    public @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally.
+    public int renderTypePriority; // If the render type priority is higher than the parent's, renderType can replace the current render types.
 
     // Callbacks which are run during various stages of the rendering process.
-    private final ArrayList<ScriptCallback>
+    public final ArrayList<ScriptCallback>
             preRenderCallbacks = new ArrayList<>(0), // Zero sized at first, since most parts will not have callbacks
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
 
 
-    protected FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, FiguraModelPart parent, boolean forceCompatible) {
+    protected FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, FiguraModelPart parent) {
         // Copy basic values out of the materials
         name = materials.name();
         this.parent = parent;
         transform.setOrigin(materials.origin());
         transform.setEulerDeg(materials.rotation());
         // Get children
-        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, textures, this, forceCompatible));
+        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, textures, this));
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
         renderTypes:
-        for (boolean iter = true; iter; iter = false) {
+        do {
             if (materials.textureIndex() != -1) {
                 // If tex index is not -1, then generate a render type from the texture:
                 AvatarTexture tex = textures.get(materials.textureIndex());
-                ResourceLocation loc = tex.getLocation();
-                // Choose the render type based on rendering mode
-                if (!forceCompatible && RenderingMode.isOptimized()) {
-                    // Use the custom optimized render type
-                    renderTypes = new ArrayList<>(List.of(OptimizedRendering.OPTIMIZED_RENDER_TYPE.apply(loc)));
-                } else {
-                    // Use RenderType.entityTranslucent()
-                    renderTypes = new ArrayList<>(List.of(RenderType.itemEntityTranslucentCull(loc)));
-                }
+                renderType = new FiguraRenderType.Basic(tex.getLocation(), null);
                 // Also, set the UV modifier from the texture (for atlases)
                 uvModifier.set(tex.getUvValues());
             } else if (!children.isEmpty()) {
                 // Otherwise, attempt to merge from children:
-                List<RenderType> first = children.getFirst().renderTypes;
-                for (int i = 1; i < children.size(); i++) {
-                    if (!Objects.equals(children.get(i).renderTypes, first))
-                        break renderTypes;
-                }
-                for (FiguraModelPart child : children) {
-                    child.renderTypes = null;
-                }
-                this.renderTypes = first;
+                FiguraRenderType first = children.getFirst().renderType;
+                for (int i = 1; i < children.size(); i++)
+                    if (!Objects.equals(children.get(i).renderType, first))
+                        break renderTypes; // Get out of the entire loop, no merge can happen
+                for (FiguraModelPart child : children)
+                    child.renderType = null;
+                this.renderType = first;
             }
-        }
+        } while (false);
 
         // Get vertices
         FloatArrayList vertexData = new FloatArrayList();
@@ -106,10 +92,10 @@ public class FiguraModelPart extends MarkedObjectBase {
     }
 
     // Construct by extruding a texture
-    public FiguraModelPart(String name, AvatarTexture texture, boolean forceCompatible) {
+    public FiguraModelPart(String name, AvatarTexture texture) {
         this.name = name;
         this.parent = null;
-        this.renderTypes = (!forceCompatible && RenderingMode.isOptimized()) ? new ArrayList<>(List.of(OptimizedRendering.OPTIMIZED_RENDER_TYPE.apply(texture.getLocation()))) : new ArrayList<>(List.of(RenderType.itemEntityTranslucentCull(texture.getLocation())));
+        this.renderType = new FiguraRenderType.Basic(texture.getLocation(), null);
         Vector4f uvModifier = texture.getUvValues();
         this.children = new ArrayList<>();
         FloatArrayList vertexData = new FloatArrayList();
@@ -358,150 +344,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         arr.add(skinningWeight0); arr.add(skinningWeight1); arr.add(skinningWeight2); arr.add(skinningWeight3);
     }
 
-    // Upload vertices to the buffer source. Used for immediate-mode-style, compatible rendering.
-    protected void renderImmediate(
-            MultiBufferSource bufferSource, // The source for render buffers
-            List<RenderType> renderTypes, // The list of render types which the vertices will be passed to
-            int renderTypePriority, // The current render type priority. The render types may only be changed if this.renderTypePriority >= renderTypePriority.
-            FiguraMatrixStack matrixStack, // The current matrix stack
-            float tickDelta,
-            int light,
-            int overlay
-    ) throws StackOverflowError, ScriptError {
-
-        invokeCallbacks(preRenderCallbacks, tickDelta);
-
-        // Cancel if not invisible
-        if (!transform.getVisible())
-            return;
-
-        // Update render types if we can and this has priority
-        if (this.renderTypes != null && this.renderTypePriority >= renderTypePriority) {
-            renderTypes = this.renderTypes;
-            renderTypePriority = this.renderTypePriority; // Update priority to new level
-        }
-
-        // Push matrix stack, apply transforms
-        matrixStack.push();
-        transform.affect(matrixStack);
-        // TODO Animations
-//        for (Animator animator : animators)
-//            animator.affect(matrixStack);
-
-        invokeCallbacks(midRenderCallbacks, tickDelta);
-
-        // Render children recursively
-        for (FiguraModelPart child : children)
-            child.renderImmediate(bufferSource, renderTypes, renderTypePriority, matrixStack, tickDelta, light, overlay);
-
-        // If this has vertices, send them in
-        if (vertices.length > 0) {
-            Vector4f pos = new Vector4f();
-            Vector3f norm = new Vector3f();
-            Matrix4f posMatrix = matrixStack.peekPosition();
-            Matrix3f normalMatrix = matrixStack.peekNormal();
-            float[] vertices = this.vertices;
-            for (RenderType renderType : renderTypes) {
-                VertexConsumer consumer = bufferSource.getBuffer(renderType);
-                for (int i = 0; i < vertices.length; i += 16) {
-                    pos.set(vertices[i], vertices[i+1], vertices[i+2], 1.0).mul(posMatrix);
-                    norm.set(vertices[i+3], vertices[i+4], vertices[i+5]).mul(normalMatrix);
-
-                    // Skinning is ignored outside optimized mode (TODO add to immediate mode also)
-                    consumer.addVertex(pos.x, pos.y, pos.z)
-                            .setColor(1.0f, 1.0f, 1.0f, 1.0f)
-                            .setUv(vertices[i+6], vertices[i+7])
-                            .setNormal(norm.x, norm.y, norm.z)
-                            .setLight(light)
-                            .setOverlay(overlay);
-                }
-            }
-        }
-
-        invokeCallbacks(postRenderCallbacks, tickDelta);
-
-        // Pop matrix stack
-        matrixStack.pop();
-    }
-
-    // Emits vertices for optimized rendering.
-    // This method, alongside calculateOptimizedTransforms, is part of the Optimized Mode analogue to renderImmediate().
-    // This should only run rarely, whenever a tree rebuild is necessary.
-    protected void buildOptimizedBuffers(
-            OptimizedBufferBuilder bufferSource,
-            List<RenderType> renderTypes,
-            int renderTypePriority,
-            MutableInt currentId
-    ) throws StackOverflowError {
-        // Update render types if we can and this has priority
-        if (this.renderTypes != null && this.renderTypePriority >= renderTypePriority) {
-            renderTypes = this.renderTypes;
-            renderTypePriority = this.renderTypePriority; // Update priority to new level
-        }
-        // Fetch the part ID
-        int partId = currentId.getAndIncrement();
-        // If this has vertices, send them in
-        if (vertices.length > 0) {
-            float[] vertices = this.vertices;
-            for (RenderType renderType : renderTypes) {
-                VertexConsumer consumer = bufferSource.getBuffer(renderType);
-                for (int i = 0; i < vertices.length; i += 16) {
-                    // Pos, Normal, and UV are all as usual
-                    consumer.addVertex(vertices[i], vertices[i+1], vertices[i+2])
-                            .setNormal(vertices[i+3], vertices[i+4], vertices[i+5])
-                            .setUv(vertices[i+6], vertices[i+7])
-                    // UV1 and UV2 contain part IDs:
-                            .setUv1(vertices[i+8] == -1 ? -1 : (partId + (int) vertices[i+8]), vertices[i+9] == -1 ? -1 : (partId + (int) vertices[i+9]))
-                            .setUv2(vertices[i+10] == -1 ? -1 : (partId + (int) vertices[i+10]), vertices[i+11] == -1 ? -1 : (partId + (int) vertices[i+11]))
-                    // Color contains the weights for the 4 part IDs.
-                            .setColor(vertices[i+12], vertices[i+13], vertices[i+14], vertices[i+15]);
-                }
-            }
-        }
-        // Recurse on children
-        for (FiguraModelPart child : children)
-            child.buildOptimizedBuffers(bufferSource, renderTypes, renderTypePriority, currentId);
-    }
-
-    // Computes transforms for optimized rendering.
-    // This method, alongside buildOptimizedBuffers, is part of the Optimized Mode analogue to renderImmediate().
-    // While buildOptimizedBuffers() only runs on tree rebuild, this one will run every time it's rendered.
-    protected void calculateOptimizedTransforms(
-            PartDataStorageBuffer.StorageBufferUpdater partData,
-            FiguraMatrixStack matrixStack,
-            float tickDelta,
-
-            boolean currentlyDirty,
-            boolean currentlyVisible,
-            MutableInt currentId
-    ) throws StackOverflowError, ScriptError {
-        // Pre-render callback
-        invokeCallbacks(preRenderCallbacks, tickDelta);
-        // Update visibility
-        currentlyVisible = currentlyVisible && transform.getVisible();
-        // Get new id
-        int id = currentId.getAndIncrement();
-        // Calculate transforms if needed
-        matrixStack.push();
-        transform.affect(matrixStack);
-        // TODO Animations
-        // Mid-render callback
-        if (currentlyVisible) invokeCallbacks(midRenderCallbacks, tickDelta);
-        // Update the storage buffer updater if this subtree is dirty
-        currentlyDirty |= transform.fetchDirty();
-        if (currentlyDirty) {
-            partData.updatePartData(id).fillFromStack(matrixStack, currentlyVisible);
-        }
-        // Recurse to children, passing down dirt
-        for (FiguraModelPart child : children)
-            child.calculateOptimizedTransforms(partData, matrixStack, tickDelta, currentlyDirty, currentlyVisible, currentId);
-        // Post-render callback
-        if (currentlyVisible) invokeCallbacks(postRenderCallbacks, tickDelta);
-        // Pop matrix stack
-        matrixStack.pop();
-    }
-
-    private void invokeCallbacks(List<ScriptCallback> functions, Object... args) throws ScriptError {
+    public void invokeCallbacks(List<ScriptCallback> functions, Object... args) throws ScriptError {
         for (ScriptCallback f : functions)
             f.call(args);
     }
@@ -515,6 +358,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         for (FiguraModelPart child : children)
             counter.trace(child, depth);
         counter.trace(parent, depth);
+        counter.trace(nonRootRenderState, depth);
         for (ScriptCallback callback : preRenderCallbacks) counter.trace(callback, depth);
         for (ScriptCallback callback : midRenderCallbacks) counter.trace(callback, depth);
         for (ScriptCallback callback : postRenderCallbacks) counter.trace(callback, depth);

@@ -32,7 +32,7 @@ public class VanillaRootModelPart extends RootModelPart {
     public final ArrayList<ScriptCallback> vanillaRenderCallbacks = new ArrayList<>(0);
 
     public VanillaRootModelPart(AvatarMaterials.VanillaRootPartMaterials materials, List<AvatarTexture> textures) {
-        super(materials.modelPartMaterials(), textures, true);
+        super(materials.modelPartMaterials(), textures);
         vanillaTransform = new PartTransform();
         vanillaTransform.setVisible(!materials.replaceRoot().getValue());
     }

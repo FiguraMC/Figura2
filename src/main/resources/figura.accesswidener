@@ -12,8 +12,9 @@ accessible field net/minecraft/client/renderer/texture/TextureManager byPath Lja
 # Accessing pixel of texture
 accessible method com/mojang/blaze3d/platform/NativeImage getPixelABGR (II)I
 
-# Constructing new render types
+# Render types and shaders
 accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible method net/minecraft/client/renderer/ShaderManager createPreprocessor (Ljava/util/Map;Lnet/minecraft/resources/ResourceLocation;)Lcom/mojang/blaze3d/preprocessor/GlslPreprocessor;
 
 # Getting data of vanilla model renderers and parts
 accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;

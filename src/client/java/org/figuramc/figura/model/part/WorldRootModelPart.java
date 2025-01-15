@@ -11,8 +11,8 @@ public class WorldRootModelPart extends RootModelPart {
     // Given as doubles for high precision!
     public final Vector3d worldPosition = new Vector3d();
 
-    public WorldRootModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, boolean forceCompatible) {
-        super(materials, textures, forceCompatible);
+    public WorldRootModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures) {
+        super(materials, textures);
     }
 
 }

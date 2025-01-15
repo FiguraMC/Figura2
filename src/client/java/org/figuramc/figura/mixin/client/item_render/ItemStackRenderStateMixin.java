@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -15,7 +14,7 @@ import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.CustomItems;
 import org.figuramc.figura.ducks.client.ItemStackRenderStateAccess;
-import org.figuramc.figura.model.optimized.RenderingMode;
+import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
@@ -88,10 +87,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
         }
         float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
         try {
-            if (RenderingMode.isOptimized())
-                modelPart.renderOptimized(MATRIX_STACK, tickDelta);
-            else
-                modelPart.renderImmediate(multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
+            FiguraRenderers.getCurrentRenderer().render(modelPart, multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
         } catch (ScriptError ex) {
             avatar.error(Component.literal("Error inside model part render callback"), ex);
         } catch (StackOverflowError ex) {

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.manage.AvatarSubManager;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.util.ChatUtils;

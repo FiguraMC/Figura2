@@ -52,7 +52,7 @@ public class CustomItems implements AvatarComponent {
             CustomItemModelPart mainPart = entry.getValue().modelPartMaterials() != null ? new CustomItemModelPart(entry.getValue().modelPartMaterials(), entry.getValue().transforms(), texturesComponent.textures) : null;
 
             // Convert the texture index to a RootModelPart
-            RootModelPart flatPart = entry.getValue().textureIndex() != -1 ? new RootModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex()), false) : null;
+            RootModelPart flatPart = entry.getValue().textureIndex() != -1 ? new RootModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex())) : null;
             // Return the entry
             return new PartEntry(matcher, mainPart, flatPart);
         });
