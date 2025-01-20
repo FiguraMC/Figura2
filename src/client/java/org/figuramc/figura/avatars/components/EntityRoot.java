@@ -7,7 +7,7 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +32,7 @@ public class EntityRoot implements AvatarComponent {
     }
 
     // Render the entity root.
-    public void render(Avatar<?> self, float tickDelta, MultiBufferSource bufferSource, FiguraMatrixStack matrixStack, int light, int overlay) {
+    public void render(Avatar<?> self, float tickDelta, MultiBufferSource bufferSource, FiguraTransformStack matrixStack, int light, int overlay) {
         try {
             FiguraRenderers.getCurrentRenderer().render(modelPart, bufferSource, matrixStack, tickDelta, light, overlay);
         } catch (ScriptError ex) {

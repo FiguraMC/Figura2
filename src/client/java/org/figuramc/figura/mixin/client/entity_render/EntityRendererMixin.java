@@ -7,7 +7,7 @@ import org.figuramc.figura.avatars.components.EntityRoot;
 import org.figuramc.figura.ducks.client.EntityRenderStateAccess;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -37,7 +37,7 @@ public class EntityRendererMixin {
         EntityRoot root = avatar.getComponent(EntityRoot.class);
         if (root == null) return;
         float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
-        root.render(avatar, tickDelta, multiBufferSource, new FiguraMatrixStack(poseStack), light, OverlayTexture.NO_OVERLAY);
+        root.render(avatar, tickDelta, multiBufferSource, new FiguraTransformStack(poseStack), light, OverlayTexture.NO_OVERLAY);
     }
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))

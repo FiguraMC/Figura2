@@ -9,10 +9,12 @@ import java.util.Map;
  * This should help make it portable across rendering backends.
  */
 public record FiguraCustomShader(
+        List<VertexElem> customVertexElements,
         List<Uniform> customUniforms,
         List<Buffer> customBuffers
 ) {
 
+    public record VertexElem(String name, VariableType type) {}
     public record Uniform(String name, VariableType type) {}
     public record Buffer(String name, VariableType type) {}
 

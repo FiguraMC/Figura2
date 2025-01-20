@@ -1,7 +1,7 @@
 package org.figuramc.figura.model.part;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.util.Mth;
 import org.joml.*;
 
@@ -27,6 +27,8 @@ public class PartTransform {
 
     private boolean visible = true;
 
+    private final Vector4f color = new Vector4f(1, 1, 1, 1); // Packed color + alpha
+
     private boolean needsMatrixUpdate = false; // Whether the position and normal matrices need to be recalculated.
     private boolean isDirty = false; // Whether the transform was changed at all since last time, including via setMatrix (which wouldn't cause a matrix update). Needed for GPU upload.
     private boolean isIdentity = true; // Whether this was ever modified away from the identity matrix. If it never was, we can skip a matrix multiply.
@@ -43,6 +45,10 @@ public class PartTransform {
     public void setScale(Vector3f scale) { this.scale.set(scale); markDirty(); }
     public void setScale(float x, float y, float z) { this.scale.set(x, y, z); markDirty(); }
     public Vector3f getScale() { return scale; }
+
+    public void setColor(Vector4f color) { this.color.set(color); markDirtyNoMatrix(); }
+    public void setColor(float r, float g, float b, float a) { this.color.set(r, g, b, a); markDirtyNoMatrix(); }
+    public Vector4f getColor() { return this.color; }
 
     public void setEulerRad(Vector3f euler) { this.rotation.set(euler); this.quaternion.rotationZYX(euler.z, euler.y, euler.x); markDirty(); }
     public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); this.quaternion.rotationZYX(z, y, x); markDirty(); }
@@ -117,12 +123,13 @@ public class PartTransform {
         return positionMatrix;
     }
 
-    // Affect a matrix stack with this transform.
-    public void affect(FiguraMatrixStack matrixStack) {
+    // Affect a transform stack with this transform.
+    public void affect(FiguraTransformStack matrixStack) {
         if (isIdentity) return; // Identity, this has no effect
         recalculateIfNeeded();
-        // Apply the matrices
+        // Apply the matrices and other things
         matrixStack.multiply(positionMatrix, normalMatrix);
+        matrixStack.color(this.color);
     }
 
     // Affect a vanilla pose stack with this transform.

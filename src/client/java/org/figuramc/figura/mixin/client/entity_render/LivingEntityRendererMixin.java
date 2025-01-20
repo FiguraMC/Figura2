@@ -7,7 +7,7 @@ import org.figuramc.figura.avatars.components.EntityRoot;
 import org.figuramc.figura.ducks.client.EntityRenderStateAccess;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.world.entity.LivingEntity;
@@ -44,7 +44,7 @@ public class LivingEntityRendererMixin {
         if (avatar == null)  { CemManager.tryGetCem(livingEntity); return; }
         EntityRoot root = avatar.getComponent(EntityRoot.class);
         if (root == null) return;
-        FiguraMatrixStack matrixStack = new FiguraMatrixStack(poseStack);
+        FiguraTransformStack matrixStack = new FiguraTransformStack(poseStack);
         // Undo the problematic translations above:
         // This has to be 1.500 exactly. NOT 1.501.
         // I have not been able to figure out why,

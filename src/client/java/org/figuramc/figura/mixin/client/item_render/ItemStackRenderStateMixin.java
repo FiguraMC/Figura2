@@ -18,7 +18,7 @@ import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -41,7 +41,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
     @Shadow boolean isLeftHand;
 
     // Static math classes for not allocating
-    @Unique private static final FiguraMatrixStack MATRIX_STACK = new FiguraMatrixStack();
+    @Unique private static final FiguraTransformStack MATRIX_STACK = new FiguraTransformStack();
     @Unique private static final Quaternionf TEMP_QUAT = new Quaternionf(); // Temporary for calculations
 
     @WrapMethod(method = "render")

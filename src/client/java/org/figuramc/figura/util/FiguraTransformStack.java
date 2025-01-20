@@ -2,10 +2,7 @@ package org.figuramc.figura.util;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.util.Mth;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
-import org.joml.Quaternionf;
-import org.joml.Vector3fc;
+import org.joml.*;
 
 import java.util.ArrayList;
 
@@ -22,26 +19,31 @@ import java.util.ArrayList;
  *
  * Problems relating to double vs float precision should be resolved elsewhere, not
  * as part of the matrix stack.
+ *
+ * This stack also contains other information than just the matrices, such as color info.
  */
-public class FiguraMatrixStack {
+public class FiguraTransformStack {
 
     private final ArrayList<Matrix4f> positionMatrices = new ArrayList<>();
     private final ArrayList<Matrix3f> normalMatrices = new ArrayList<>();
+    private final ArrayList<Vector4f> colorMultipliers = new ArrayList<>();
     int curIndex; //index of the top item
     int maxSize; //the number of matrices that have been on the stack at its peak
 
-    public FiguraMatrixStack() {
+    public FiguraTransformStack() {
         curIndex = 0;
         maxSize = 1;
         positionMatrices.add(new Matrix4f());
         normalMatrices.add(new Matrix3f());
+        colorMultipliers.add(new Vector4f(1,1,1,1));
     }
 
-    public FiguraMatrixStack(PoseStack vanillaStack) {
+    public FiguraTransformStack(PoseStack vanillaStack) {
         this();
         PoseStack.Pose peeked = vanillaStack.last();
         positionMatrices.get(curIndex).set(peeked.pose());
         normalMatrices.get(curIndex).set(peeked.normal());
+        colorMultipliers.get(curIndex).set(1);
     }
 
     public void translate(Vector3fc vec) {
@@ -85,6 +87,10 @@ public class FiguraMatrixStack {
         normalMatrices.get(curIndex).scaleLocal(f * i, g * i, h * i);
     }
 
+    public void color(Vector4f multiplier) {
+        colorMultipliers.get(curIndex).mul(multiplier);
+    }
+
     public void rotate(Quaternionf quaternion) {
         positionMatrices.get(curIndex).rotate(quaternion);
         normalMatrices.get(curIndex).rotate(quaternion);
@@ -94,6 +100,8 @@ public class FiguraMatrixStack {
         positionMatrices.get(curIndex).mul(posMatrix);
         normalMatrices.get(curIndex).mul(normalMatrix);
     }
+
+
 
     private final Matrix3f normal = new Matrix3f();
     public void multiply(Matrix4f posMatrix) {
@@ -105,14 +113,16 @@ public class FiguraMatrixStack {
     public void push() {
         curIndex++;
         if (curIndex == maxSize) {
-            positionMatrices.add(new Matrix4f(positionMatrices.get(curIndex-1)));
-            normalMatrices.add(new Matrix3f(normalMatrices.get(curIndex-1)));
+            positionMatrices.add(new Matrix4f(positionMatrices.get(curIndex - 1)));
+            normalMatrices.add(new Matrix3f(normalMatrices.get(curIndex - 1)));
+            colorMultipliers.add(new Vector4f(colorMultipliers.get(curIndex - 1)));
             maxSize++;
         } else if (curIndex > maxSize) {
             throw new IllegalStateException("Current index should never be above max size - this is a bug in FiguraMatrixStack!");
         } else {
-            positionMatrices.get(curIndex).set(positionMatrices.get(curIndex-1));
-            normalMatrices.get(curIndex).set(normalMatrices.get(curIndex-1));
+            positionMatrices.get(curIndex).set(positionMatrices.get(curIndex - 1));
+            normalMatrices.get(curIndex).set(normalMatrices.get(curIndex - 1));
+            colorMultipliers.get(curIndex).set(colorMultipliers.get(curIndex - 1));
         }
     }
 
@@ -128,6 +138,8 @@ public class FiguraMatrixStack {
         return normalMatrices.get(curIndex);
     }
 
+    public Vector4f peekColor() { return colorMultipliers.get(curIndex); }
+
     public boolean isEmpty() {
         return curIndex == 0;
     }
@@ -138,7 +150,7 @@ public class FiguraMatrixStack {
     }
 
     /**
-     * Converts the matrix stack to a vanilla matrix stack.
+     * Converts the matrix stack to a vanilla matrix stack, losing non-matrix info.
      */
     public PoseStack getVanillaCopy() {
         PoseStack result = new PoseStack();

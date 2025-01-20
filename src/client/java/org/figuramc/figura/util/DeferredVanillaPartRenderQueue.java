@@ -4,7 +4,6 @@ import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.script_hooks.ScriptError;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import org.joml.Matrix3f;
@@ -32,7 +31,7 @@ public class DeferredVanillaPartRenderQueue {
         entry.overlay = overlay;
     }
 
-    private static final FiguraMatrixStack MATRIX_STACK = new FiguraMatrixStack();
+    private static final FiguraTransformStack MATRIX_STACK = new FiguraTransformStack();
     public static void flush(MultiBufferSource bufferSource, float tickDelta) {
         for (int i = 0; i < curIndex; i++) {
             QueueEntry entry = ENTRIES.get(i);

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import net.minecraft.Util;
 import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.blockentity.TheEndPortalRenderer;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.FiguraMod;
 import org.jetbrains.annotations.NotNull;
@@ -72,7 +73,7 @@ public abstract class OptimizedVanillaShaders extends RenderType {
     }
 
     private static final String VERSION_HEADER = """
-            #version 460
+            #version 430
             """;
 
     private static final String UNIFORMS = """
@@ -207,6 +208,22 @@ public abstract class OptimizedVanillaShaders extends RenderType {
                 return texture(lightMap, clamp(uv / 256.0, vec2(0.5 / 16.0), vec2(15.5 / 16.0)));
             }
             """;
+    private static final String PROJECTION = """
+            vec4 projection_from_position(vec4 position) {
+                vec4 projection = position * 0.5;
+                projection.xy = vec2(projection.x + projection.w, projection.y + projection.w);
+                projection.zw = position.zw;
+                return projection;
+            }
+            """;
+    private static final String MATRIX = """
+            mat2 mat2_rotate_z(float radians) {
+                return mat2(
+                    cos(radians), -sin(radians),
+                    sin(radians), cos(radians)
+                );
+            }
+            """;
 
 
     // Vertex shader for the "Basic" render type
@@ -260,7 +277,82 @@ public abstract class OptimizedVanillaShaders extends RenderType {
             
             """;
 
-    public static final CompiledShaderProgram BASIC = createOptimizedShader("basic", BASIC_VSH, BASIC_FSH);
+    // Largely copied from regular vanilla shader...
+    private static final String END_THINGY_VSH = VSH_HEADER + PROJECTION + """
+            
+            out vec4 texProj0;
+            out vec4 vertColor;
+            
+            void main() {
+                vec4 position; vec3 normal; // Normal is unused... hopefully optimized out?
+                figura_compute_weights(position, normal, vertColor);
+                gl_Position = ProjMat * ModelViewMat * position;
+                texProj0 = projection_from_position(gl_Position);
+            }
+            """;
+    private static final String END_THINGY_FSH = VERSION_HEADER + UNIFORMS + MATRIX + """
+            
+            in vec4 texProj0;
+            in vec4 vertColor;
+            
+            uniform sampler2D Sampler0;
+            uniform sampler2D Sampler1;
+            
+            const vec3[] COLORS = vec3[](
+                vec3(0.022087, 0.098399, 0.110818),
+                vec3(0.011892, 0.095924, 0.089485),
+                vec3(0.027636, 0.101689, 0.100326),
+                vec3(0.046564, 0.109883, 0.114838),
+                vec3(0.064901, 0.117696, 0.097189),
+                vec3(0.063761, 0.086895, 0.123646),
+                vec3(0.084817, 0.111994, 0.166380),
+                vec3(0.097489, 0.154120, 0.091064),
+                vec3(0.106152, 0.131144, 0.195191),
+                vec3(0.097721, 0.110188, 0.187229),
+                vec3(0.133516, 0.138278, 0.148582),
+                vec3(0.070006, 0.243332, 0.235792),
+                vec3(0.196766, 0.142899, 0.214696),
+                vec3(0.047281, 0.315338, 0.321970),
+                vec3(0.204675, 0.390010, 0.302066),
+                vec3(0.080955, 0.314821, 0.661491)
+            );
+            
+            const mat4 SCALE_TRANSLATE = mat4(
+                0.5, 0.0, 0.0, 0.25,
+                0.0, 0.5, 0.0, 0.25,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0
+            );
+            
+            mat4 end_portal_layer(float layer) {
+                mat4 translate = mat4(
+                    1.0, 0.0, 0.0, 17.0 / layer,
+                    0.0, 1.0, 0.0, (2.0 + layer / 1.5) * (GameTime * 1.5),
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0
+                );
+                mat2 rotate = mat2_rotate_z(radians((layer * layer * 4321.0 + layer * 9.0) * 2.0));
+                mat2 scale = mat2((4.5 - layer / 4.0) * 2.0);
+                return mat4(scale * rotate) * translate * SCALE_TRANSLATE;
+            }
+
+            out vec4 fragColor;
+
+            void main() {
+                vec3 color = textureProj(Sampler0, texProj0).rgb * COLORS[0];
+                for (int i = 0; i < LAYER_COUNT; i++) {
+                    color += textureProj(Sampler1, texProj0 * end_portal_layer(float(i + 1))).rgb * COLORS[i];
+                }
+                fragColor = vertColor * vec4(color, 1.0); // Apply Figura vertColor at the end!
+            }
+            
+            """;
+
+
+    private static final CompiledShaderProgram BASIC = createOptimizedShader("basic", BASIC_VSH, BASIC_FSH);
+    // They are literally 1 number off from each other, one is 15 and one is 16, so I avoid code duplication here
+    private static final CompiledShaderProgram END_PORTAL = createOptimizedShader("end_portal", END_THINGY_VSH, END_THINGY_FSH.replace("LAYER_COUNT", "15"));
+    private static final CompiledShaderProgram END_GATEWAY = createOptimizedShader("end_gateway", END_THINGY_VSH, END_THINGY_FSH.replace("LAYER_COUNT", "16"));
 
     public static final BiFunction<@NotNull ResourceLocation, @NotNull ResourceLocation, RenderType> OPTIMIZED_BASIC = Util.memoize((mainTex, emissiveTex) -> {
         CompositeState compositeState = CompositeState.builder()
@@ -272,6 +364,23 @@ public abstract class OptimizedVanillaShaders extends RenderType {
                 .createCompositeState(true);
         return RenderType.create("figura_optimized_basic", FORMAT, VertexFormat.Mode.QUADS, 4096, compositeState);
     });
+
+    public static final RenderType OPTIMIZED_END_PORTAL = RenderType.create("figura_optimized_end_portal", FORMAT, VertexFormat.Mode.QUADS, 256, CompositeState.builder()
+            .setColorLogicState(new CompiledShaderShard(END_PORTAL))
+            .setTextureState(MultiTextureStateShard.builder()
+                    .add(TheEndPortalRenderer.END_SKY_LOCATION, false, false)
+                    .add(TheEndPortalRenderer.END_PORTAL_LOCATION, false, false)
+                    .build())
+            .createCompositeState(false)
+    );
+    public static final RenderType OPTIMIZED_END_GATEWAY = RenderType.create("figura_optimized_end_gateway", FORMAT, VertexFormat.Mode.QUADS, 256, CompositeState.builder()
+            .setColorLogicState(new CompiledShaderShard(END_GATEWAY))
+            .setTextureState(MultiTextureStateShard.builder()
+                    .add(TheEndPortalRenderer.END_SKY_LOCATION, false, false)
+                    .add(TheEndPortalRenderer.END_PORTAL_LOCATION, false, false)
+                    .build())
+            .createCompositeState(false)
+    );
 
     // A bit cursed to use ColorLogicStateShard, but it's only currently ever used for text rendering,
     // and the alternatives are much more invasive.

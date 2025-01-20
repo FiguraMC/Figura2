@@ -1,6 +1,6 @@
 package org.figuramc.figura.model.renderers.vbo;
 
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -26,11 +26,11 @@ public class PartDataStruct {
     private final Matrix3f normalMat = new Matrix3f();
     private final Vector4f colorMultiplier = new Vector4f();
 
-    public void fillFromStack(FiguraMatrixStack stack, Vector4f color, boolean visible) {
+    public void fillFromStack(FiguraTransformStack stack, boolean visible) {
         if (visible) {
             this.transform.set(stack.peekPosition());
             this.normalMat.set(stack.peekNormal());
-            this.colorMultiplier.set(color);
+            this.colorMultiplier.set(stack.peekColor());
         } else {
             // If invisible, turn the matrix into the zero-scale matrix
             this.transform.zero();

@@ -1,7 +1,10 @@
 package org.figuramc.figura.script_languages.lua.model_parts;
 
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.figuramc.figura.model.part.*;
+import org.figuramc.figura.model.shader.FiguraRenderType;
+import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -99,7 +102,7 @@ public class ModelPartAPI {
             }
             return args.first();
         })); // Angles in radians
-        // quat() accepts 0 args, 1 vector4 arg, or 4 numeric args
+        // quat() accepts 0 args, 1 quaternion arg, or 4 numeric args
 //        metatable.rawset("quat", LibFunction.createV((s, args) -> {
 //            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
 //        }));
@@ -119,6 +122,25 @@ public class ModelPartAPI {
             }
             return args.first();
         }));
+        // color() accepts 0 args, 1 vector3 arg, or 3 numeric args.
+        metatable.rawset("color", LibFunction.createV((s, args) -> {
+            FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
+            switch (args.count()) {
+                case 1 -> { return Vector3API.wrap(part.transform.getColor().xyz(new Vector3d()), metatables); }
+                case 2 -> {
+                    Vector3d vec = args.arg(2).checkUserdata(s, Vector3d.class);
+                    part.transform.setColor((float) vec.x, (float) vec.y, (float) vec.z, part.transform.getColor().w);
+                }
+                case 4 -> part.transform.setColor(
+                        (float) args.arg(2).checkDouble(s),
+                        (float) args.arg(3).checkDouble(s),
+                        (float) args.arg(4).checkDouble(s),
+                        part.transform.getColor().w
+                );
+                default -> throw new LuaError("Invalid number of args to ModelPart:color(): expected 0, 1, or 3", s.allocationTracker);
+            }
+            return args.first();
+        }));
         metatable.rawset("vis", LibFunction.createV((s, args) -> {
             FiguraModelPart part = args.first().checkUserdata(s, FiguraModelPart.class);
             switch (args.count()) {
@@ -129,6 +151,54 @@ public class ModelPartAPI {
             return args.first();
         }));
 
+        // Render type has separate getter/setter.
+        // This is because setting to nil needs to be a valid operation,
+        // and we want calling with 0 args to be the same as setting to nil.
+
+        // TODO improve these functions! They aren't final and may need to change as rendering evolves.
+
+        metatable.rawset("getRenderType", LibFunction.create((s, p) -> {
+            FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
+            return switch (part.getRenderType()) {
+                case null -> NIL;
+                case FiguraRenderType.EndPortal e -> valueOf("END_PORTAL", s.allocationTracker);
+                case FiguraRenderType.EndGateway e -> valueOf("END_GATEWAY", s.allocationTracker);
+                case FiguraRenderType.Basic basic -> {
+                    LuaTable result = tableOf(s.allocationTracker);
+                    if (basic.mainTex() != null) result.rawset("mainTex", valueOf(basic.mainTex().toString(), s.allocationTracker));
+                    if (basic.emissiveTex() != null) result.rawset("emissiveTex", valueOf(basic.emissiveTex().toString(), s.allocationTracker));
+                    yield result;
+                }
+            };
+        }));
+        metatable.rawset("setRenderType", LibFunction.create((s, p, ty, pri) -> {
+            FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
+            part.renderTypePriority = pri.optInteger(s, 1); // Priority is 1 by default, to override 0
+            part.setRenderType(switch (ty) {
+                case LuaNil nil -> null;
+                case LuaString string -> switch (string.toString()) {
+                    case "END_PORTAL" -> FiguraRenderType.EndPortal.INSTANCE;
+                    case "END_GATEWAY" -> FiguraRenderType.EndGateway.INSTANCE;
+                    default -> throw new LuaError("Invalid string arg to ModelPart:setRenderType(): \"" + string + "\"", s.allocationTracker);
+                };
+                case LuaTable table -> new FiguraRenderType.Basic(
+                        switch (table.rawget("mainTex")) {
+                            case LuaNil nil -> null;
+                            case LuaString string -> ResourceLocation.parse(string.toString());
+                            case LuaUserdata texture -> texture.checkUserdata(s, AvatarTexture.class).getLocation();
+                            default -> throw new LuaError("Invalid value for key \"mainTex\" in ModelPart:setRenderType() - expected string or texture", s.allocationTracker);
+                        },
+                        switch (table.rawget("emissiveTex")) {
+                            case LuaNil nil -> null;
+                            case LuaString string -> ResourceLocation.parse(string.toString());
+                            case LuaUserdata texture -> texture.checkUserdata(s, AvatarTexture.class).getLocation();
+                            default -> throw new LuaError("Invalid value for key \"emissiveTex\" in ModelPart:setRenderType() - expected string or texture", s.allocationTracker);
+                        }
+                );
+                default -> throw new LuaError("Invalid arg to ModelPart:setRenderType(). Expected nil, string, or table", s.allocationTracker);
+            });
+            return p;
+        }));
         // Other operations
 
         // Get child with the given string name

@@ -43,7 +43,7 @@ public class FiguraModelPart extends MarkedObjectBase {
     // Rendering
     public @Nullable FiguraPartRenderer.NonRootState nonRootRenderState; // Temp state for the renderer to keep track of. Should be cleared when render type is modified.
     public final float[] vertices; // The vertices making up the cubes and meshes of the model part
-    public @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally.
+    private @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally. Private because of contract with non-root render state.
     public int renderTypePriority; // If the render type priority is higher than the parent's, renderType can replace the current render types.
 
     // Callbacks which are run during various stages of the rendering process.
@@ -342,6 +342,15 @@ public class FiguraModelPart extends MarkedObjectBase {
         arr.add(u * uvModifier.z + uvModifier.x); arr.add(v * uvModifier.w + uvModifier.y);
         arr.add(skinningOffset0); arr.add(skinningOffset1); arr.add(skinningOffset2); arr.add(skinningOffset3);
         arr.add(skinningWeight0); arr.add(skinningWeight1); arr.add(skinningWeight2); arr.add(skinningWeight3);
+    }
+
+    public void setRenderType(@Nullable FiguraRenderType renderType) {
+        this.nonRootRenderState = null;
+        this.renderType = renderType;
+    }
+
+    public @Nullable FiguraRenderType getRenderType() {
+        return this.renderType;
     }
 
     public void invokeCallbacks(List<ScriptCallback> functions, Object... args) throws ScriptError {

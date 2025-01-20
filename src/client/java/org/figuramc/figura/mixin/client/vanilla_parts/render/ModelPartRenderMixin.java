@@ -9,7 +9,7 @@ import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.util.DeferredVanillaPartRenderQueue;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.network.chat.Component;
@@ -34,7 +34,7 @@ public class ModelPartRenderMixin {
     @Unique private static Avatar<?> currentAvatar = null;
     @Unique private static VanillaRootModelPart currentModelPart = null;
     @Unique private static VanillaParts currentVanillaParts = null;
-    @Unique private static final FiguraMatrixStack tempMatrixStack = new FiguraMatrixStack();
+    @Unique private static final FiguraTransformStack tempMatrixStack = new FiguraTransformStack();
     @Unique private static final Quaternionf tempQuat = new Quaternionf();
 
     @Inject(

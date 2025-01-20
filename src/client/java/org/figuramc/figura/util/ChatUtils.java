@@ -23,12 +23,14 @@ public class ChatUtils {
         if (reason == null)
             msg = msg.append(" ").append(Component.literal("[No reason given]").withStyle(ChatFormatting.AQUA)); // TODO translatable
         else {
-            MutableComponent hoverMessage = Component.literal(reason.getMessage().replace("\t", "  ")).withStyle(ChatFormatting.RED);
+            String reasonMsg = reason.getMessage() != null ? reason.getMessage() : "[No reason given]";
+            MutableComponent hoverMessage = Component.literal(reasonMsg.replace("\t", "  ")).withStyle(ChatFormatting.RED);
             reason = reason.getCause();
             while (reason != null) {
+                reasonMsg = reason.getMessage() != null ? reason.getMessage() : "[No reason given]";
                 hoverMessage.append(
                         Component.literal("\nCaused by:\n").withStyle(ChatFormatting.AQUA).append(
-                        Component.literal(reason.getMessage().replace("\t", "  ")).withStyle(ChatFormatting.RED)
+                        Component.literal(reasonMsg.replace("\t", "  ")).withStyle(ChatFormatting.RED)
                 ));
                 reason = reason.getCause();
             }

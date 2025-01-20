@@ -11,7 +11,7 @@ import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -30,7 +30,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
     public void render(
             RootModelPart root,
             MultiBufferSource bufferSource,
-            FiguraMatrixStack matrixStack,
+            FiguraTransformStack matrixStack,
             float tickDelta,
             int light, int overlay
     ) throws ScriptError, StackOverflowError {
@@ -42,7 +42,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
             MultiBufferSource bufferSource, // The source for render buffers
             List<RenderType> currentRenderTypes, // The currently cached render types which vertices will be passed to
             int renderTypePriority, // The current render type priority. The render type may only be changed if part.renderTypePriority >= renderTypePriority.
-            FiguraMatrixStack matrixStack, // The current matrix stack
+            FiguraTransformStack matrixStack, // The current matrix stack
             float tickDelta,
             int light,
             int overlay
@@ -55,12 +55,12 @@ public class CompatibleRenderer implements FiguraPartRenderer {
             return;
 
         // Update render types if we can and this has priority
-        if (part.renderType != null && part.renderTypePriority >= renderTypePriority) {
+        if (part.getRenderType() != null && part.renderTypePriority >= renderTypePriority) {
             // If it already has a cached render type, use it! Otherwise, compute and cache.
             @Nullable State partState = (State) part.nonRootRenderState;
             if (partState == null) {
                 // Create the Minecraft RenderTypes by reading the part's figura render type.
-                List<RenderType> types = switch (part.renderType) {
+                List<RenderType> types = switch (part.getRenderType()) {
                     case FiguraRenderType.EndPortal p -> List.of(RenderType.endPortal());
                     case FiguraRenderType.EndGateway g -> List.of(RenderType.endGateway());
                     case FiguraRenderType.Basic(@Nullable ResourceLocation mainTex, @Nullable ResourceLocation emissiveTex) -> {
@@ -95,6 +95,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
             Vector3f norm = new Vector3f();
             Matrix4f posMatrix = matrixStack.peekPosition();
             Matrix3f normalMatrix = matrixStack.peekNormal();
+            Vector4f color = matrixStack.peekColor();
             float[] vertices = part.vertices;
             for (RenderType renderType : currentRenderTypes) {
                 VertexConsumer consumer = bufferSource.getBuffer(renderType);
@@ -104,7 +105,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
 
                     // Skinning is ignored in compatible mode (TODO add, even if not performant)
                     consumer.addVertex(pos.x, pos.y, pos.z)
-                            .setColor(1.0f, 1.0f, 1.0f, 1.0f)
+                            .setColor(color.x, color.y, color.z, color.w)
                             .setUv(vertices[i+6], vertices[i+7])
                             .setNormal(norm.x, norm.y, norm.z)
                             .setLight(light)

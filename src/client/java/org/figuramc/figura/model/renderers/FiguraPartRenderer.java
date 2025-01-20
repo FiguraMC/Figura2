@@ -4,11 +4,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 
 /**
  * A renderer which can render a part. One exists per rendering backend.
- * "Context" represents the context needed for said renderer to function.
  */
 public interface FiguraPartRenderer {
 
@@ -18,7 +17,7 @@ public interface FiguraPartRenderer {
     void render(
             RootModelPart root,
             MultiBufferSource bufferSource,
-            FiguraMatrixStack matrixStack,
+            FiguraTransformStack matrixStack,
             float tickDelta,
             int light, int overlay
     ) throws ScriptError, StackOverflowError;

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Vector4f;
 
 import java.util.List;
@@ -35,7 +35,7 @@ public class OptimizedHelpers {
     // Private helper method for recursing through model parts and building optimized buffers.
     private static void buildOptimizedBuffers(FiguraModelPart part, OptimizedBufferBuilder bufferSource, List<RenderType> renderTypes, int renderTypePriority, Function<FiguraModelPart, List<RenderType>> renderTypeGetter, MutableInt currentId) {
         // Update render types if we can and this has priority
-        if (part.renderType != null && part.renderTypePriority >= renderTypePriority) {
+        if (part.getRenderType() != null && part.renderTypePriority >= renderTypePriority) {
             renderTypes = renderTypeGetter.apply(part);
             renderTypePriority = part.renderTypePriority;
         }
@@ -51,10 +51,10 @@ public class OptimizedHelpers {
                     consumer.addVertex(vertices[i], vertices[i+1], vertices[i+2])
                             .setNormal(vertices[i+3], vertices[i+4], vertices[i+5])
                             .setUv(vertices[i+6], vertices[i+7])
-                            // UV1 and UV2 contain part IDs:
+                            // "UV1" and "UV2" contain part IDs:
                             .setUv1(vertices[i+8] == -1 ? -1 : (partId + (int) vertices[i+8]), vertices[i+9] == -1 ? -1 : (partId + (int) vertices[i+9]))
                             .setUv2(vertices[i+10] == -1 ? -1 : (partId + (int) vertices[i+10]), vertices[i+11] == -1 ? -1 : (partId + (int) vertices[i+11]))
-                            // Color contains the weights for the 4 part IDs.
+                            // "Color" contains the weights for the 4 part IDs.
                             .setColor(vertices[i+12], vertices[i+13], vertices[i+14], vertices[i+15]);
                 }
             }
@@ -67,7 +67,7 @@ public class OptimizedHelpers {
     // Helper method to update transforms for a given root and store them in the PartDataStorageBuffer.
     public static void updateTransforms(RootModelPart root, PartDataStorageBuffer partDataStorageBuffer, float tickDelta) throws StackOverflowError, ScriptError {
         partDataStorageBuffer.updatePartData(partData -> {
-            calculateTransforms(root, partData, new FiguraMatrixStack(), tickDelta, false, true, new MutableInt(0));
+            calculateTransforms(root, partData, new FiguraTransformStack(), tickDelta, false, true, new MutableInt(0));
         });
     }
 
@@ -75,7 +75,7 @@ public class OptimizedHelpers {
     private static void calculateTransforms(
             FiguraModelPart part,
             PartDataStorageBuffer.StorageBufferUpdater partData,
-            FiguraMatrixStack matrixStack,
+            FiguraTransformStack matrixStack,
             float tickDelta,
             boolean currentlyDirty, boolean currentlyVisible,
             MutableInt currentId
@@ -95,7 +95,7 @@ public class OptimizedHelpers {
         // Update the storage buffer updater if this subtree is dirty
         currentlyDirty |= part.transform.fetchDirty();
         if (currentlyDirty) {
-            partData.updatePartData(id).fillFromStack(matrixStack, new Vector4f(1.0f), currentlyVisible);
+            partData.updatePartData(id).fillFromStack(matrixStack, currentlyVisible);
         }
         // Recurse to children, passing down dirt
         for (FiguraModelPart child : part.children)

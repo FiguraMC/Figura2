@@ -18,7 +18,7 @@ import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.util.FiguraMatrixStack;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.figuramc.figura.util.GeneralUtils;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -31,8 +31,8 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
     private VanillaOptimizedRenderer() {}
 
     // Black transparent pixel to use as a placeholder for no texture
-    private static final ResourceLocation BLACK_PIXEL = GeneralUtils.block(() -> {
-        ResourceLocation loc = FiguraMod.id("black_pixel");
+    private static final ResourceLocation ZERO_PIXEL = GeneralUtils.block(() -> {
+        ResourceLocation loc = FiguraMod.id("zero_pixel");
         DynamicTexture tex = new DynamicTexture(GeneralUtils.block(() -> {
             NativeImage image = new NativeImage(1, 1, false);
             image.setPixel(0, 0, ARGB.color(0, 0, 0, 0));
@@ -46,7 +46,7 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
     public void render(
             RootModelPart root,
             MultiBufferSource bufferSource,
-            FiguraMatrixStack matrixStack,
+            FiguraTransformStack matrixStack,
             float tickDelta,
             int light, int overlay
     ) throws ScriptError, StackOverflowError {
@@ -59,13 +59,13 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
                 // Create/get the optimized render type from the part's state
                 @Nullable NonRootState nonRootState = (NonRootState) part.nonRootRenderState;
                 if (nonRootState == null) {
-                    assert part.renderType != null;
-                    part.nonRootRenderState = nonRootState = new NonRootState(switch (part.renderType) {
-                        case FiguraRenderType.EndPortal p -> throw new UnsupportedOperationException("TODO");
-                        case FiguraRenderType.EndGateway g -> throw new UnsupportedOperationException("TODO");
+                    assert part.getRenderType() != null;
+                    part.nonRootRenderState = nonRootState = new NonRootState(switch (part.getRenderType()) {
+                        case FiguraRenderType.EndPortal p -> OptimizedVanillaShaders.OPTIMIZED_END_PORTAL;
+                        case FiguraRenderType.EndGateway g -> OptimizedVanillaShaders.OPTIMIZED_END_GATEWAY;
                         case FiguraRenderType.Basic(@Nullable ResourceLocation mainTex, @Nullable ResourceLocation emissiveTex) -> {
-                            if (mainTex == null) mainTex = BLACK_PIXEL;
-                            if (emissiveTex == null) emissiveTex = BLACK_PIXEL;
+                            if (mainTex == null) mainTex = ZERO_PIXEL;
+                            if (emissiveTex == null) emissiveTex = ZERO_PIXEL;
                             yield OptimizedVanillaShaders.OPTIMIZED_BASIC.apply(mainTex, emissiveTex);
                         }
                     });
