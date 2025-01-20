@@ -22,9 +22,9 @@ public sealed interface FiguraRenderType {
      * A rendering type that uses a custom shader.
      * Not all rendering backends need to support this.
      */
-    record CustomShader(
-            FiguraCustomShader customShader
-    ) implements FiguraRenderType {}
+//    record CustomShader(
+//            FiguraCustomShader customShader
+//    ) implements FiguraRenderType {}
 
     /**
      * One-off, non-customizable render types, with global INSTANCE objects.
