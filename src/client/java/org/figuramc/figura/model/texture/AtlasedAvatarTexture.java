@@ -23,8 +23,12 @@ public class AtlasedAvatarTexture extends AvatarTexture {
 
     @Override public void upload() {}
     @Override public void destroy() {}
-    @Override public ResourceLocation getLocation() { return this.texturesComponent.atlas.location; }
+    @Override public ResourceLocation getLocation() {
+        assert texturesComponent.atlas != null; // We are an atlased texture, atlas must exist
+        return this.texturesComponent.atlas.location;
+    }
     @Override public Vector4f getUvValues() {
+        assert texturesComponent.atlas != null; // We are an atlased texture, atlas must exist
         float atlasWidth = (float) texturesComponent.atlas.width;
         float atlasHeight = (float) texturesComponent.atlas.height;
         return new Vector4f(

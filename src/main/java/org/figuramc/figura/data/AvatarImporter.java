@@ -66,6 +66,9 @@ public class AvatarImporter {
         List<AvatarMaterials.ScriptMaterials> scripts = getScripts(rootFolder.resolve("scripts"));
         ArrayList<AvatarMaterials.TextureMaterials> textures = getTextures(rootFolder.resolve("textures"));
 
+        // Read custom items as well. Other models might have textures that link to ones defined here, so it has to happen first!
+        Map<String, AvatarMaterials.CustomItemPartMaterials> customItems = parseCustomItems(rootFolder.resolve("items"), textures);
+
         // Handle part roots
         List<AvatarMaterials.ModelPartMaterials> worldRoots = parseModelFolder(rootFolder.resolve("world"), "world", textures).children();
         AvatarMaterials.ModelPartMaterials entityRoot = parseModelFolder(rootFolder.resolve("entity"), "entity", textures);
@@ -73,9 +76,6 @@ public class AvatarImporter {
 
         // Read vanilla parts
         Map<String, AvatarMaterials.VanillaRootPartMaterials> vanillaRoots = parseVanillaRoots(rootFolder.resolve("vanilla"), "vanilla", textures);
-
-        // Read custom items
-        Map<String, AvatarMaterials.CustomItemPartMaterials> customItems = parseCustomItems(rootFolder.resolve("items"), textures);
 
         // Return!
         return new AvatarMaterials(metadata, scripts, textures, worldRoots, entityRoot, hudRoot, vanillaRoots, customItems);
@@ -111,7 +111,7 @@ public class AvatarImporter {
         if (!Files.isDirectory(scriptRoot)) return List.of();
         ArrayList<AvatarMaterials.ScriptMaterials> scripts = ListUtils.map(FileUtils.listFiles(scriptRoot.toFile(), null, true), file -> {
             Path path = file.toPath();
-            String relativizedName = scriptRoot.relativize(path).toString().replace('\\', '/'); // Cursed path OS-specific stuff
+            String relativizedName = scriptRoot.relativize(path).toString().replace(File.pathSeparatorChar, '/'); // Cursed path OS-specific stuff
             byte[] data = Files.readAllBytes(path);
             return new AvatarMaterials.ScriptMaterials(relativizedName, data);
         });
@@ -124,13 +124,13 @@ public class AvatarImporter {
         if (!Files.isDirectory(texturesRoot)) return new ArrayList<>();
         ArrayList<AvatarMaterials.TextureMaterials> textures = ListUtils.map(FileUtils.listFiles(texturesRoot.toFile(), new String[]{"png"}, true), file -> {
             Path path = file.toPath();
-            String relativizedName = texturesRoot.relativize(path).toString().replace('\\', '/'); // Cursed path OS-specific stuff
+            String relativizedName = texturesRoot.relativize(path).toString().replace(File.pathSeparatorChar, '/'); // Cursed path OS-specific stuff
             relativizedName = IOUtils.stripExtension(relativizedName, "png"); // Strip png extension
             boolean noAtlas = relativizedName.endsWith(".noatlas");
             if (noAtlas) relativizedName = relativizedName.substring(0, relativizedName.length() - ".noatlas".length());
             byte[] data = Files.readAllBytes(path);
 
-            return new AvatarMaterials.TextureMaterials.OwnedTexture(relativizedName, data, noAtlas);
+            return new AvatarMaterials.TextureMaterials.OwnedTexture(relativizedName, path, data, noAtlas);
         });
         textures.sort(Comparator.comparing(AvatarMaterials.TextureMaterials::name)); // Sort for consistency
         return textures;
@@ -183,7 +183,7 @@ public class AvatarImporter {
                 JsonObject outlinerMember = element.getAsJsonObject();
                 // Figure out which root this is part of:
                 if (!outlinerMember.has(VANILLA_ROOT_KEY))
-                    throw new AvatarImportingException("Inside bbmodel \"" + prefix.replace('\\', '/') + "/" + file.getName() + "\": part \"" + outlinerMember.get("name").getAsString() + "\" has no Figura vanilla root!");
+                    throw new AvatarImportingException("Inside bbmodel \"" + prefix.replace(File.pathSeparatorChar, '/') + "/" + file.getName() + "\": part \"" + outlinerMember.get("name").getAsString() + "\" has no Figura vanilla root!");
                 boolean replace = outlinerMember.has(VANILLA_ROOT_REPLACE_KEY) && outlinerMember.get(VANILLA_ROOT_REPLACE_KEY).getAsBoolean();
                 String vanillaRoot = outlinerMember.get(VANILLA_ROOT_KEY).getAsString();
                 // Get or create the part for this root. Note the ArrayList<> to make it editable!
@@ -214,8 +214,17 @@ public class AvatarImporter {
 
         Map<String, MutablePair<Pair<AvatarMaterials.ModelPartMaterials, EnumMap<ItemDisplayContext, AvatarMaterials.ItemPartTransform>>, Integer>> discovered = new HashMap<>();
 
+        // Get valid files, put pngs first in case bbmodels reference them.
+        List<File> files = new ArrayList<>();
         for (File subfile : file.listFiles()) {
+            if (subfile.getName().endsWith(".bbmodel"))
+                files.addLast(subfile);
+            else if (subfile.getName().endsWith(".png"))
+                files.addFirst(subfile);
+        }
 
+        // Iterate
+        for (File subfile : files) {
             if (subfile.getName().endsWith(".bbmodel")) {
 
                 // Fetch the pattern, which is just the file name
@@ -254,7 +263,7 @@ public class AvatarImporter {
                 var pair = discovered.computeIfAbsent(pattern, k -> new MutablePair<>(null, null));
 
                 byte[] data = Files.readAllBytes(subfile.toPath());
-                textures.add(new AvatarMaterials.TextureMaterials.OwnedTexture("items/" + pattern, data, noAtlas));
+                textures.add(new AvatarMaterials.TextureMaterials.OwnedTexture("items/" + pattern, subfile.toPath(), data, noAtlas));
                 pair.right = textures.size() - 1;
             }
         }
@@ -330,27 +339,39 @@ public class AvatarImporter {
                 textures.add(new AvatarMaterials.TextureMaterials.VanillaTexture(override));
                 localToGlobalTextureMapping.add(textures.size() - 1);
             } else {
-                // Get the name of the texture. Strip ".png" if it has it.
-                String textureName = IOUtils.stripExtension(texture.get("name").getAsString(), "png");
-                // Textures named .noatlas.png will have their noAtlas flag set to true!
-                boolean noAtlas = textureName.endsWith(".noatlas");
-                if (noAtlas) textureName = textureName.substring(0, textureName.length() - ".noatlas".length());
+                // If the texture has a path, and the path points to something in the avatar folder, use it instead.
+                @Nullable Path linkedPath = null;
+                if (texture.has("path")) {
+                    JsonElement path = texture.get("path");
+                    if (path.isJsonPrimitive() && ((JsonPrimitive) path).isString()) {
+                        linkedPath = Path.of(path.getAsString());
+                    }
+                }
 
-                // If this texture already existed in the textures folder, reuse that one. Otherwise, add a new one.
-                String finalTextureName = textureName;
-                int globalTextureIndex = ListUtils.findIndex(textures, tex -> Objects.equals(tex.name(), finalTextureName));
+                // If this texture has a linked path that pointed to an existing texture, reuse that one. Otherwise, add a new one.
+                @Nullable Path finalLinkedPath = linkedPath;
+                int globalTextureIndex = finalLinkedPath == null ? -1 : ListUtils.findIndex(textures, tex ->
+                    tex instanceof AvatarMaterials.TextureMaterials.OwnedTexture ownedTex && finalLinkedPath.equals(ownedTex.path()));
                 if (globalTextureIndex != -1) {
                     // Already existed, reuse it
                     localToGlobalTextureMapping.add(globalTextureIndex);
                 } else {
                     // Didn't exist, need to add a new texture
+
+                    // Get the name of the texture. Strip ".png" if it has it.
+                    String textureName = IOUtils.stripExtension(texture.get("name").getAsString(), "png");
+                    // Textures named .noatlas.png will have their noAtlas flag set to true!
+                    boolean noAtlas = textureName.endsWith(".noatlas");
+                    if (noAtlas) textureName = textureName.substring(0, textureName.length() - ".noatlas".length());
+
                     String longTextureName = texturePrefix + "/" + textureName;
                     String base64Source = texture.get("source").getAsString();
                     if (!base64Source.startsWith("data:image/png;base64,"))
                         throw new AvatarImportingException("Failed to read texture base64 for texture \"" + longTextureName + "\". Expected string prefix \"data:image/png;base64,\".");
                     String rest = base64Source.substring("data:image/png;base64,".length());
                     byte[] pngData = Base64.getDecoder().decode(rest);
-                    AvatarMaterials.TextureMaterials newTexture = new AvatarMaterials.TextureMaterials.OwnedTexture(longTextureName, pngData, noAtlas);
+                    // Texture has no path
+                    AvatarMaterials.TextureMaterials newTexture = new AvatarMaterials.TextureMaterials.OwnedTexture(longTextureName, null, pngData, noAtlas);
                     textures.add(newTexture);
                     localToGlobalTextureMapping.add(textures.size() - 1);
                 }

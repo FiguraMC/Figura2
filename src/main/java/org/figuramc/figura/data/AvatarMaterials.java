@@ -8,6 +8,7 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.joml.Vector4i;
 
+import java.nio.file.Path;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,8 @@ public record AvatarMaterials(
     // TEXTURES
     public interface TextureMaterials {
         @Nullable String name();
-        record OwnedTexture(String name, byte[] data, boolean noAtlas) implements TextureMaterials {}
+        // Path only used during importing. Do not serialize.
+        record OwnedTexture(String name, @Nullable Path path, byte[] data, boolean noAtlas) implements TextureMaterials {}
         record VanillaTexture(String resourceLocation) implements TextureMaterials { @Override public String name() { return null; }}
     }
 
@@ -64,10 +66,12 @@ public record AvatarMaterials(
     public record VertexData(Vector3f pos, @Nullable Vector4i skinningOffsets, @Nullable Vector4f skinningWeights) {}
 
     // VANILLA ROOTS
-    public record VanillaRootPartMaterials(ModelPartMaterials modelPartMaterials, MutableBoolean replaceRoot) {} // Mutable to make the importing process easier
+    // replaceRoot is mutable to make the importing process easier
+    public record VanillaRootPartMaterials(ModelPartMaterials modelPartMaterials, MutableBoolean replaceRoot) {}
 
     // CUSTOM ITEMS
-    public record CustomItemPartMaterials(@Nullable ModelPartMaterials modelPartMaterials, @Nullable EnumMap<ItemDisplayContext, ItemPartTransform> transforms, int textureIndex) {} // Either both null, or neither null
+    // Either both null, or neither null
+    public record CustomItemPartMaterials(@Nullable ModelPartMaterials modelPartMaterials, @Nullable EnumMap<ItemDisplayContext, ItemPartTransform> transforms, int textureIndex) {}
     public record ItemPartTransform(Vector3f translation, Vector3f rotation, Vector3f scale) {}
 
 }
