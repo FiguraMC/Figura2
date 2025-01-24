@@ -134,8 +134,8 @@ public class FiguraTextureAtlas extends AbstractTexture {
                         rect.y = currentY;
                         currentX += rect.width;
                         totalWidth = Math.max(totalWidth, currentX);
-                        // Add an unused region below it
-                        if (totalHeight - rect.getHeight() != 0)
+                        // Add an unused region below it if needed
+                        if (totalHeight - rect.getHeight() != currentY)
                             unusedRegions.add(new Region(rect.getX(), rect.getBottom(), rect.getWidth(), totalHeight - rect.getHeight()));
                     }
                 } else {

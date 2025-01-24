@@ -149,16 +149,13 @@ public class AvatarImporter {
             for (File subfile : file.listFiles()) {
                 Map<String, AvatarMaterials.VanillaRootPartMaterials> childParts = parseVanillaRoots(subfile.toPath(), newPrefix, textures);
                 for (Map.Entry<String, AvatarMaterials.VanillaRootPartMaterials> childEntry : childParts.entrySet()) {
-                    if (children.containsKey(childEntry.getKey())) {
-                        AvatarMaterials.VanillaRootPartMaterials current = children.get(childEntry.getKey());
-                        // Make it replace-root if it should be
-                        current.replaceRoot().setValue(current.replaceRoot().getValue() || childEntry.getValue().replaceRoot().getValue());
-                        // Merge child lists
-                        current.modelPartMaterials().children().addAll(childEntry.getValue().modelPartMaterials().children());
-                    } else {
-                        // Just add it to the list
-                        children.put(childEntry.getKey(), childEntry.getValue());
-                    }
+                    // Get or create the root part, with the file's name
+                    AvatarMaterials.VanillaRootPartMaterials root = children.computeIfAbsent(childEntry.getKey(), k ->
+                        new AvatarMaterials.VanillaRootPartMaterials(new AvatarMaterials.ModelPartMaterials(file.getName(), new Vector3f(), new Vector3f(), new ArrayList<>(), -1, List.of(), List.of()), new MutableBoolean(false)));
+
+                    // Add this entry as child of the root part, and mark it replace-root if it should be
+                    root.replaceRoot().setValue(root.replaceRoot().getValue() || childEntry.getValue().replaceRoot().getValue());
+                    root.modelPartMaterials().children().add(childEntry.getValue().modelPartMaterials());
                 }
             }
             return children;
@@ -166,6 +163,7 @@ public class AvatarImporter {
         // If it's a bbmodel: process the json.
         // The following code is rife with potential for various runtime exceptions from badly formatted files... TODO deal with this?
         if (file.getName().endsWith(".bbmodel")) {
+            String fileName = IOUtils.stripExtension(file.getName(), "bbmodel");
             String jsonText = Files.readString(path);
             JsonObject bbmodel = JsonParser.parseString(jsonText).getAsJsonObject();
 
@@ -173,7 +171,7 @@ public class AvatarImporter {
             JsonObject dummyFakePart = new JsonObject();
             dummyFakePart.add("children", bbmodel.getAsJsonArray("outliner"));
             Map<String, Integer> relativeGroupIds = readRelativeGroupIds(dummyFakePart, new MutableInt(0), 0, new HashMap<>());
-            String newPrefix = prefix + "/" + IOUtils.stripExtension(file.getName(), "bbmodel");
+            String newPrefix = prefix + "/" + fileName;
             Map<String, Element> elements = readTexturesAndElements(bbmodel, newPrefix, textures, relativeGroupIds);
 
             // Read the outliner!
@@ -187,8 +185,8 @@ public class AvatarImporter {
                 boolean replace = outlinerMember.has(VANILLA_ROOT_REPLACE_KEY) && outlinerMember.get(VANILLA_ROOT_REPLACE_KEY).getAsBoolean();
                 String vanillaRoot = outlinerMember.get(VANILLA_ROOT_KEY).getAsString();
                 // Get or create the part for this root. Note the ArrayList<> to make it editable!
-                AvatarMaterials.VanillaRootPartMaterials partRoot = modelParts.computeIfAbsent(vanillaRoot,
-                        v -> new AvatarMaterials.VanillaRootPartMaterials(new AvatarMaterials.ModelPartMaterials("root", new Vector3f(), new Vector3f(), new ArrayList<>(), -1, List.of(), List.of()), new MutableBoolean(false)));
+                AvatarMaterials.VanillaRootPartMaterials partRoot = modelParts.computeIfAbsent(vanillaRoot, v ->
+                        new AvatarMaterials.VanillaRootPartMaterials(new AvatarMaterials.ModelPartMaterials(fileName, new Vector3f(), new Vector3f(), new ArrayList<>(), -1, List.of(), List.of()), new MutableBoolean(false)));
                 // Parse this model part recursively and add it as a child of the root
                 AvatarMaterials.ModelPartMaterials mats = readOutlinerMember(outlinerMember, new Vector3f(), elements);
                 // NOW ZERO OUT ORIGIN AND ROTATION! THOSE ARE IGNORED, AS IT ALL INHERITS FROM THE VANILLA PART!
