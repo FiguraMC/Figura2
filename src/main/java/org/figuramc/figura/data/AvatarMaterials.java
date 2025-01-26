@@ -45,13 +45,13 @@ public record AvatarMaterials(
 ) {
 
     // METADATA
-    public record MetadataMaterials(List<String> sharedScripts) {}
+    public record MetadataMaterials() {}
 
     // SCRIPTS
     public record ScriptMaterials(String name, byte[] data) {}
 
     // TEXTURES
-    public interface TextureMaterials {
+    public sealed interface TextureMaterials {
         @Nullable String name();
         // Path only used during importing. Do not serialize.
         record OwnedTexture(String name, @Nullable Path path, byte[] data, boolean noAtlas) implements TextureMaterials {}
@@ -63,7 +63,8 @@ public record AvatarMaterials(
     public record CubeData(Vector3f from, Vector3f to, Vector3f origin, Vector3f rotation, @Nullable CubeFace[] faces) {}
     public record CubeFace(Vector4f uv, int rot) {}
     public record MeshData(Vector3f origin, Vector3f rotation, List<VertexData> vertices, List<Vector2f> uvs, List<Vector4i> faces) {}
-    public record VertexData(Vector3f pos, @Nullable Vector4i skinningOffsets, @Nullable Vector4f skinningWeights) {}
+    public record VertexData(Vector3f pos, @Nullable SkinningData skinningData) {}
+    public record SkinningData(Vector4i offsets, Vector4f weights) {}
 
     // VANILLA ROOTS
     // replaceRoot is mutable to make the importing process easier

@@ -13,13 +13,13 @@ import java.util.ArrayList;
  * currently has in its stack. It will *post-multiply*. This is the same
  * behavior that JOML uses, as well as the vanilla matrix stack, so I'm
  * implementing this in the same way for convention.
- *
+ * <p>
  * This uses float precision rather than double - the reason is to potentially
  * make it easier to change to storing data on the GPU later.
- *
+ * <p>
  * Problems relating to double vs float precision should be resolved elsewhere, not
  * as part of the matrix stack.
- *
+ * <p>
  * This stack also contains other information than just the matrices, such as color info.
  */
 public class FiguraTransformStack {
@@ -52,14 +52,10 @@ public class FiguraTransformStack {
     public void translate(float x, float y, float z) {
         positionMatrices.get(curIndex).translate(x, y, z);
     }
-    public void translateLocal(float x, float y, float z) {
-        positionMatrices.get(curIndex).translateLocal(x, y, z);
-    }
 
     public void scale(Vector3fc vec) {
         scale(vec.x(), vec.y(), vec.z());
     }
-
     public void scale(float x, float y, float z) {
         positionMatrices.get(curIndex).scale(x, y, z);
         if (x == y && y == z) {
@@ -72,19 +68,6 @@ public class FiguraTransformStack {
         float h = 1 / z;
         float i = Mth.fastInvCubeRoot(f * g * h);
         normalMatrices.get(curIndex).scale(f * i, g * i, h * i);
-    }
-    public void scaleLocal(float x, float y, float z) {
-        positionMatrices.get(curIndex).scaleLocal(x, y, z);
-        if (x == y && y == z) {
-            if (x > 0)
-                return; //If all positive, and uniform scaling, normals are not affected
-            normalMatrices.get(curIndex).scale(-1);
-        }
-        float f = 1 / x;
-        float g = 1 / y;
-        float h = 1 / z;
-        float i = Mth.fastInvCubeRoot(f * g * h);
-        normalMatrices.get(curIndex).scaleLocal(f * i, g * i, h * i);
     }
 
     public void color(Vector4f multiplier) {
@@ -100,8 +83,6 @@ public class FiguraTransformStack {
         positionMatrices.get(curIndex).mul(posMatrix);
         normalMatrices.get(curIndex).mul(normalMatrix);
     }
-
-
 
     private final Matrix3f normal = new Matrix3f();
     public void multiply(Matrix4f posMatrix) {

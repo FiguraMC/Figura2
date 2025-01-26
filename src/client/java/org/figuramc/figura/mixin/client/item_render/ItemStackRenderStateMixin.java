@@ -86,15 +86,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
             MATRIX_STACK.translate(-0.5f, -0.5f, -0.5f);
         }
         float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
-        try {
-            FiguraRenderers.getCurrentRenderer().render(modelPart, multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
-        } catch (ScriptError ex) {
-            avatar.error(Component.literal("Error inside model part render callback"), ex);
-        } catch (StackOverflowError ex) {
-            avatar.error(Component.literal("Stack overflow during part rendering - tree too deep!"), ex);
-        } catch (Throwable other) {
-            avatar.error(Component.literal("Unexpected error during model part rendering"), other);
-        }
+        avatar.tryRenderModelPart(modelPart, multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
         // Successfully overrode it!
         return true;
     }

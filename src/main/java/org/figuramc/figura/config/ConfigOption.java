@@ -3,7 +3,7 @@ package org.figuramc.figura.config;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.figuramc.figura.FiguraMod;
-import org.figuramc.figura.util.exception.ThrowingFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 
 import java.util.function.Function;
 
@@ -40,6 +40,7 @@ public class ConfigOption<T> {
         } else try {
             this.value = reader.apply(element);
         } catch (Throwable t) {
+            //noinspection StringConcatenationArgumentToLogCall
             FiguraMod.LOGGER.error("Failed to parse input \"" + element + "\" for config key \"" + key + "\"! Using default.", t);
         }
     }

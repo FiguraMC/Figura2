@@ -21,7 +21,7 @@ import java.util.Objects;
 
 /**
  * Corresponds to a Group in Blockbench.
- *
+ * <p>
  * Unlike previously, Figura's scripting no longer allows manipulation of individual cubes and meshes, only of groups.
  * Here's why:
  * - This is more in-line with Blockbench, as Blockbench only allows animations to affect groups
@@ -53,7 +53,7 @@ public class FiguraModelPart extends MarkedObjectBase {
             postRenderCallbacks = new ArrayList<>(0);
 
 
-    protected FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, FiguraModelPart parent) {
+    protected FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, @Nullable FiguraModelPart parent) {
         // Copy basic values out of the materials
         name = materials.name();
         this.parent = parent;
@@ -296,7 +296,7 @@ public class FiguraModelPart extends MarkedObjectBase {
 
     private static void meshVert(FloatArrayList arr, AvatarMaterials.VertexData vertexData, Vector3f normalVec, Vector2f uv, Matrix4f transform, Matrix3f normalMat, Vector4f uvModifier) {
         Vector3f p = vertexData.pos();
-        if (vertexData.skinningOffsets() == null) {
+        if (vertexData.skinningData() == null) {
             emitVert(arr,
                     p.x, p.y, p.z, uv.x, uv.y, normalVec.x, normalVec.y, normalVec.z,
                     0, -1, -1, -1,
@@ -304,8 +304,8 @@ public class FiguraModelPart extends MarkedObjectBase {
                     transform, normalMat, uvModifier
             );
         } else {
-            Vector4i so = vertexData.skinningOffsets();
-            Vector4f sw = vertexData.skinningWeights();
+            Vector4i so = vertexData.skinningData().offsets();
+            Vector4f sw = vertexData.skinningData().weights();
             emitVert(arr,
                     p.x, p.y, p.z, uv.x, uv.y, normalVec.x, normalVec.y, normalVec.z,
                     so.x, so.y, so.z, so.w, sw.x, sw.y, sw.z, sw.w,

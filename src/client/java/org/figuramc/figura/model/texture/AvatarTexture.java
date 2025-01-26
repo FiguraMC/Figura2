@@ -24,7 +24,6 @@ public abstract class AvatarTexture {
             case AvatarMaterials.TextureMaterials.VanillaTexture vanilla -> {
                 return new VanillaAvatarTexture(vanilla);
             }
-            default -> throw new AvatarLoadingException("Internal Figura error: unexpected/null texture?");
         }
     }
 

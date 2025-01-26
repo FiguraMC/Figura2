@@ -1,11 +1,15 @@
 package org.figuramc.figura.script_hooks;
 
+import net.minecraft.network.chat.Component;
+import org.figuramc.figura.util.exception.FiguraException;
+import org.jetbrains.annotations.NotNull;
+
 /**
  * If an error occurs during script execution, throw one of these!
  */
-public class ScriptError extends Exception {
+public class ScriptError extends FiguraException {
 
-    public ScriptError(String message) { super(message); }
-    public ScriptError(String message, Throwable cause) { super(message, cause); }
-
+    public ScriptError(@NotNull Component message) {
+        super(message);
+    }
 }

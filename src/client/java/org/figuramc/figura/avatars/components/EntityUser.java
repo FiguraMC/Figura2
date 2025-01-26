@@ -25,7 +25,7 @@ public class EntityUser implements AvatarComponent {
 
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarMaterials materials, Avatar<?> self) {
         // Obtain the UUID
         if (!(self.user instanceof UUID userUUID)) throw new IllegalArgumentException("EntityUser AvatarComponent requires an Avatar with a UUID (Tied to an entity)");
         this.uuid = userUUID;
@@ -34,6 +34,7 @@ public class EntityUser implements AvatarComponent {
     // Each tick, maybe update entity
     // If it changed, mark as changed for 1 tick
     @Override
+    @SuppressWarnings("resource") // No, I don't want to use try with resources on entity.level()...
     public boolean tick() {
         justChanged = false; // Set to false at the beginning
         if (entity == null || entity.isRemoved() || entity.level() != Minecraft.getInstance().level) { // If we don't have the entity...

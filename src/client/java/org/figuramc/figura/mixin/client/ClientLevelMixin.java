@@ -32,6 +32,7 @@ import java.util.concurrent.CompletionException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+@SuppressWarnings("rawtypes")
 @Mixin(ClientLevel.class)
 public class ClientLevelMixin {
 

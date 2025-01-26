@@ -12,6 +12,7 @@ import org.joml.Vector4d;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
 
+@SuppressWarnings("DuplicatedCode")
 public class Vector4API {
 
     // Wrap a Vector4d into a userdata given the metatables

@@ -1,0 +1,49 @@
+
+{
+
+  "figura.nothing": "",
+
+  "figura.error.caused_by": "Caused by: ",
+  "figura.error.check_stacktrace": "<Check stacktrace!>",
+  "figura.error.hover_for_reason": "Hover for reason",
+
+  "figura.error.importing": "Error while importing avatar.",
+  "figura.error.importing.no_avatar_json": "Folder does not have an \"avatar.json\" file.",
+  "figura.error.importing.invalid_json": "Failed to parse json - \"%s\" must be a valid json object.",
+  "figura.error.importing.unnamed_mesh": "<Unnamed Mesh>",
+  "figura.error.importing.unnamed_group": "<Unnamed Group>",
+  "figura.error.importing.skinning_part_cap": "Invalid parts array for Figura mesh skinning on model part \"%s\" in %s.bbmodel: expected at most 4 model parts! Likely a bug in the Figura Blockbench plugin to allow this.",
+  "figura.error.importing.negative_skinning_offset": "Invalid parts array for Figura mesh skinning on model part \"%s\" in %s.bbmodel: negative skinning offset! Likely a bug in the Figura Blockbench plugin to allow this.",
+  "figura.error.importing.no_vanilla_root": "Model part \"%s\" in file \"%s\" has no vanilla root! Try using the Figura Blockbench Plugin to add one.",
+  "figura.error.importing.unknown_item_display_context": "Custom item model \"%s\" uses an unrecognized display context: \"%s\". Recognized contexts are: %s",
+  "figura.error.importing.unknown_texture_data_header": "Failed to read Blockbench texture \"%s\", because there was no base64 header. Likely a bug with Figura, or an incompatible Blockbench version.",
+
+  "figura.error.loading": "Error while loading avatar.",
+  "figura.error.loading.invalid_png": "Failed to process texture \"%s\". Are you sure this is a valid PNG file?",
+  "figura.error.loading.script.no_extension": "Script \"%s\" has no file extension.",
+  "figura.error.loading.script.unknown_extension": "Script \"%s\" has an unknown file extension. Recognized extensions are: %s",
+  "figura.error.loading.script.lua.compile_error": "Script \"%s\" failed to compile: \n%s",
+
+  "figura.error.runtime.unnamed_vanilla_part": "<Unnamed Vanilla Part>",
+  "figura.error.runtime.vanilla_part_callback": "Script error during vanilla callback inside vanilla part \"%s\".",
+  "figura.error.runtime.model_part.callback": "Script error during model part callback.",
+  "figura.error.runtime.model_part.stack_overflow": "Stack overflow during model part rendering. Part tree is too deep!",
+  "figura.error.runtime.model_part.unexpected": "Unexpected issue during model part rendering. Please report to the devs so we can add a better message!",
+
+  "figura.error.runtime.script.stage.init": "initialization",
+  "figura.error.runtime.script.stage.tick": "tick event",
+  "figura.error.runtime.script.stage.render": "render event",
+
+  "figura.error.runtime.script.script_error": "Script error during %s",
+  "figura.error.runtime.script.unexpected_error": "Unexpected error suring script %s. Check your log to find the stacktrace, and please report this to the devs so we can add a better error message!",
+
+  "figura.error.internal.unexpected": "Unexpected internal error in Figura. Check your log to find the error stacktrace, and please report this to the devs so we can add a better error message!",
+
+  "figura.error.internal.subfile_io_error": "IO Error while trying to read subfiles of file \"%s\". Likely bug in Figura, please notify devs!",
+  "figura.error.internal.missing_file": "Figura was unable to find builtin file \"%s\"? Likely bug in Figura, please notify devs!",
+
+  "figura.error.internal.script.lua.compile_error": "Figura builtin Lua file \"%s\" failed to compile! Likely bug in Figura, please notify devs!",
+  "figura.error.internal.script.lua.runtime_error": "Figura builtin Lua file \"%s\" failed to run! Likely bug in Figura, please notify devs!",
+  "figura.error.internal.script.lua.setup_failed": "Figura failed to set up the Lua runtime. Likely bug in Figura, please notify devs!"
+
+}

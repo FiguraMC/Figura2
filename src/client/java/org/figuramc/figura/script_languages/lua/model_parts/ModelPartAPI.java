@@ -19,6 +19,7 @@ public class ModelPartAPI {
 
     // Wrap an object into a userdata given the metatables
     public static LuaUserdata wrap(FiguraModelPart obj, FiguraMetatables metatables) {
+        //noinspection SwitchStatementWithTooFewBranches
         return switch (obj) {
             case RootModelPart root -> switch (root) {
                 case VanillaRootModelPart vanilla -> userdataOf(vanilla, metatables.vanillaRootModelPart);
@@ -200,6 +201,12 @@ public class ModelPartAPI {
             return p;
         }));
         // Other operations
+
+        // Get name of the part
+        metatable.rawset("name", LibFunction.create((s, p) -> {
+            FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
+            return valueOf(part.name, s.allocationTracker);
+        }));
 
         // Get child with the given string name
         metatable.rawset("child", LibFunction.create((s, p, n) -> {

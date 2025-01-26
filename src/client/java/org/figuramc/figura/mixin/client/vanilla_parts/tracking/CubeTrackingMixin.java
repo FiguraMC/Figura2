@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
 
+@SuppressWarnings("rawtypes")
 @Mixin(ModelPart.Cube.class)
 public class CubeTrackingMixin implements CubeTrackingAccess {
 

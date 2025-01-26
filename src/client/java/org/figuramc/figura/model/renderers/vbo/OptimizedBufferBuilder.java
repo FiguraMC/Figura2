@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.figuramc.figura.model.renderers.vanilla_optimized.OptimizedVanillaShaders;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class OptimizedBufferBuilder implements MultiBufferSource {
     private boolean built;
 
     @Override
-    public VertexConsumer getBuffer(RenderType renderType) {
+    public @NotNull VertexConsumer getBuffer(RenderType renderType) {
         if (built) throw new IllegalStateException("Figura BufferSource was already built!");
         return buffers.computeIfAbsent(renderType, t -> {
             ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(1024);

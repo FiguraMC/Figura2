@@ -25,7 +25,7 @@ public class ModelPartTrackingMixin implements ModelPartTrackingAccess {
     @Unique public @Nullable ModelPart parent;
 
     // Inject into constructor:
-    @SuppressWarnings("UnreachableCode")
+    @SuppressWarnings({"UnreachableCode", "DataFlowIssue"})
     @Inject(method = "<init>", at = @At("RETURN"))
     private void setNameFieldsOfChildren(List<ModelPart.Cube> cubes, Map<String, ModelPart> children, CallbackInfo ci) {
         // Iterate over children and set their name/parent fields.

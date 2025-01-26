@@ -1,21 +1,23 @@
 package org.figuramc.figura.avatars.components;
 
+import com.demonwav.mcdev.annotations.Translatable;
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.part.*;
+import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.ScriptRuntimeType;
 import org.figuramc.figura.util.IOUtils;
-import org.figuramc.figura.util.exception.ThrowingRunnable;
-import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.Nullable;
+import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 // The Scripts component should generally be at or near the END of the list of components.
 // Other components probably should not rely on Scripts, and instead Scripts should rely on them.
@@ -33,15 +35,17 @@ public class Scripts implements AvatarComponent {
     }
 
     // Helper to try running code, catch any error, and error out the Avatar if so
-    private boolean tryOrError(ThrowingRunnable<?> runnable, String message) {
-        // Try running the code
+    private boolean tryOrError(ThrowingRunnable<ScriptError> runnable, @Translatable String stage) {
         try {
             runnable.run();
+            // If successful, return false
             return false;
+        } catch (ScriptError ex) {
+            self.error(new AvatarError("figura.error.runtime.script.script_error", ex, true, Component.translatable(stage)));
         } catch (Throwable ex) {
-            self.error(Component.literal(message), ex); // TODO translate
-            return true;
+            self.error(new AvatarError("figura.error.runtime.script.unexpected_error", ex, false, Component.translatable(stage)));
         }
+        return true;
     }
 
     // Runs once on init
@@ -49,7 +53,7 @@ public class Scripts implements AvatarComponent {
     public boolean mainThreadInitialize() {
         return tryOrError(() -> {
             for (var runtime : scriptRuntimes) runtime.init();
-        }, "Error during script init");
+        }, "figura.error.runtime.script.stage.init");
     }
 
     // Runs every tick
@@ -57,14 +61,14 @@ public class Scripts implements AvatarComponent {
     public boolean tick() {
         return tryOrError(() -> {
             for (var runtime : scriptRuntimes) runtime.tick();
-        }, "Error during script tick");
+        }, "figura.error.runtime.script.stage.tick");
     }
 
     // Runs every frame
     public void renderEvent(float tickDelta) {
         tryOrError(() -> {
             for (var runtime : scriptRuntimes) runtime.render(tickDelta);
-        }, "Error during script render");
+        }, "figura.error.runtime.script.stage.render");
     }
 
     @Override
@@ -80,9 +84,13 @@ public class Scripts implements AvatarComponent {
         Map<ScriptRuntimeType, Map<String, byte[]>> scriptsByType = new HashMap<>();
         for (var script : materials.scripts()) {
             String ext = IOUtils.getExtension(script.name());
-            if (ext == null) throw new AvatarLoadingException("Script file \"" + script.name() + "\" has no extension.");
+            if (ext == null) throw new AvatarLoadingException("figura.error.loading.script.no_extension", script.name());
             ScriptRuntimeType runtime = ScriptRuntimeType.TYPE_BY_EXTENSION.get(ext);
-            if (runtime == null) throw new AvatarLoadingException("Unrecognized script file extension: \"." + IOUtils.getExtension(script.name()) + "\"");
+            if (runtime == null) throw new AvatarLoadingException(
+                    "figura.error.loading.script.unknown_extension",
+                    script.name(),
+                    ScriptRuntimeType.ALL_RUNTIME_TYPES.stream().flatMap(rt -> rt.validFileExtensions().stream()).map(s -> "." + s).collect(Collectors.joining(", "))
+            );
             // Otherwise, insert it to the result map.
             scriptsByType
                     .computeIfAbsent(runtime, t -> new HashMap<>())

@@ -18,7 +18,7 @@ public class CemSelfDeleter implements AvatarComponent {
     private EntityUser entityUser;
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarMaterials materials, Avatar<?> self) {
         key = (UUID) self.user; // Assert, must be on an entity avatar
         entityUser = self.assertDependency(EntityUser.class, getClass());
     }

@@ -25,11 +25,11 @@ import java.util.function.Predicate;
  * as a BBModel. Only model part data can be exported, not texture
  * data, because textures are dependent on an actual Entity instance,
  * which might not always be present.
- *
+ * <p>
  * For example, the textures of horse markings depend on the particular
  * horse. So it's impossible to just "export minecraft:horse" and get
  * a texture.
- *
+ * <p>
  * Potentially, at some point in the future, a function could be
  * added to export a specific entity in the world, as it appears on a
  * particular frame, including the textures.
@@ -37,7 +37,6 @@ import java.util.function.Predicate;
 public class BBModelExporter {
 
     public static final Predicate<ModelPart> ALL_PARTS = p -> true;
-    public static final Predicate<ModelPart> NO_PARTS = p -> false;
     public static final Predicate<ModelPart> ONLY_SUPPORTED = p -> ModelPartTracker.getAlias(p) != null;
 
     // onlySupported - whether to export only supported parents, or EVERYTHING
@@ -147,10 +146,9 @@ public class BBModelExporter {
 
         // Process children:
         JsonArray children = new JsonArray();
-        // Process cubes (if we succeeded)
-        if (succeededPredicate)
-            for (ModelPart.Cube cube : vanillaPart.cubes)
-                children.add(processCube(cube, elements, pos, isLivingEntity));
+        // Process cubes
+        for (ModelPart.Cube cube : vanillaPart.cubes)
+            children.add(processCube(cube, elements, pos, isLivingEntity));
         // Process groups, add them to outliner instead
         for (ModelPart child : vanillaPart.children.values()) {
             JsonObject jsonPart = processModelPart(child, elements, outliner, pos, rotRadians, isLivingEntity, predicate);

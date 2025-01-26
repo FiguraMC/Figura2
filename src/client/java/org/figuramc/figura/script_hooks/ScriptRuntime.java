@@ -6,7 +6,7 @@ import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
  * An interface to be implemented by any language to be added.
  * The mod itself will only depend upon this interface, and not implementation
  * details of any one runtime.
- *
+ * <p>
  * Script Runtimes are memory-countable and will be used as tracing roots.
  */
 public interface ScriptRuntime extends MemoryCountable {

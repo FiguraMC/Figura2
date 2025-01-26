@@ -1,18 +1,12 @@
 package org.figuramc.figura.script_hooks;
 
 import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_languages.lua.LuaRuntime;
-import org.figuramc.figura.util.IOUtils;
-import org.figuramc.figura.util.StringUtils;
 import oshi.util.tuples.Pair;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**

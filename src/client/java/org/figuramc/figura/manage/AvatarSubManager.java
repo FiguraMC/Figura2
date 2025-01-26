@@ -1,10 +1,8 @@
 package org.figuramc.figura.manage;
 
-import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.data.AvatarImportingException;
-import org.figuramc.figura.util.ChatUtils;
-import net.minecraft.network.chat.Component;
+import org.figuramc.figura.util.ErrorReporting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
@@ -35,16 +33,16 @@ public class AvatarSubManager<K> {
                     // For now, we'll ALWAYS report to chat/console.
                     // Maybe later we'll disable this for multiplayer avatars (whenever we get to that lol)
                     switch (cause) {
-                        case AvatarImportingException importingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to import avatar"), cause); // TODO Translate
-                        case AvatarLoadingException loadingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to load avatar"), cause); // TODO Translate
-                        default -> ChatUtils.unexpectedError("avatar loading", cause);
+                        case AvatarImportingException importingException -> ErrorReporting.avatarImporting(importingException);
+                        case AvatarLoadingException loadingException -> ErrorReporting.avatarLoading(loadingException);
+                        default -> ErrorReporting.unexpectedError(cause);
                     }
 
                     // Cancel the in-progress Avatar, since it errored
                     cancelInProgress(key);
                     continue;
                 } catch (Throwable unexpected) {
-                    ChatUtils.unexpectedError("avatar loading", unexpected);
+                    ErrorReporting.unexpectedError(unexpected);
                     cancelInProgress(key);
                     continue;
                 }

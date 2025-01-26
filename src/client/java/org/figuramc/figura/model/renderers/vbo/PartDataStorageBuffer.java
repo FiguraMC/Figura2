@@ -1,6 +1,6 @@
 package org.figuramc.figura.model.renderers.vbo;
 
-import org.figuramc.figura.util.exception.ThrowingConsumer;
+import org.figuramc.figura.util.exception.functional.ThrowingConsumer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL46;
 
@@ -132,9 +132,6 @@ public class PartDataStorageBuffer {
                     int offset = regionStart * PartDataStruct.SIZE;
                     ByteBuffer slice = nativeBuffer.slice(offset, (regionEnd - regionStart) * PartDataStruct.SIZE);
                     GL46.glNamedBufferSubData(bufferHandle, offset, slice);
-                    int err = GL46.glGetError();
-                    if (err != GL46.GL_NO_ERROR)
-                        throw new IllegalStateException("ERROR!!! " + err );
                     // Inc index
                     index++;
                 } else {
@@ -148,9 +145,6 @@ public class PartDataStorageBuffer {
                 int offset = regionStart * PartDataStruct.SIZE;
                 ByteBuffer slice = nativeBuffer.slice(offset, (regionEnd - regionStart) * PartDataStruct.SIZE);
                 GL46.glNamedBufferSubData(bufferHandle, offset, slice);
-                int err = GL46.glGetError();
-                if (err != GL46.GL_NO_ERROR)
-                    throw new IllegalStateException("ERROR!!! " + err );
             }
 
         }

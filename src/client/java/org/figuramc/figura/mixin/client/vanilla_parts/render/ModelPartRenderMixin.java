@@ -4,15 +4,15 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaParts;
 import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.util.DeferredVanillaPartRenderQueue;
 import org.figuramc.figura.util.FiguraTransformStack;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.network.chat.Component;
+import org.figuramc.figura.vanillamodel.ModelPartTracker;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,11 +25,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 
+@SuppressWarnings({"UnreachableCode", "SuspiciousMethodCalls"})
 @Mixin(ModelPart.class)
 public class ModelPartRenderMixin {
 
     @Shadow public float x, y, z, xRot, yRot, zRot, xScale, yScale, zScale;
-    @Shadow private PartPose initialPose;
 
     @Unique private static Avatar<?> currentAvatar = null;
     @Unique private static VanillaRootModelPart currentModelPart = null;
@@ -103,11 +103,18 @@ public class ModelPartRenderMixin {
             currentModelPart.storedVanillaScale.set(this.xScale, this.yScale, this.zScale);
 
             // Run the callbacks:
+
             try {
-                for (ScriptCallback callback : currentModelPart.vanillaRenderCallbacks)
-                    callback.call();
+                currentModelPart.invokeCallbacks(currentModelPart.vanillaRenderCallbacks);
             } catch (ScriptError ex) {
-                currentAvatar.error(Component.literal("Error inside vanilla part callback"), ex); // Todo translate
+                // Get vanilla part's name in a component, for informational purposes
+                Component partName;
+                String str = ModelPartTracker.getAlias((ModelPart) (Object) this);
+                if (str == null) str = ModelPartTracker.getFullName((ModelPart) (Object) this);
+                if (str == null) partName = Component.translatable("figura.error.runtime.unnamed_vanilla_part");
+                else partName = Component.literal(str);
+                // Error out
+                currentAvatar.error(new AvatarError("figura.error.runtime.vanilla_part_callback", ex, true, partName));
                 resetVars();
                 return;
             }

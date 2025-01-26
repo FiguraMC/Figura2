@@ -1,15 +1,18 @@
 package org.figuramc.figura.data;
 
+import com.demonwav.mcdev.annotations.Translatable;
 import com.google.gson.*;
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.MapUtils;
-import org.figuramc.figura.util.exception.ExceptionUtils;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.commons.lang3.tuple.MutablePair;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -27,7 +30,9 @@ import java.util.function.Supplier;
 /**
  * This class is responsible for reading a folder and outputting AvatarMaterials.
  * This is as good a place as any to specify the file layout!
- *
+ * This class is also a massive mess.
+ * In the future we should make a custom blockbench model format, and clean this up dramatically.
+ * <p>
  * my_avatar/
  * - avatar.json (metadata file)
  * - world/
@@ -59,7 +64,7 @@ public class AvatarImporter {
 
         // Fetch the metadata:
         Path metadataJsonPath = rootFolder.resolve("avatar.json");
-        if (!Files.exists(metadataJsonPath)) throw new AvatarImportingException("Folder does not have an \"avatar.json\" file.");
+        if (!Files.exists(metadataJsonPath)) throw new AvatarImportingException("figura.error.importing.no_avatar_json");
         AvatarMaterials.MetadataMaterials metadata = getMetadata(metadataJsonPath);
 
         // Read in scripts and textures:
@@ -88,22 +93,21 @@ public class AvatarImporter {
         try {
             metadata = metadataString.isBlank() ? new JsonObject() : JsonParser.parseString(metadataString);
         } catch (JsonSyntaxException ex) {
-            throw new AvatarImportingException("Invalid metadata file - it must be a valid JSON object!");
+            throw new AvatarImportingException("figura.error.importing.invalid_json", "avatar.json");
         }
-        if (!metadata.isJsonObject()) throw new AvatarImportingException("Invalid metadata file - it must be a valid JSON object!");
-        JsonObject metadataObject = metadata.getAsJsonObject();
+        if (!metadata.isJsonObject()) throw new AvatarImportingException("figura.error.importing.invalid_json", "avatar.json");
 
-        // Get shared modules:
-        JsonElement arrMaybe = metadataObject.get("shared_scripts");
-        if (arrMaybe == null) arrMaybe = new JsonArray();
-        if (!arrMaybe.isJsonArray()) throw new AvatarImportingException("Invalid metadata file - \"shared_scripts\" key should be a list of strings!");
-        List<String> sharedScripts = ListUtils.map(arrMaybe.getAsJsonArray().asList(), ExceptionUtils.wrapAny(
-                JsonElement::getAsString,
-                t -> new AvatarImportingException("Invalid metadata file - \"shared_scripts\" key should be a list of strings!", t)
-        ));
+//        JsonObject metadataObject = metadata.getAsJsonObject();
+//        JsonElement arrMaybe = metadataObject.get("shared_scripts");
+//        if (arrMaybe == null) arrMaybe = new JsonArray();
+//        if (!arrMaybe.isJsonArray()) throw new AvatarImportingException("Invalid metadata file - \"shared_scripts\" key should be a list of strings!");
+//        List<String> sharedScripts = ListUtils.map(arrMaybe.getAsJsonArray().asList(), ExceptionUtils.wrapAny(
+//                JsonElement::getAsString,
+//                t -> new AvatarImportingException("Invalid metadata file - \"shared_scripts\" key should be a list of strings!", t)
+//        ));
 
         // Return the metadata.
-        return new AvatarMaterials.MetadataMaterials(sharedScripts);
+        return new AvatarMaterials.MetadataMaterials();
     }
 
     private static List<AvatarMaterials.ScriptMaterials> getScripts(Path scriptRoot) throws IOException {
@@ -146,8 +150,8 @@ public class AvatarImporter {
         if (file.isDirectory()) {
             Map<String, AvatarMaterials.VanillaRootPartMaterials> children = new HashMap<>();
             String newPrefix = prefix + "/" + file.getName();
-            for (File subfile : file.listFiles()) {
-                Map<String, AvatarMaterials.VanillaRootPartMaterials> childParts = parseVanillaRoots(subfile.toPath(), newPrefix, textures);
+            for (File subfile : getSubFiles(file)) {
+                Map<String, AvatarMaterials.VanillaRootPartMaterials> childParts = parseVanillaRoots(subfile.toPath(), subfile.isDirectory() ? newPrefix : prefix, textures);
                 for (Map.Entry<String, AvatarMaterials.VanillaRootPartMaterials> childEntry : childParts.entrySet()) {
                     // Get or create the root part, with the file's name
                     AvatarMaterials.VanillaRootPartMaterials root = children.computeIfAbsent(childEntry.getKey(), k ->
@@ -180,10 +184,13 @@ public class AvatarImporter {
             for (JsonElement element : outliner) {
                 JsonObject outlinerMember = element.getAsJsonObject();
                 // Figure out which root this is part of:
-                if (!outlinerMember.has(VANILLA_ROOT_KEY))
-                    throw new AvatarImportingException("Inside bbmodel \"" + prefix.replace(File.pathSeparatorChar, '/') + "/" + file.getName() + "\": part \"" + outlinerMember.get("name").getAsString() + "\" has no Figura vanilla root!");
+                @Nullable String vanillaRoot = getStringOrDefault(outlinerMember, VANILLA_ROOT_KEY, null);
+                if (vanillaRoot == null || vanillaRoot.isBlank()) {
+                    Component partName = getErrorStringOrDefault(outlinerMember, "name", "figura.error.importing.unnamed_group");
+                    String fullFileName = prefix + "/" + file.getName();
+                    throw new AvatarImportingException("figura.error.importing.no_vanilla_root", partName, fullFileName);
+                }
                 boolean replace = outlinerMember.has(VANILLA_ROOT_REPLACE_KEY) && outlinerMember.get(VANILLA_ROOT_REPLACE_KEY).getAsBoolean();
-                String vanillaRoot = outlinerMember.get(VANILLA_ROOT_KEY).getAsString();
                 // Get or create the part for this root. Note the ArrayList<> to make it editable!
                 AvatarMaterials.VanillaRootPartMaterials partRoot = modelParts.computeIfAbsent(vanillaRoot, v ->
                         new AvatarMaterials.VanillaRootPartMaterials(new AvatarMaterials.ModelPartMaterials(fileName, new Vector3f(), new Vector3f(), new ArrayList<>(), -1, List.of(), List.of()), new MutableBoolean(false)));
@@ -214,7 +221,7 @@ public class AvatarImporter {
 
         // Get valid files, put pngs first in case bbmodels reference them.
         List<File> files = new ArrayList<>();
-        for (File subfile : file.listFiles()) {
+        for (File subfile : getSubFiles(file)) {
             if (subfile.getName().endsWith(".bbmodel"))
                 files.addLast(subfile);
             else if (subfile.getName().endsWith(".png"))
@@ -242,7 +249,11 @@ public class AvatarImporter {
                     for (var entry : display.entrySet()) {
                         String key = entry.getKey();
                         ItemDisplayContext context = DISPLAY_CONTEXTS_BY_KEY.get(key);
-                        if (context == null) throw new AvatarImportingException("Invalid item display context in bbmodel \"items/" + subfile.getName() + "\": \"" + key + "\"");
+                        if (context == null) {
+                            String fullFileName = "items/" + file.getName();
+                            String allContexts = String.join(", ", DISPLAY_CONTEXTS_BY_KEY.keySet());
+                            throw new AvatarImportingException("figura.error.importing.unknown_item_display_context", fullFileName, key, allContexts);
+                        }
                         JsonObject value = entry.getValue().getAsJsonObject();
                         Vector3f translation = parseVec3(value.get("translation"));
                         Vector3f rotation = parseVec3(value.get("rotation"));
@@ -274,33 +285,29 @@ public class AvatarImporter {
         });
     }
 
-    private static @Nullable AvatarMaterials.ModelPartMaterials parseModelFolder(Path path, String prefix, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException, IOException {
+    private static AvatarMaterials.ModelPartMaterials parseModelFolder(Path path, String prefix, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException, IOException {
         File file = path.toFile();
         // If nonexistent: Return empty part
-        if (!file.exists()) return new AvatarMaterials.ModelPartMaterials(file.getName(), new Vector3f(), new Vector3f(), List.of(), -1, List.of(), List.of());
-        // If directory: Recurse
+        if (!file.exists() || !file.isDirectory()) return new AvatarMaterials.ModelPartMaterials(file.getName(), new Vector3f(), new Vector3f(), List.of(), -1, List.of(), List.of());
+        // It exists and is a directory: recurse on valid files
         if (file.isDirectory()) {
             List<AvatarMaterials.ModelPartMaterials> children = new ArrayList<>();
             String newPrefix = prefix + "/" + file.getName();
-            for (File subfile : file.listFiles()) {
-                AvatarMaterials.ModelPartMaterials child = parseModelFolder(subfile.toPath(), newPrefix, textures);
-                if (child != null) children.add(child);
+            for (File subfile : getSubFiles(file)) {
+                if (subfile.isDirectory()) {
+                    children.add(parseModelFolder(subfile.toPath(), newPrefix, textures));
+                } else if (subfile.getName().endsWith(".bbmodel")) {
+                    String jsonText = Files.readString(subfile.toPath());
+                    JsonObject bbmodel = JsonParser.parseString(jsonText).getAsJsonObject();
+                    children.add(parseModel(bbmodel, subfile.getName(), prefix, textures));
+                }
             }
             return new AvatarMaterials.ModelPartMaterials(file.getName(), new Vector3f(), new Vector3f(), children, -1, List.of(), List.of());
         }
-
-        // If it's a bbmodel: process the json.
-        if (file.getName().endsWith(".bbmodel")) {
-            String jsonText = Files.readString(path);
-            JsonObject bbmodel = JsonParser.parseString(jsonText).getAsJsonObject();
-            return parseModel(bbmodel, file.getName(), prefix, textures);
-        }
-
-        // Nothing here, just return null
-        return null;
+        throw new IllegalStateException("Internal error in Figura avatar importing; attempt to import invalid model folder? Please report to devs!");
     }
 
-    private static AvatarMaterials.ModelPartMaterials parseModel(JsonObject bbmodel, String fileName, String prefix, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException, IOException {
+    private static AvatarMaterials.ModelPartMaterials parseModel(JsonObject bbmodel, String fileName, String prefix, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException {
         // Adjust file name and prefix
         fileName = IOUtils.stripExtension(fileName, "bbmodel");
         prefix = prefix + "/" + fileName;
@@ -320,7 +327,7 @@ public class AvatarImporter {
 
 
     private static final String[] DIRECTIONS = new String[] { "north", "east", "south", "west", "up", "down" };
-    private static Map<String, Element> readTexturesAndElements(JsonObject bbmodel, String texturePrefix, ArrayList<AvatarMaterials.TextureMaterials> textures, Map<String, Integer> relativeGroupIds) throws AvatarImportingException {
+    private static Map<String, Element> readTexturesAndElements(JsonObject bbmodel, String bbmodelPath, ArrayList<AvatarMaterials.TextureMaterials> textures, Map<String, Integer> relativeGroupIds) throws AvatarImportingException {
         // Read textures from the bbmodel and deal with them
         List<Integer> localToGlobalTextureMapping = new ArrayList<>();
         List<Vector2f> localTextureUvMappers = new ArrayList<>();
@@ -362,10 +369,10 @@ public class AvatarImporter {
                     boolean noAtlas = textureName.endsWith(".noatlas");
                     if (noAtlas) textureName = textureName.substring(0, textureName.length() - ".noatlas".length());
 
-                    String longTextureName = texturePrefix + "/" + textureName;
+                    String longTextureName = bbmodelPath + "/" + textureName;
                     String base64Source = texture.get("source").getAsString();
                     if (!base64Source.startsWith("data:image/png;base64,"))
-                        throw new AvatarImportingException("Failed to read texture base64 for texture \"" + longTextureName + "\". Expected string prefix \"data:image/png;base64,\".");
+                        throw new AvatarImportingException("figura.error.importing.unknown_texture_data_header", longTextureName);
                     String rest = base64Source.substring("data:image/png;base64,".length());
                     byte[] pngData = Base64.getDecoder().decode(rest);
                     // Texture has no path
@@ -416,14 +423,14 @@ public class AvatarImporter {
                 // Parse mesh data
 
                 // Get vertex skinning data, if present
-                Map<String, Pair<Vector4i, Vector4f>> skinningData = new HashMap<>();
+                Map<String, AvatarMaterials.@Nullable SkinningData> skinningData = new HashMap<>();
                 if (elementJson.has(MESH_SKINNING_DATA_KEY)) {
                     JsonObject skinningDataJson = elementJson.getAsJsonObject(MESH_SKINNING_DATA_KEY);
                     for (var vert : skinningDataJson.entrySet()) {
                         String key = vert.getKey();
                         JsonArray parts = vert.getValue().getAsJsonArray();
                         if (parts.isEmpty()) continue; // Skip if there's not actually any data in there
-                        if (parts.size() > 4) throw new AvatarImportingException("Invalid parts array for Figura mesh skinning: expected at most 4 parts!");
+                        if (parts.size() > 4) throw new AvatarImportingException("figura.error.importing.skinning_part_cap", getErrorStringOrDefault(elementJson, "name", "figura.error.importing.unnamed_mesh"), bbmodelPath);
                         Vector4i offsets = new Vector4i(-1);
                         Vector4f weights = new Vector4f(0);
                         int component = 0;
@@ -432,11 +439,11 @@ public class AvatarImporter {
                             String partUUID = part.get("uuid").getAsString();
                             float weight = part.get("weight").getAsFloat();
                             int relativeOffset = relativeGroupIds.get(partUUID) - relativeGroupIds.get(uuid);
-                            if (relativeOffset < 0) throw new AvatarImportingException("Invalid avatar file, or bug in Figura plugin/importer; relative skinning offset should not be negative");
+                            if (relativeOffset < 0) throw new AvatarImportingException("figura.error.importing.negative_skinning_offset", getErrorStringOrDefault(elementJson, "name", "figura.error.importing.unnamed_mesh"), bbmodelPath);
                             offsets.setComponent(component, relativeOffset);
                             weights.setComponent(component++, weight);
                         }
-                        skinningData.put(key, new Pair<>(offsets, weights));
+                        skinningData.put(key, new AvatarMaterials.SkinningData(offsets, weights));
                     }
                 }
 
@@ -445,14 +452,8 @@ public class AvatarImporter {
                 List<AvatarMaterials.VertexData> vertices = new ArrayList<>();
                 for (var vert : elementJson.getAsJsonObject("vertices").entrySet()) {
                     Vector3f pos = parseVec3(vert.getValue());
-                    var vertSkinningData = skinningData.get(vert.getKey());
-                    AvatarMaterials.VertexData vertexData;
-                    if (vertSkinningData != null) {
-                        vertexData = new AvatarMaterials.VertexData(pos, vertSkinningData.getA(), vertSkinningData.getB());
-                    } else {
-                        vertexData = new AvatarMaterials.VertexData(pos, null, null);
-                    }
-                    vertices.add(vertexData);
+                    @Nullable AvatarMaterials.SkinningData vertSkinningData = skinningData.get(vert.getKey());
+                    vertices.add(new AvatarMaterials.VertexData(pos, vertSkinningData));
                     indices.put(vert.getKey(), vertices.size() - 1);
                 }
 
@@ -530,6 +531,7 @@ public class AvatarImporter {
     // Quad untwisting is from blockbench:
     // https://github.com/JannisX11/blockbench/blob/813379d114aab14a2ff1e40e4bba6985dfa6844e/js/outliner/mesh.js#L184
     private static final Vector3f p0 = new Vector3f(), p1 = new Vector3f(), p2 = new Vector3f(), p3 = new Vector3f();
+    @SuppressWarnings("SuspiciousNameCombination")
     private static void untwistQuad(Vector4i indices, Vector2f[] faceUVs, List<AvatarMaterials.VertexData> vertices) {
         // Set up vertices
         p0.set(vertices.get(indices.x).pos());
@@ -555,6 +557,7 @@ public class AvatarImporter {
     // Tests if point1 and point2 are on opposite sides of the line.
     // Assumes the points are coplanar; otherwise this idea doesn't make any sense.
     private static final Vector3f t0 = new Vector3f(), t1 = new Vector3f(), t2 = new Vector3f(), t3 = new Vector3f();
+    @SuppressWarnings("SameParameterValue")
     private static boolean testOppositeSides(Vector3f linePoint1, Vector3f linePoint2, Vector3f point1, Vector3f point2) {
         // Formula: (x = cross product, . = dot product)
         // ((linePoint2 - linePoint1) x (point1 - linePoint1)) . ((linePoint2 - linePoint1) x (point2 - linePoint1)) < 0
@@ -656,6 +659,33 @@ public class AvatarImporter {
         if (elem == null) return new Vector4f(0);
         JsonArray arr = elem.getAsJsonArray();
         return new Vector4f(arr.get(0).getAsFloat(), arr.get(1).getAsFloat(), arr.get(2).getAsFloat(), arr.get(3).getAsFloat());
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    @Contract("_, _, !null -> !null")
+    private static @Nullable String getStringOrDefault(JsonObject object, String key, @Nullable String defaultVal) {
+        JsonElement elem = object.get(key);
+        if (elem == null || !elem.isJsonPrimitive()) return defaultVal;
+        JsonPrimitive prim = elem.getAsJsonPrimitive();
+        if (!prim.isString()) return defaultVal;
+        return prim.getAsString();
+    }
+
+
+    @SuppressWarnings("SameParameterValue")
+    private static Component getErrorStringOrDefault(JsonObject object, String key, @Translatable String defaultVal) {
+        JsonElement elem = object.get(key);
+        if (elem.isJsonPrimitive() && !elem.isJsonNull())
+            return Component.literal(elem.getAsString());
+        return Component.translatable(defaultVal);
+    }
+
+    // Helper for sub-files because java is annoying.
+    private static File @NotNull [] getSubFiles(File directory) throws AvatarImportingException {
+        assert directory.isDirectory();
+        File @Nullable[] subFiles = directory.listFiles();
+        if (subFiles == null) throw new AvatarImportingException("figura.error.internal.subfile_io_error", directory.getName());
+        return subFiles;
     }
 
     // Helper algebraic type for storing different elements

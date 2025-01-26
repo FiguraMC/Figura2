@@ -7,7 +7,9 @@ import org.slf4j.LoggerFactory;
 
 public class FiguraMod implements ModInitializer {
 
+    // Constants
     public static final String MOD_ID = "figura";
+
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     @Override

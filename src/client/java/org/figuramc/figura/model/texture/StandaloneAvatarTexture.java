@@ -60,7 +60,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
             try {
                 this.image = NativeImage.read(buffer);
             } catch (IOException e) {
-                throw new AvatarLoadingException("Somehow failed to read NativeImage? Please contact devs!", e);
+                throw new AvatarLoadingException("figura.error.loading.invalid_png", e, false, materials.name());
             }
         }
 
@@ -93,14 +93,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
         // Uploads the texture to the texture manager,
         // committing any changes that happened CPU-side.
         public void upload() {
-            if (isClosed) return;
-            RenderUtils.executeOnRenderThread(() -> {
-                if (isClosed) return;
-                TextureManager manager = Minecraft.getInstance().getTextureManager();
-                manager.register(this.location, this);
-                TextureUtil.prepareImage(this.getId(), image.getWidth(), image.getHeight());
-                image.upload(0, 0, 0, false);
-            });
+            RenderUtils.uploadTexture(() -> isClosed, this, location, image);
         }
 
     }

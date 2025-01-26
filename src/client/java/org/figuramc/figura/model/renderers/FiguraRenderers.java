@@ -9,11 +9,11 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Methods for getting/setting the current renderer.
- *
+ * <p>
  * Important note for design: The return value of `getCurrentRenderer()` is intended
  * to never change while an avatar is in use.
  * Hence, when the value is changed, all avatars are immediately cleared out.
- *
+ * <p>
  * As a result, it *should* be safe to assume, for any given avatar, that
  * `getCurrentRenderer()` returns the same result every time. If this is not the case, there's
  * a bug!

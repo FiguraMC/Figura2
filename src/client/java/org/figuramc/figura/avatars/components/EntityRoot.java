@@ -1,15 +1,11 @@
 package org.figuramc.figura.avatars.components;
 
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.util.FiguraTransformStack;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -19,7 +15,7 @@ public class EntityRoot implements AvatarComponent {
     private RootModelPart modelPart;
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarMaterials materials, Avatar<?> self) {
         // Depends on Textures component
         Textures texturesComponent = self.assertDependency(Textures.class, getClass());
         // Create the model part from materials
@@ -32,16 +28,8 @@ public class EntityRoot implements AvatarComponent {
     }
 
     // Render the entity root.
-    public void render(Avatar<?> self, float tickDelta, MultiBufferSource bufferSource, FiguraTransformStack matrixStack, int light, int overlay) {
-        try {
-            FiguraRenderers.getCurrentRenderer().render(modelPart, bufferSource, matrixStack, tickDelta, light, overlay);
-        } catch (ScriptError ex) {
-            self.error(Component.literal("Error inside model part render callback"), ex);
-        } catch (StackOverflowError ex) {
-            self.error(Component.literal("Stack overflow during part rendering - tree too deep!"), ex);
-        } catch (Throwable other) {
-            self.error(Component.literal("Unexpected error during model part rendering"), other);
-        }
+    public void render(Avatar<?> self, MultiBufferSource bufferSource, FiguraTransformStack matrixStack, float tickDelta, int light, int overlay) {
+        self.tryRenderModelPart(modelPart, bufferSource, matrixStack, tickDelta, light, overlay);
     }
 
     @Override

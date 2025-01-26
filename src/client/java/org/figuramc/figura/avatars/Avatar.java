@@ -1,14 +1,16 @@
 package org.figuramc.figura.avatars;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import org.figuramc.figura.FiguraMod;
+import net.minecraft.client.renderer.MultiBufferSource;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.manage.AvatarSubManager;
+import org.figuramc.figura.model.part.RootModelPart;
+import org.figuramc.figura.model.renderers.FiguraRenderers;
+import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
-import org.figuramc.figura.util.ChatUtils;
-import net.minecraft.network.chat.MutableComponent;
+import org.figuramc.figura.util.ErrorReporting;
+import org.figuramc.figura.util.FiguraTransformStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.IdentityHashMap;
@@ -21,8 +23,7 @@ public class Avatar<K> {
     private final AvatarComponent[] components;
     private final Map<Class<?>, AvatarComponent> componentsByType = new IdentityHashMap<>();
 
-    private @Nullable Throwable error;
-    private boolean isErrored;
+    private @Nullable AvatarError error;
 
     // Memory tracker. Null indicates memory shouldn't be tracked,
     // making it faster in cases where full permission is granted.
@@ -44,7 +45,7 @@ public class Avatar<K> {
         // Errored avatars act like they have no components.
         // All mixins and such will look for a component on a given avatar and try to use it;
         // but they will be unable to get this component if the avatar is errored.
-        if (isErrored) return null;
+        if (isErrored()) return null;
         return (T) componentsByType.get(type);
     }
 
@@ -82,24 +83,41 @@ public class Avatar<K> {
         return allocationTracker;
     }
 
-    // Error out the avatar with the given message and reason.
-    // The reason will be shown to chat (TODO only if host), and printed in more detail in the console.
-    public void error(MutableComponent message, Throwable reason) {
-        // Mark as errored with the given reason
-        isErrored = true;
-        error = reason;
+//    // Error out the avatar with the given message and reason.
+//    // The reason will be shown to chat (TODO only if host), and printed in more detail in the console.
+//    public void error(Throwable reason) {
+//        // Mark as errored with the given reason
+//        error = reason;
+//        // Notify components:
+//        for (AvatarComponent component : components)
+//            component.onError(reason);
+//        // Report the error to user.
+//        if (reason instanceof FiguraException ex) {
+//
+//        }
+//
+//        switch (reason) {
+//            default -> ErrorReporting.unexpectedError(message, reason);
+//        }
+//        //noinspection StringConcatenationArgumentToLogCall
+//        FiguraMod.LOGGER.error("Avatar with user (" + user + ") encountered an error: ", reason);
+//        ChatUtils.reportErrorWithReason(message, reason);
+//    }
+
+    public void error(AvatarError reason) {
+        // Mark as errored
+        this.error = reason;
         // Notify components:
         for (AvatarComponent component : components)
             component.onError(reason);
         // Report the error to user
-        FiguraMod.LOGGER.error("Avatar with user (" + user + ") encountered an error: ", reason);
-        ChatUtils.reportErrorWithReason(message, reason);
+        ErrorReporting.avatarRuntimeError(reason);
     }
 
     // We want to use this function only when necessary; for most usages, the fact
     // that an errored avatar acts like it has no components is good enough.
     public boolean isErrored() {
-        return isErrored;
+        return error != null;
     }
 
     // Run on cleanup. Should be used to prevent memory leaks.
@@ -119,7 +137,7 @@ public class Avatar<K> {
 
     // Runs each tick. Just ticks each component in the order they were added to the Avatar.
     public void tick() {
-        if (isErrored) return; // Don't tick if errored
+        if (isErrored()) return; // Don't tick if errored
         for (AvatarComponent component : components)
             if (component.tick()) break;
     }
@@ -134,6 +152,23 @@ public class Avatar<K> {
                 return false;
         return true;
     }
+
+    // Various helper methods
+
+    // Attempt to render the model part, and error the avatar if it fails.
+    public void tryRenderModelPart(RootModelPart part, MultiBufferSource bufferSource, FiguraTransformStack transformStack, float tickDelta, int light, int overlay) {
+        if (isErrored()) return;
+        try {
+            FiguraRenderers.getCurrentRenderer().render(part, bufferSource, transformStack, tickDelta, light, overlay);
+        } catch (ScriptError ex) {
+            error(new AvatarError("figura.error.runtime.model_part.callback", ex, true));
+        } catch (StackOverflowError ex) {
+            error(new AvatarError("figura.error.runtime.model_part.stack_overflow", ex, false));
+        } catch (Throwable other) {
+            error(new AvatarError("figura.error.runtime.model_part.unexpected", other, true));
+        }
+    }
+
 
 
 }

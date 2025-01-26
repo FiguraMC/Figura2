@@ -18,10 +18,10 @@ public sealed interface FiguraRenderType {
             @Nullable ResourceLocation emissiveTex
     ) implements FiguraRenderType {}
 
-    /**
-     * A rendering type that uses a custom shader.
-     * Not all rendering backends need to support this.
-     */
+//    /**
+//     * A rendering type that uses a custom shader.
+//     * Not all rendering backends need to support this.
+//     */
 //    record CustomShader(
 //            FiguraCustomShader customShader
 //    ) implements FiguraRenderType {}

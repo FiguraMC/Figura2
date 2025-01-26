@@ -2,6 +2,7 @@ package org.figuramc.figura.model.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.platform.TextureUtil;
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.ListUtils;
@@ -49,9 +50,10 @@ public class FiguraTextureAtlas extends AbstractTexture {
                         false, false // Mirror horizontal/vertical
                 );
             } catch (IOException ex) {
-                throw new AvatarLoadingException("Failed to create texture atlas!", ex);
+                throw new AvatarLoadingException("figura.error.loading.invalid_png", ex, false, rectangle.name);
             } finally {
                 // Free rectangle data
+                rectangle.name = null;
                 rectangle.data = null;
             }
         }
@@ -72,28 +74,21 @@ public class FiguraTextureAtlas extends AbstractTexture {
     // Uploads the texture to the texture manager,
     // committing any changes that happened CPU-side.
     public void upload() {
-        if (isClosed) return;
-        RenderUtils.executeOnRenderThread(() -> {
-            if (isClosed) return;
-            TextureManager manager = Minecraft.getInstance().getTextureManager();
-            manager.register(this.location, this);
-            TextureUtil.prepareImage(this.getId(), image.getWidth(), image.getHeight());
-            image.upload(0, 0, 0, false);
-        });
+        RenderUtils.uploadTexture(() -> isClosed, this, location, image);
     }
 
     // Builder
     public static Builder builder() { return new Builder(); }
     public static class Builder {
-        private List<TextureRectangle> rectangles = new ArrayList<>();
+        private final List<TextureRectangle> rectangles = new ArrayList<>();
 
         private Builder() {}
 
         // Get back a TextureRectangle.
         // Later, once you call .build(), the rectangle will be updated to have
         // its "x" and "y" values set.
-        public TextureRectangle insert(byte[] png) throws AvatarLoadingException {
-            TextureRectangle rect = new TextureRectangle(png);
+        public TextureRectangle insert(String texName, byte[] png) throws AvatarLoadingException {
+            TextureRectangle rect = new TextureRectangle(texName, png);
             rectangles.add(rect);
             return rect;
         }
@@ -156,19 +151,23 @@ public class FiguraTextureAtlas extends AbstractTexture {
     }
 
     public static class TextureRectangle {
+        private String name;
         private byte[] data;
         private int x = -1, y = -1;
         private final int width, height;
 
-        private TextureRectangle(byte[] png) throws AvatarLoadingException {
+        private TextureRectangle(String texName, byte[] png) throws AvatarLoadingException {
             try {
+                this.name = texName;
                 PngInfo info = PngInfo.fromBytes(png);
-                if (info.width() < 1 || info.height() < 1) throw new AvatarLoadingException("Texture must be at least 1x1");
+                if (info.width() < 1 || info.height() < 1) {
+                    throw new AvatarLoadingException("figura.error.loading.invalid_png", texName);
+                }
                 this.width = info.width();
                 this.height = info.height();
                 this.data = png;
             } catch (IOException ioException) {
-                throw new AvatarLoadingException("Failed to read png info for texture? Probably a bug in Figura, contact devs!");
+                throw new AvatarLoadingException("figura.error.loading.invalid_png", texName);
             }
         }
         public int getX() { return x; }

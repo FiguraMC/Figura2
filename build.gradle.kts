@@ -49,12 +49,10 @@ dependencies {
 	modCompileOnly("maven.modrinth:sodium:${property("sodium_version")}")
 	modCompileOnly("maven.modrinth:iris:${property("iris_version")}")
 
-	// Fabric API (specific modules we want)
-	fun fabric(vararg modules: String) {
-		for (module in modules)
-			include(modImplementation(fabricApi.module(module, "${property("fabric_api_version")}"))!!)
+	// Fabric API (only the modules we need, to reduce code size and dependence on one loader)
+	arrayOf("fabric-api-base", "fabric-resource-loader-v0").forEach {
+		include(modImplementation(fabricApi.module(it, "${property("fabric_api_version")}"))!!)
 	}
-	fabric("fabric-api-base")
 
 	// Cobalt (lua) dependencies:
 	compileOnly("org.checkerframework:checker-qual:3.36.0")
@@ -62,6 +60,7 @@ dependencies {
 
 	// Utils
 	include(implementation("com.moulberry:mixinconstraints:1.0.1")!!)
+	compileOnly("com.demonwav.mcdev:annotations:2.1.0")
 }
 
 tasks.processResources {

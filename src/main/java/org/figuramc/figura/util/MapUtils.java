@@ -1,11 +1,12 @@
 package org.figuramc.figura.util;
 
-import org.figuramc.figura.util.exception.ThrowingBiFunction;
-import org.figuramc.figura.util.exception.ThrowingFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class MapUtils {
 
     public static <K, V1, V2, E extends Throwable> Map<K, V2> mapValues(Map<K, V1> map, ThrowingFunction<V1, V2, E> func) throws E {

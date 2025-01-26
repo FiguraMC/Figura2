@@ -18,8 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 /**
- * Deals with tracking the various
+ * Deals with tracking the various model parts and other rendering objects in the game.
  */
+@SuppressWarnings("SameParameterValue")
 public class ModelPartTracker {
 
     /**
@@ -33,9 +34,7 @@ public class ModelPartTracker {
     private static final Map<EntityRenderer<?,?>, HashMap<String, ModelPart>> MODEL_PARTS_BY_NAME_BY_RENDERER = new ConcurrentHashMap<>();
 
     /**
-     * Helpers to get name/parent of a vanilla part, if it has one.
-     * Returns null if the part is unnamed, or has no parent, respectively.
-     * Note: A part has a name if it has a parent, or if we manually gave it a name through setName().
+     * Helpers to get stored values of vanilla parts, if they have any.
      */
     public static @Nullable String getName(ModelPart vanillaPart) {
         return ((ModelPartTrackingAccess) (Object) vanillaPart).figura$getName();
@@ -107,9 +106,8 @@ public class ModelPartTracker {
                         }));
                         setName(newPart, layerName);
                         foundModelParts.add(newPart);
-                    } else {
-                        // If there were no model parts, do nothing here
                     }
+                    // If there are no model parts, do nothing
                 }
             }
             // Simplify and store in caches
@@ -155,7 +153,8 @@ public class ModelPartTracker {
             // If there's only one model part, and its name is of the form "Model<number>", add its children directly.
             if (foundModelParts.size() == 1) {
                 ModelPart part = foundModelParts.iterator().next();
-                if (getName(part) != null && getName(part).matches("^Model\\d+$")) {
+                String name = getName(part);
+                if (name != null && name.matches("^Model\\d+$")) {
                     foundModelParts = new HashSet<>(part.children.values());
                 }
             }
@@ -170,7 +169,7 @@ public class ModelPartTracker {
      * Simplify the set of found model parts by tracing the parent-child trees.
      * If an element of foundModelParts is a child of another element, remove
      * that first element.
-     *
+     * <p>
      * Not the most efficient implementation, but should only happen once per
      * entity renderer per resource manager reload, so it's alright.
      */
@@ -311,26 +310,28 @@ public class ModelPartTracker {
 
         // Humanoid mobs
         addModelPartAliases(HumanoidMobRenderer.class, (HumanoidMobRenderer<?,?,?> humanoid) -> {
-            return aliasHumanoidModel(humanoid.getModel(), "", "", new HashMap<>());
+            HashMap<String, ModelPart> res = new HashMap<>();
+            aliasHumanoidModel(humanoid.getModel(), "", "", res);
+            return res;
         });
 
         // Players are not humanoid mobs because... reasons
         addModelPartAliases(PlayerRenderer.class, player -> {
-            Map<String, ModelPart> result = new HashMap<>();
+            Map<String, ModelPart> res = new HashMap<>();
             PlayerModel model = player.getModel();
-            aliasHumanoidModel(model, "", "", result); // Trace humanoid parts
+            aliasHumanoidModel(model, "", "", res); // Trace humanoid parts
             // Trace other parts
-            result.put("FIGURA_JACKET", model.jacket);
-            result.put("FIGURA_LEFT_SLEEVE", model.leftSleeve);
-            result.put("FIGURA_RIGHT_SLEEVE", model.rightSleeve);
-            result.put("FIGURA_LEFT_PANTS", model.leftPants);
-            result.put("FIGURA_RIGHT_PANTS", model.rightPants);
-            return result;
+            res.put("FIGURA_JACKET", model.jacket);
+            res.put("FIGURA_LEFT_SLEEVE", model.leftSleeve);
+            res.put("FIGURA_RIGHT_SLEEVE", model.rightSleeve);
+            res.put("FIGURA_LEFT_PANTS", model.leftPants);
+            res.put("FIGURA_RIGHT_PANTS", model.rightPants);
+            return res;
         });
     }
 
     // Helpers for DRY.
-    private static Map<String, ModelPart> aliasHumanoidModel(HumanoidModel<?> model, String prefix, String suffix, Map<String, ModelPart> output) {
+    private static void aliasHumanoidModel(HumanoidModel<?> model, String prefix, String suffix, Map<String, ModelPart> output) {
         output.put("FIGURA_" + prefix + "HEAD" + suffix, model.head);
         output.put("FIGURA_" + prefix + "HAT" + suffix, model.hat);
         output.put("FIGURA_" + prefix + "BODY" + suffix, model.body);
@@ -338,22 +339,20 @@ public class ModelPartTracker {
         output.put("FIGURA_" + prefix + "RIGHT_ARM" + suffix, model.rightArm);
         output.put("FIGURA_" + prefix + "LEFT_LEG" + suffix, model.leftLeg);
         output.put("FIGURA_" + prefix + "RIGHT_LEG" + suffix, model.rightLeg);
-        return output;
     }
 
-    private static Map<String, ModelPart> aliasArmor(HumanoidModel<?> model, String suffix, Map<String, ModelPart> output) {
-        return aliasHumanoidModel(model, "ARMOR_", suffix, output);
+    private static void aliasArmor(HumanoidModel<?> model, String suffix, Map<String, ModelPart> output) {
+        aliasHumanoidModel(model, "ARMOR_", suffix, output);
     }
 
-    private static Map<String, ModelPart> aliasArrowModel(ArrowModel model, String prefix, Map<String, ModelPart> output) {
+    private static void aliasArrowModel(ArrowModel model, String prefix, Map<String, ModelPart> output) {
         output.put("FIGURA_" + prefix + "ARROW_1", model.root().getChild("cross_1"));
         output.put("FIGURA_" + prefix + "ARROW_2", model.root().getChild("cross_2"));
         output.put("FIGURA_" + prefix + "ARROW_BACK", model.root().getChild("back"));
-        return output;
     }
 
     // Render layers... need a lot of access wideners for this one.
-    private static Map<String, ModelPart> aliasRenderLayer(RenderLayer<?, ?> layer, Map<String, ModelPart> output) {
+    private static void aliasRenderLayer(RenderLayer<?, ?> layer, Map<String, ModelPart> output) {
         switch (layer) {
             case CapeLayer cape -> output.put("FIGURA_CAPE", ((PlayerCapeModel<?>) cape.model).cape);
             case WingsLayer<?, ?> elytra -> {
@@ -379,7 +378,6 @@ public class ModelPartTracker {
             }
             default -> {} // Don't do anything
         }
-        return output;
     }
 
 }

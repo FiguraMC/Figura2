@@ -1,12 +1,11 @@
 package org.figuramc.figura.manage;
 
-import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatars.AvatarTemplate;
 import org.figuramc.figura.data.AvatarImporter;
 import org.figuramc.figura.data.AvatarImportingException;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.directory.FiguraDir;
-import org.figuramc.figura.util.ChatUtils;
+import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.exception.ExceptionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -16,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -68,12 +66,13 @@ public class CemManager {
         } catch (CompletionException ex) {
             Throwable cause = ex.getCause();
             // For now, always report CEM errors to chat.
+            //noinspection SwitchStatementWithTooFewBranches
             switch (cause) {
-                case AvatarImportingException importingException -> ChatUtils.reportErrorWithReason(Component.literal("Failed to import avatar"), cause); // TODO Translate
-                default -> ChatUtils.unexpectedError("CEM avatar import", cause);
+                case AvatarImportingException importingException -> ErrorReporting.avatarImporting(importingException);
+                default -> ErrorReporting.unexpectedError(cause);
             }
         } catch (Throwable unexpected) {
-            ChatUtils.unexpectedError("CEM avatar import", unexpected);
+            ErrorReporting.unexpectedError(unexpected);
         }
     }
 

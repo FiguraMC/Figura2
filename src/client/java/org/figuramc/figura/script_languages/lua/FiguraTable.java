@@ -12,6 +12,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 /**
  * Adds some functional operations to the table library for fast iteration on lists.
  */
+@SuppressWarnings("DuplicatedCode") // Deduplication can help with speed.
 public class FiguraTable {
 
     public static void init(LuaState state) throws LuaError {

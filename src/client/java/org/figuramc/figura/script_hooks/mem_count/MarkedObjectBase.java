@@ -2,7 +2,7 @@ package org.figuramc.figura.script_hooks.mem_count;
 
 /**
  * A base class for convenience that handles marking for you.
- *
+ * <p>
  * Note that marking is currently the only way for an object to only
  * be counted once, if referenced multiple times.
  */

@@ -37,7 +37,7 @@ public class EntityRendererMixin {
         EntityRoot root = avatar.getComponent(EntityRoot.class);
         if (root == null) return;
         float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
-        root.render(avatar, tickDelta, multiBufferSource, new FiguraTransformStack(poseStack), light, OverlayTexture.NO_OVERLAY);
+        root.render(avatar, multiBufferSource, new FiguraTransformStack(poseStack), tickDelta, light, OverlayTexture.NO_OVERLAY);
     }
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))

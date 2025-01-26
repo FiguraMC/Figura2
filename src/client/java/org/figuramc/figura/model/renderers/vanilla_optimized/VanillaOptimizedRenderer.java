@@ -19,7 +19,7 @@ import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
-import org.figuramc.figura.util.GeneralUtils;
+import static org.figuramc.figura.util.GeneralUtils.*;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
@@ -31,9 +31,9 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
     private VanillaOptimizedRenderer() {}
 
     // Black transparent pixel to use as a placeholder for no texture
-    private static final ResourceLocation ZERO_PIXEL = GeneralUtils.block(() -> {
+    private static final ResourceLocation ZERO_PIXEL = block(() -> {
         ResourceLocation loc = FiguraMod.id("zero_pixel");
-        DynamicTexture tex = new DynamicTexture(GeneralUtils.block(() -> {
+        DynamicTexture tex = new DynamicTexture(block(() -> {
             NativeImage image = new NativeImage(1, 1, false);
             image.setPixel(0, 0, ARGB.color(0, 0, 0, 0));
             return image;
@@ -80,7 +80,7 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
         // Now render (this is VanillaOptimizedRenderer-specific!)
         state.partDataStorageBuffer.bind(0);
         state.optimizedBufferBuilder.draw(() -> {
-            // Cursed uniform setting...
+            // Cursed uniform setting... TODO make better
             Matrix4f figuraRootMatrix = matrixStack.peekPosition();
             RenderSystem.getShader()
                     .getUniform("FiguraRootMatrix")
@@ -98,6 +98,9 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
         public void destroy() {
             optimizedBufferBuilder.clear();
             partDataStorageBuffer.clear();
+            // Ensure they're not used after destruction
+            optimizedBufferBuilder = null;
+            partDataStorageBuffer = null;
         }
 
         @Override

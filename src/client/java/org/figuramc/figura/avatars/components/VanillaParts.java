@@ -47,7 +47,7 @@ public class VanillaParts implements AvatarComponent {
     private EntityUser entityUserComponent;
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarMaterials materials, Avatar<?> self) {
         // Depends on Textures and EntityUser
         texturesComponent = self.assertDependency(Textures.class, getClass());
         entityUserComponent = self.assertDependency(EntityUser.class, getClass());
@@ -90,7 +90,7 @@ public class VanillaParts implements AvatarComponent {
             // If there's a corresponding vanilla part, use it
             @Nullable ModelPart vanillaPart = ModelPartTracker.getModelPartByName(renderer, name);
             if (vanillaPart != null) partMap.put(vanillaPart, figuraPart);
-            else FiguraMod.LOGGER.warn("Part with vanilla root \"" + name + "\" does not have an analogue");
+            else FiguraMod.LOGGER.warn("Part with vanilla root \"{}\" does not have an analogue", name); // Todo prevent log spam here?
         }
         // Set the variable for whether it's a living entity
         isLivingEntityRenderer = renderer instanceof LivingEntityRenderer<?,?,?>;

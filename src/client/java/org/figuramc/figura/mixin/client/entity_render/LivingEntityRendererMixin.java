@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
@@ -57,6 +58,6 @@ public class LivingEntityRendererMixin {
         int overlayCoords = LivingEntityRenderer.getOverlayCoords(renderState, whiteOverlayProgress);
         // Render
         float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
-        root.render(avatar, tickDelta, multiBufferSource, matrixStack, light, overlayCoords);
+        root.render(avatar, multiBufferSource, matrixStack, tickDelta, light, overlayCoords);
     }
 }

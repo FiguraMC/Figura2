@@ -1,9 +1,9 @@
 package org.figuramc.figura.avatars.components;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
 import org.figuramc.figura.util.ListUtils;
@@ -26,10 +26,8 @@ public class CustomItems implements AvatarComponent {
      */
     private List<PartEntry> customItems;
 
-    private @Nullable Scripts scriptsComponent;
-
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarMaterials materials, Avatar<?> self) {
         // Depend on textures, needed for creating model parts
         Textures texturesComponent = self.assertDependency(Textures.class, getClass());
 
@@ -97,7 +95,7 @@ public class CustomItems implements AvatarComponent {
         record ExactMatcher(ResourceLocation location) implements Matcher {
             @Override
             public boolean matches(ItemStack item) {
-                return item.getItemHolder().unwrapKey().get().location().equals(location);
+                return BuiltInRegistries.ITEM.getKey(item.getItem()).equals(location);
             }
 
             @Override
@@ -109,7 +107,7 @@ public class CustomItems implements AvatarComponent {
         record EndsWithMatcher(String ending) implements Matcher {
             @Override
             public boolean matches(ItemStack item) {
-                return item.getItemHolder().unwrapKey().get().location().getPath().endsWith(ending);
+                return BuiltInRegistries.ITEM.getKey(item.getItem()).getPath().endsWith(ending);
             }
             @Override
             public int compareTo(@NotNull CustomItems.Matcher o) {

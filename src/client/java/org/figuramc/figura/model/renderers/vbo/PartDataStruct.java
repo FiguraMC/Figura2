@@ -20,7 +20,6 @@ public class PartDataStruct {
     public static final int SIZE =
             // Position mat, normal mat, color
             MAT4_SIZE + MAT3_SIZE + VEC4_SIZE;
-    ;
 
     private final Matrix4f transform = new Matrix4f();
     private final Matrix3f normalMat = new Matrix3f();
@@ -39,6 +38,7 @@ public class PartDataStruct {
         }
     }
 
+    @SuppressWarnings("UnusedAssignment")
     public void write(ByteBuffer buffer, int partIndex) {
         int index = partIndex * SIZE;
         transform.get(index, buffer); index += MAT4_SIZE;

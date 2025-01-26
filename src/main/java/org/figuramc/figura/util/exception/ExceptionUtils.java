@@ -1,11 +1,12 @@
 package org.figuramc.figura.util.exception;
 
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.figuramc.figura.util.exception.functional.ThrowingFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingSupplier;
 
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+@SuppressWarnings("unused")
 public class ExceptionUtils {
 
     // Wrap checked exceptions in the given runtime exception wrapper.
@@ -53,12 +54,5 @@ public class ExceptionUtils {
             throw runtimeWrapper.apply(err);
         }
     }
-
-    public static <R, E extends Throwable> @NotNull R castOrThrow(@Nullable Object obj, Class<R> clazz, Supplier<E> message) throws E {
-        if (obj == null) throw message.get();
-        if (clazz.isAssignableFrom(obj.getClass())) return (R) obj;
-        throw message.get();
-    }
-
 
 }

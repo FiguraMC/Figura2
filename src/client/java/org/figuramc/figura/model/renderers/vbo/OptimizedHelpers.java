@@ -66,9 +66,7 @@ public class OptimizedHelpers {
 
     // Helper method to update transforms for a given root and store them in the PartDataStorageBuffer.
     public static void updateTransforms(RootModelPart root, PartDataStorageBuffer partDataStorageBuffer, float tickDelta) throws StackOverflowError, ScriptError {
-        partDataStorageBuffer.updatePartData(partData -> {
-            calculateTransforms(root, partData, new FiguraTransformStack(), tickDelta, false, true, new MutableInt(0));
-        });
+        partDataStorageBuffer.updatePartData(partData -> calculateTransforms(root, partData, new FiguraTransformStack(), tickDelta, false, true, new MutableInt(0)));
     }
 
     // Private recursive helper to traverse parts and calculate their transforms.

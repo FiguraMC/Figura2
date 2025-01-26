@@ -38,19 +38,8 @@ public class DeferredVanillaPartRenderQueue {
             MATRIX_STACK.peekPosition().set(entry.posMatrix);
             MATRIX_STACK.peekNormal().set(entry.normalMatrix);
 
-            // Sadly, need to check if the avatar is errored here. Don't want to rely too much on .isErrored()
-            // but in this case it's very beneficial.
-            if (!entry.avatar.isErrored()) {
-                try {
-                    FiguraRenderers.getCurrentRenderer().render(entry.modelPart, bufferSource, MATRIX_STACK, tickDelta, entry.light, entry.overlay);
-                } catch (ScriptError ex) {
-                    entry.avatar.error(Component.literal("Error inside model part render callback"), ex);
-                } catch (StackOverflowError ex) {
-                    entry.avatar.error(Component.literal("Stack overflow during part rendering - tree too deep!"), ex);
-                } catch (Throwable other) {
-                    entry.avatar.error(Component.literal("Unexpected error during model part rendering"), other);
-                }
-            }
+            // If the avatar is errored, this call will do nothing.
+            entry.avatar.tryRenderModelPart(entry.modelPart, bufferSource, MATRIX_STACK, tickDelta, entry.light, entry.overlay);
 
             // No memory leaks
             entry.avatar = null;

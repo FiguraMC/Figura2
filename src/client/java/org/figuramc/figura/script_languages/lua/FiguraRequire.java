@@ -36,10 +36,10 @@ public class FiguraRequire {
                 // Use @ because it's a file name.
                 LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, state.globals());
                 functionStorage.rawset(name, closure);
-            } catch (CompileException compileException) {
-                throw new AvatarLoadingException("Failed to compile Lua script", compileException);
-            } catch (LuaError error) {
-                throw new AvatarLoadingException("Error while compiling Lua script", error);
+            } catch (CompileException ex) {
+                throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, false, name, ex.getMessage());
+            } catch (LuaError ex) {
+                throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, true, name, ex.getMessage());
             }
         }
         // Create require function

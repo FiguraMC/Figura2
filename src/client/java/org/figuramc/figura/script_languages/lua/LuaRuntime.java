@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua;
 
+import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
@@ -28,21 +29,19 @@ import java.util.Map;
 
 public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
 
-    private final Avatar<?> avatar;
+    // Lua State
     private final LuaState state;
 
     // Figura metatable reference, for creating/converting objects
     private final FiguraMetatables metatables;
 
-    // Keep references to event objects
+    // Keep references to event objects, so we can call them on demand
     private final LuaValue tick, render;
 
     /**
      * The starting point for the creation of a Lua Runtime.
      */
     public LuaRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException {
-        // Save avatar
-        this.avatar = avatar;
         // LuaError can happen at basically any time, so wrap the whole thing :P
         try {
             // Create the LuaState.
@@ -120,13 +119,13 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             }
 
         } catch (LuaError error) {
-            throw new AvatarLoadingException("Problem instantiating the Lua runtime", error);
+            throw new AvatarLoadingException("figura.error.internal.script.lua.setup_failed", error, false);
         }
     }
 
     @Override
     public void runCode(String snippet) throws ScriptError {
-        throw new ScriptError("Not yet implemented");
+        throw new ScriptError(Component.literal("TODO"));
     }
 
     @Override
@@ -136,28 +135,28 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             LuaClosure entrypoint = LoadState.load(state, new ByteArrayInputStream("require 'main.lua'".getBytes(StandardCharsets.UTF_8)), "=ENTRYPOINT", state.globals());
             LuaThread.runMain(state, entrypoint);
         } catch (LuaError luaError) {
-            throw new ScriptError("Error in Lua during init", luaError);
+            throw new ScriptError(Component.literal(luaError.getMessage().replace("\t", "  ")));
         } catch (CompileException impossible) {
             throw new IllegalStateException("Failed to compile Lua entrypoint. Should be impossible. Bug in Figura, please report!", impossible);
         }
     }
 
-    private void call(LuaValue event, String name, Varargs args) throws ScriptError {
+    private void call(LuaValue event, Varargs args) throws ScriptError {
         try {
             LuaThread.runMain(state, event, args);
         } catch (LuaError luaError) {
-            throw new ScriptError("Error in Lua during \"" + name + "\" event", luaError);
+            throw new ScriptError(Component.literal(luaError.getMessage().replace("\t", "  ")));
         }
     }
 
     @Override
     public void tick() throws ScriptError {
-        call(tick, "tick", Constants.NONE);
+        call(tick, Constants.NONE);
     }
 
     @Override
     public void render(float tickDelta) throws ScriptError {
-        call(render, "render", LuaDouble.valueOf(tickDelta));
+        call(render, LuaDouble.valueOf(tickDelta));
     }
 
     @Override
@@ -182,16 +181,16 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     public static Varargs runAssetFile(LuaState state, String name, Varargs args) throws AvatarLoadingException {
         try(InputStream input = FiguraModClient.class.getResourceAsStream("/assets/figura/scripts/lua/" + name + ".lua")) {
             // Compile the file
-            if (input == null) throw new AvatarLoadingException("Figura was unable to find builtin file \"" + name + ".lua\"? Likely bug in Figura, please report.");
+            if (input == null) throw new AvatarLoadingException("figura.error.internal.missing_file", name + ".lua");
             LuaClosure c = LoadState.load(state, input, "=" + name.toUpperCase(), state.globals());
             // Execute the file
             return LuaThread.runMain(state, c, args);
         } catch (IOException e) {
-            throw new AvatarLoadingException("Figura was unable to load \"" + name + ".lua\"? Likely bug in Figura, please report.", e);
+            throw new AvatarLoadingException("figura.error.internal.missing_file", e, false, name + ".lua");
         } catch (CompileException e) {
-            throw new AvatarLoadingException("Figura internal \"" + name + ".lua\" failed to compile! Likely bug in Figura, please report.", e);
+            throw new AvatarLoadingException("figura.error.internal.script.lua.compile_error", e, false, name + ".lua");
         } catch (LuaError e) {
-            throw new AvatarLoadingException("Error while initializing Figura internal \"" + name + ".lua\". Likely bug in Figura, please report.", e);
+            throw new AvatarLoadingException("figura.error.internal.script.lua.runtime_error", e, false, name + ".lua");
         }
     }
 

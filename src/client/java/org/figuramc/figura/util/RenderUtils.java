@@ -1,14 +1,21 @@
 package org.figuramc.figura.util;
 
 import com.mojang.blaze3d.pipeline.RenderCall;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4d;
+
+import java.util.function.Supplier;
 
 public class RenderUtils {
 
@@ -26,22 +33,15 @@ public class RenderUtils {
         return Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
     }
 
-    public static @Nullable EntityModel<?> getModel(Entity entity) {
-        EntityRenderer<?,?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
-        if (renderer instanceof LivingEntityRenderer<?,?,?> living) {
-            return living.getModel();
-        }
-        return null;
-    }
-
-    /**
-     * Keep track of the world <=> view matrices, update each frame
-     */
-    public static final Matrix4d WORLD_TO_VIEW_MATRIX = new Matrix4d();
-    public static final Matrix4d VIEW_TO_WORLD_MATRIX = new Matrix4d();
-    public static void updateWorldViewMatrices(Matrix4d worldToView) {
-        WORLD_TO_VIEW_MATRIX.set(worldToView);
-        WORLD_TO_VIEW_MATRIX.invert(VIEW_TO_WORLD_MATRIX);
+    public static void uploadTexture(Supplier<Boolean> closed, AbstractTexture tex, ResourceLocation location, NativeImage image) {
+        if (closed.get()) return;
+        RenderUtils.executeOnRenderThread(() -> {
+            if (closed.get()) return;
+            TextureManager manager = Minecraft.getInstance().getTextureManager();
+            manager.register(location, tex);
+            TextureUtil.prepareImage(tex.getId(), image.getWidth(), image.getHeight());
+            image.upload(0, 0, 0, false);
+        });
     }
 
 }

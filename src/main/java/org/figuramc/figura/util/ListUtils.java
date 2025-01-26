@@ -1,15 +1,15 @@
 package org.figuramc.figura.util;
 
-import org.figuramc.figura.util.exception.BiThrowingFunction;
-import org.figuramc.figura.util.exception.ThrowingFunction;
+import org.figuramc.figura.util.exception.functional.BiThrowingFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 
+@SuppressWarnings({"DuplicatedCode", "unused"})
 public class ListUtils {
 
     public static <T, R, E extends Throwable> ArrayList<R> map(Iterable<T> list, ThrowingFunction<T, R, E> func) throws E {
