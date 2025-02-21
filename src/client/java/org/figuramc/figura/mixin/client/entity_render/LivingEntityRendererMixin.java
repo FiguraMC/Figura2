@@ -18,12 +18,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
+// A similar mixin is applied for any class that should flip and translate.
+// See RenderUtils.shouldFlipAndTranslate().
 @SuppressWarnings({"unchecked", "rawtypes"})
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
 
     /**
-     * Inject after calling getRenderType.
+     * Inject before rendering the model.
      * This will have all the necessary transforms of the model applied,
      * but it will also have some ones we don't want:
      * - Flipping the x and y axes. This is not necessary in our renderer,

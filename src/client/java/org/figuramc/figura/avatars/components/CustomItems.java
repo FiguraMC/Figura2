@@ -44,11 +44,8 @@ public class CustomItems implements AvatarComponent {
                 ResourceLocation exactLocation = ResourceLocation.parse(pattern.replace('$', ':'));
                 matcher = new Matcher.ExactMatcher(exactLocation);
             }
-
-
             // Convert the materials to a CustomItemModelPart
-            CustomItemModelPart mainPart = entry.getValue().modelPartMaterials() != null ? new CustomItemModelPart(entry.getValue().modelPartMaterials(), entry.getValue().transforms(), texturesComponent.textures) : null;
-
+            CustomItemModelPart mainPart = entry.getValue().model() != null ? new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), texturesComponent.textures) : null;
             // Convert the texture index to a RootModelPart
             RootModelPart flatPart = entry.getValue().textureIndex() != -1 ? new RootModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex())) : null;
             // Return the entry
@@ -85,9 +82,9 @@ public class CustomItems implements AvatarComponent {
      * If the file name starts with $, then it's an EndsWithMatcher.
      * Otherwise, it's exact, with $ acting as the namespace separator.
      * Examples:
-     * - $_sword.bbmodel matches anything whose id ends with "_sword"
-     * - golden_axe.bbmodel matches specifically "minecraft:golden_axe"
-     * - silly_mod$titanium_axe.bbmodel matches specifically "silly_mod:titanium_axe"
+     * - $_sword.figmodel matches anything whose id ends with "_sword"
+     * - golden_axe.figmodel matches specifically "minecraft:golden_axe"
+     * - silly_mod$titanium_axe.figmodel matches specifically "silly_mod:titanium_axe"
      */
     private sealed interface Matcher extends Comparable<Matcher> {
         boolean matches(ItemStack item);

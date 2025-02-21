@@ -16,28 +16,53 @@ accessible method com/mojang/blaze3d/platform/NativeImage getPixelABGR (II)I
 accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
 accessible method net/minecraft/client/renderer/ShaderManager createPreprocessor (Ljava/util/Map;Lnet/minecraft/resources/ResourceLocation;)Lcom/mojang/blaze3d/preprocessor/GlslPreprocessor;
 
-# Getting data of vanilla model renderers and parts
-accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
+# Getting transforms of original item model, to use as fallback when overriding
+accessible field net/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState model Lnet/minecraft/client/resources/model/BakedModel;
 
+# Fetching ModelPart info
 accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;
 accessible field net/minecraft/client/model/geom/ModelPart children Ljava/util/Map;
 accessible field net/minecraft/client/model/geom/ModelPart$Cube polygons [Lnet/minecraft/client/model/geom/ModelPart$Polygon;
 accessible class net/minecraft/client/model/geom/ModelPart$Polygon
 accessible class net/minecraft/client/model/geom/ModelPart$Vertex
 
+# Model part aliases :despair:
+accessible field net/minecraft/client/renderer/entity/LivingEntityRenderer layers Ljava/util/List;
+
+accessible field net/minecraft/client/renderer/entity/AgeableMobRenderer adultModel Lnet/minecraft/client/model/EntityModel;
+accessible field net/minecraft/client/renderer/entity/AgeableMobRenderer babyModel Lnet/minecraft/client/model/EntityModel;
+
 accessible field net/minecraft/client/renderer/entity/layers/CapeLayer model Lnet/minecraft/client/model/HumanoidModel;
 accessible field net/minecraft/client/model/PlayerCapeModel cape Lnet/minecraft/client/model/geom/ModelPart;
+
 accessible field net/minecraft/client/renderer/entity/layers/WingsLayer elytraModel Lnet/minecraft/client/model/ElytraModel;
+accessible field net/minecraft/client/renderer/entity/layers/WingsLayer elytraBabyModel Lnet/minecraft/client/model/ElytraModel;
 accessible field net/minecraft/client/model/ElytraModel leftWing Lnet/minecraft/client/model/geom/ModelPart;
 accessible field net/minecraft/client/model/ElytraModel rightWing Lnet/minecraft/client/model/geom/ModelPart;
+
 accessible field net/minecraft/client/renderer/entity/layers/SpinAttackEffectLayer model Lnet/minecraft/client/model/SpinAttackEffectModel;
 accessible field net/minecraft/client/model/SpinAttackEffectModel boxes [Lnet/minecraft/client/model/geom/ModelPart;
+
 accessible field net/minecraft/client/renderer/entity/layers/StuckInBodyLayer model Lnet/minecraft/client/model/Model;
+
 accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer innerModel Lnet/minecraft/client/model/HumanoidModel;
 accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer outerModel Lnet/minecraft/client/model/HumanoidModel;
 accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer innerModelBaby Lnet/minecraft/client/model/HumanoidModel;
 accessible field net/minecraft/client/renderer/entity/layers/HumanoidArmorLayer outerModelBaby Lnet/minecraft/client/model/HumanoidModel;
 
+accessible field net/minecraft/client/model/QuadrupedModel head Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/QuadrupedModel body Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/QuadrupedModel leftHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/QuadrupedModel rightHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/QuadrupedModel leftFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/QuadrupedModel rightFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+
+accessible field net/minecraft/client/model/FoxModel body Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/FoxModel leftHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/FoxModel rightHindLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/FoxModel leftFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/FoxModel rightFrontLeg Lnet/minecraft/client/model/geom/ModelPart;
+accessible field net/minecraft/client/model/FoxModel tail Lnet/minecraft/client/model/geom/ModelPart;
 
 # Grabbing entity renderer maps from EntityRenderDispatcher
 accessible field net/minecraft/client/renderer/entity/EntityRenderDispatcher renderers Ljava/util/Map;

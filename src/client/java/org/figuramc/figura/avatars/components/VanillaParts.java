@@ -110,9 +110,7 @@ public class VanillaParts implements AvatarComponent {
         needsPartMapRefresh = true;
         return newPart;
     }
-    private static final AvatarMaterials.VanillaRootPartMaterials emptyMaterials = new AvatarMaterials.VanillaRootPartMaterials(
-            new AvatarMaterials.ModelPartMaterials("root", new Vector3f(), new Vector3f(), List.of(), -1, List.of(), List.of()),
-            new MutableBoolean(false)
-    );
+    
+    private static final AvatarMaterials.VanillaRootPartMaterials emptyMaterials = AvatarMaterials.VanillaRootPartMaterials.wrapper("vanilla", List.of());
 
 }

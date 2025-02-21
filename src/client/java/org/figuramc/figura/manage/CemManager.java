@@ -1,9 +1,9 @@
 package org.figuramc.figura.manage;
 
 import org.figuramc.figura.avatars.AvatarTemplate;
-import org.figuramc.figura.data.AvatarImporter;
 import org.figuramc.figura.data.AvatarImportingException;
 import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.NewAvatarImporter;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.exception.ExceptionUtils;
@@ -51,7 +51,7 @@ public class CemManager {
                     String modId = entityTypeLocation.getNamespace();
                     String entityName = entityTypeLocation.getPath();
                     Path entityDir = FiguraDir.CEM.get().resolve(modId).resolve(entityName);
-                    return Files.exists(entityDir) ? AvatarImporter.importFolder(entityDir) : null;
+                    return Files.exists(entityDir) ? NewAvatarImporter.importPath(entityDir) : null;
                 }, CompletionException::new)));
         // If the task isn't complete yet, just return out.
         if (!materials.isDone()) return;

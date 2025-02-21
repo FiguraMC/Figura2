@@ -2,6 +2,7 @@ package org.figuramc.figura.model.renderers.vanilla_optimized;
 
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -19,7 +20,6 @@ import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
-import static org.figuramc.figura.util.GeneralUtils.*;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
@@ -31,9 +31,9 @@ public class VanillaOptimizedRenderer implements FiguraPartRenderer {
     private VanillaOptimizedRenderer() {}
 
     // Black transparent pixel to use as a placeholder for no texture
-    private static final ResourceLocation ZERO_PIXEL = block(() -> {
+    private static final ResourceLocation ZERO_PIXEL = Util.make(() -> {
         ResourceLocation loc = FiguraMod.id("zero_pixel");
-        DynamicTexture tex = new DynamicTexture(block(() -> {
+        DynamicTexture tex = new DynamicTexture(Util.make(() -> {
             NativeImage image = new NativeImage(1, 1, false);
             image.setPixel(0, 0, ARGB.color(0, 0, 0, 0));
             return image;

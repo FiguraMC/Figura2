@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.Entity;
+import org.figuramc.figura.util.RenderUtils;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,7 +28,7 @@ public class EntityRendererMixin {
     public void onRender(EntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
         // If this is a living entity renderer, then the more specific mixin will already have been run.
         // So this one is unnecessary.
-        if (((Object) this) instanceof LivingEntityRenderer<?,?,?>)
+        if ((Object) this instanceof LivingEntityRenderer<?,?,?>)
             return;
 
         // Otherwise, render the Avatar's entity root if it exists.

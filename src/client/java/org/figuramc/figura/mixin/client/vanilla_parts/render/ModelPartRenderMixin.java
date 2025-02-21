@@ -109,8 +109,7 @@ public class ModelPartRenderMixin {
             } catch (ScriptError ex) {
                 // Get vanilla part's name in a component, for informational purposes
                 Component partName;
-                String str = ModelPartTracker.getAlias((ModelPart) (Object) this);
-                if (str == null) str = ModelPartTracker.getFullName((ModelPart) (Object) this);
+                String str = ModelPartTracker.getAliasOrFullName((ModelPart) (Object) this);
                 if (str == null) partName = Component.translatable("figura.error.runtime.unnamed_vanilla_part");
                 else partName = Component.literal(str);
                 // Error out

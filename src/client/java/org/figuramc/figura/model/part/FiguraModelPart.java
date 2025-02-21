@@ -178,8 +178,8 @@ public class FiguraModelPart extends MarkedObjectBase {
 
 
     private static void addVertices(FloatArrayList vertexData, AvatarMaterials.CubeData cubeData, Vector4f uvModifier) {
-        Vector3f f = cubeData.from();
-        Vector3f t = cubeData.to();
+        Vector3f f = cubeData.from().sub(cubeData.inflate(), new Vector3f());
+        Vector3f t = cubeData.to().add(cubeData.inflate(), new Vector3f());
         Vector3f o = cubeData.origin();
         Vector3f r = cubeData.rotation();
 
@@ -194,7 +194,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         Matrix3f normalMat = transform.normal(new Matrix3f());
 
         for (int i = 0; i < 6; i++) {
-            AvatarMaterials.CubeFace face = cubeData.faces()[i];
+            @Nullable AvatarMaterials.CubeFace face = cubeData.faces()[i];
             if (face == null) continue;
             float u1 = face.uv().x();
             float v1 = face.uv().y();
@@ -213,41 +213,41 @@ public class FiguraModelPart extends MarkedObjectBase {
                 faceRot--;
             }
             switch (i) {
-                case 0 -> { //north
-                    noSkinVert(vertexData, t.x, f.y, f.z, u4, v4, 0f, 0f, -1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, f.x, f.y, f.z, u3, v3, 0f, 0f, -1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, f.x, t.y, f.z, u2, v2,0f, 0f, -1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, t.y, f.z, u1, v1, 0f, 0f, -1f, transform, normalMat, uvModifier);
-                }
-                case 1 -> { //east
-                    noSkinVert(vertexData, t.x, f.y, t.z, u4, v4, 1f, 0f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, f.y, f.z, u3, v3, 1f, 0f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, t.y, f.z, u2, v2,1f, 0f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, t.y, t.z, u1, v1, 1f, 0f, 0f, transform, normalMat, uvModifier);
-                }
-                case 2 -> { //south
-                    noSkinVert(vertexData, f.x, f.y, t.z, u4, v4, 0f, 0f, 1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, f.y, t.z, u3, v3, 0f, 0f, 1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, t.y, t.z, u2, v2, 0f, 0f, 1f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, f.x, t.y, t.z, u1, v1, 0f, 0f, 1f, transform, normalMat, uvModifier);
-                }
-                case 3 -> { //west
+                case 0 -> { // West (Negative X)
                     noSkinVert(vertexData, f.x, f.y, f.z, u4, v4, -1f, 0f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, f.x, f.y, t.z, u3, v3, -1f, 0f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, f.x, t.y, t.z, u2, v2, -1f, 0f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, f.x, t.y, f.z, u1, v1, -1f, 0f, 0f, transform, normalMat, uvModifier);
                 }
-                case 4 -> { //up
+                case 1 -> { // East (Positive X)
+                    noSkinVert(vertexData, t.x, f.y, t.z, u4, v4, 1f, 0f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, f.y, f.z, u3, v3, 1f, 0f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, t.y, f.z, u2, v2,1f, 0f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, t.y, t.z, u1, v1, 1f, 0f, 0f, transform, normalMat, uvModifier);
+                }
+                case 2 -> { // Down (Negative Y)
+                    noSkinVert(vertexData, f.x, f.y, f.z, u4, v4, 0f, -1f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, f.y, f.z, u3, v3, 0f, -1f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, f.y, t.z, u2, v2, 0f, -1f, 0f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, f.x, f.y, t.z, u1, v1, 0f, -1f, 0f, transform, normalMat, uvModifier);
+                }
+                case 3 -> { // Up (Positive Y)
                     noSkinVert(vertexData, f.x, t.y, t.z, u4, v4, 0f, 1f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, t.x, t.y, t.z, u3, v3, 0f, 1f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, t.x, t.y, f.z, u2, v2, 0f, 1f, 0f, transform, normalMat, uvModifier);
                     noSkinVert(vertexData, f.x, t.y, f.z, u1, v1, 0f, 1f, 0f, transform, normalMat, uvModifier);
                 }
-                case 5 -> { //down
-                    noSkinVert(vertexData, f.x, f.y, f.z, u4, v4, 0f, -1f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, f.y, f.z, u3, v3, 0f, -1f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, t.x, f.y, t.z, u2, v2, 0f, -1f, 0f, transform, normalMat, uvModifier);
-                    noSkinVert(vertexData, f.x, f.y, t.z, u1, v1, 0f, -1f, 0f, transform, normalMat, uvModifier);
+                case 4 -> { // North (Negative Z)
+                    noSkinVert(vertexData, t.x, f.y, f.z, u4, v4, 0f, 0f, -1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, f.x, f.y, f.z, u3, v3, 0f, 0f, -1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, f.x, t.y, f.z, u2, v2,0f, 0f, -1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, t.y, f.z, u1, v1, 0f, 0f, -1f, transform, normalMat, uvModifier);
+                }
+                case 5 -> { // South (Positive Z)
+                    noSkinVert(vertexData, f.x, f.y, t.z, u4, v4, 0f, 0f, 1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, f.y, t.z, u3, v3, 0f, 0f, 1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, t.x, t.y, t.z, u2, v2, 0f, 0f, 1f, transform, normalMat, uvModifier);
+                    noSkinVert(vertexData, f.x, t.y, t.z, u1, v1, 0f, 0f, 1f, transform, normalMat, uvModifier);
                 }
             }
         }
@@ -270,7 +270,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         List<AvatarMaterials.VertexData> vertices = meshData.vertices();
         List<Vector2f> uvs = meshData.uvs();
         int uv = 0;
-        for (Vector4i face : meshData.faces()) {
+        for (Vector4i face : meshData.indices()) {
             // Always do 3 vertices
             AvatarMaterials.VertexData v1 = vertices.get(face.x);
             AvatarMaterials.VertexData v2 = vertices.get(face.y);

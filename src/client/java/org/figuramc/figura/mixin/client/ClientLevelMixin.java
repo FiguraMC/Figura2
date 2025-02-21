@@ -1,23 +1,25 @@
 package org.figuramc.figura.mixin.client;
 
 import com.google.gson.JsonObject;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.resources.PlayerSkin;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.EntityType;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.AvatarTemplate;
-import org.figuramc.figura.data.AvatarImporter;
 import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.NewAvatarImporter;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
 import org.figuramc.figura.util.ClientUtils;
 import org.figuramc.figura.util.exception.ExceptionUtils;
-import org.figuramc.figura.vanillamodel.BBModelExporter;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.multiplayer.ClientPacketListener;
-import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.entity.EntityType;
+import org.figuramc.figura.vanillamodel.EntityExporter;
+import org.figuramc.figura.vanillamodel.ModelPartAlias;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -30,7 +32,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 @SuppressWarnings("rawtypes")
 @Mixin(ClientLevel.class)
@@ -51,7 +52,7 @@ public class ClientLevelMixin {
 
             AvatarManager.ENTITY_AVATARS.load(ClientUtils.getLocalUUID(), CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
                 Path avatarPath = FiguraDir.AVATARS.get().resolve("test_avatar");
-                AvatarMaterials materials = AvatarImporter.importFolder(avatarPath);
+                AvatarMaterials materials = NewAvatarImporter.importPath(avatarPath);
                 return AvatarTemplate.LOCAL_PLAYER_AVATAR.construct(ClientUtils.getLocalUUID(), materials);
             }, CompletionException::new)));
 
@@ -60,20 +61,20 @@ public class ClientLevelMixin {
             // Also export some stuff for testing
             try {
                 Path exportsFolder = FiguraDir.EXPORTS.get();
-                JsonObject playerExport = BBModelExporter.exportPlayer("slim_player", true, BBModelExporter.ONLY_SUPPORTED);
-                Files.writeString(exportsFolder.resolve("slim_player.bbmodel"), playerExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                JsonObject playerExport = EntityExporter.exportPlayer(PlayerSkin.Model.SLIM, new EntityExporter.ExporterOptions(ModelPartAlias.Group.ELYTRA, ModelPartAlias.Group.STUCK_ARROW));
+                Files.writeString(exportsFolder.resolve("slim_player.figmodel"), playerExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject foxExport = BBModelExporter.exportEntity("fox", EntityType.FOX, BBModelExporter.ALL_PARTS);
-                Files.writeString(exportsFolder.resolve("fox.bbmodel"), foxExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                JsonObject foxExport = EntityExporter.exportEntity(EntityType.FOX, new EntityExporter.ExporterOptions());
+                Files.writeString(exportsFolder.resolve("fox.figmodel"), foxExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject endCrystalExport = BBModelExporter.exportEntity("end_crystal", EntityType.END_CRYSTAL, BBModelExporter.ALL_PARTS);
-                Files.writeString(exportsFolder.resolve("end_crystal.bbmodel"), endCrystalExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                JsonObject endCrystalExport = EntityExporter.exportEntity(EntityType.END_CRYSTAL, EntityExporter.LITERALLY_ALL_PARTS);
+                Files.writeString(exportsFolder.resolve("end_crystal.figmodel"), endCrystalExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject enderDragonExport = BBModelExporter.exportEntity("ender_dragon", EntityType.ENDER_DRAGON, BBModelExporter.ALL_PARTS);
-                Files.writeString(exportsFolder.resolve("ender_dragon.bbmodel"), enderDragonExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                JsonObject enderDragonExport = EntityExporter.exportEntity(EntityType.ENDER_DRAGON, EntityExporter.LITERALLY_ALL_PARTS);
+                Files.writeString(exportsFolder.resolve("ender_dragon.figmodel"), enderDragonExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-                JsonObject arrowExport = BBModelExporter.exportEntity("arrow", EntityType.ARROW, BBModelExporter.ALL_PARTS);
-                Files.writeString(exportsFolder.resolve("arrow.bbmodel"), arrowExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+                JsonObject arrowExport = EntityExporter.exportEntity(EntityType.ARROW, EntityExporter.LITERALLY_ALL_PARTS);
+                Files.writeString(exportsFolder.resolve("arrow.figmodel"), arrowExport.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             } catch (IOException e) {
                 FiguraMod.LOGGER.error("Failed to store file", e);
             }

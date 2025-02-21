@@ -4,13 +4,18 @@ import org.figuramc.figura.util.exception.functional.BiThrowingFunction;
 import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import oshi.util.tuples.Pair;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
-@SuppressWarnings({"DuplicatedCode", "unused"})
+@SuppressWarnings({"DuplicatedCode"})
 public class ListUtils {
+
+    public static <T> void swap(List<T> list, int i, int j) {
+        T elem = list.get(i);
+        list.set(i, list.get(j));
+        list.set(j, elem);
+    }
 
     public static <T, R, E extends Throwable> ArrayList<R> map(Iterable<T> list, ThrowingFunction<T, R, E> func) throws E {
         ArrayList<R> result = new ArrayList<>();
@@ -28,8 +33,17 @@ public class ListUtils {
         ArrayList<R> result = new ArrayList<>();
         for (T t : list) {
             @Nullable R out = func.apply(t);
-            if (out != null)
-                result.add(out);
+            if (out != null) result.add(out);
+        }
+        result.trimToSize();
+        return result;
+    }
+
+    public static <T, R, E1 extends Throwable, E2 extends Throwable> ArrayList<@NotNull R> mapBiThrowingNonNull(Iterable<T> list, BiThrowingFunction<T, @Nullable R, E1, E2> func) throws E1, E2 {
+        ArrayList<R> result = new ArrayList<>();
+        for (T t : list) {
+            @Nullable R out = func.apply(t);
+            if (out != null) result.add(out);
         }
         result.trimToSize();
         return result;
@@ -41,6 +55,23 @@ public class ListUtils {
             if (predicate.apply(t))
                 result.add(t);
         result.trimToSize();
+        return result;
+    }
+
+    public static <T> ArrayList<T> flatten(Iterable<? extends Iterable<T>> lists) {
+        ArrayList<T> result = new ArrayList<>();
+        for (Iterable<T> l : lists)
+            for (T v : l)
+                result.add(v);
+        return result;
+    }
+
+    public static <A, B> ArrayList<Pair<A, B>> zip(List<A> a, List<B> b) {
+        if (a.size() != b.size()) throw new IllegalArgumentException("Zipped lists must have same length");
+        ArrayList<Pair<A, B>> result = new ArrayList<>(a.size());
+        for (int i = 0; i < a.size(); i++) {
+            result.add(new Pair<>(a.get(i), b.get(i)));
+        }
         return result;
     }
 
@@ -158,26 +189,36 @@ public class ListUtils {
         return -1;
     }
 
-    public static <T, K, E extends Throwable> HashMap<K, T> associateBy(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
-        HashMap<K, T> res = new HashMap<>();
+    public static <T, K, E extends Throwable> LinkedHashMap<K, T> associateBy(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
+        LinkedHashMap<K, T> res = new LinkedHashMap<>();
         for (T elem : list)
             res.put(keyFunc.apply(elem), elem);
         return res;
     }
 
-    public static <T, K, V, E extends Throwable> HashMap<K, V> associateByTo(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc, ThrowingFunction<T, V, E> valueFunc) throws E {
-        HashMap<K, V> res = new HashMap<>();
+    public static <T, K, V, E extends Throwable> LinkedHashMap<K, V> associateByTo(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc, ThrowingFunction<T, V, E> valueFunc) throws E {
+        LinkedHashMap<K, V> res = new LinkedHashMap<>();
         for (T elem : list)
             res.put(keyFunc.apply(elem), valueFunc.apply(elem));
         return res;
     }
 
-    public static <T, K, E extends Throwable> HashMap<K, List<T>> associateByAndMerge(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
-        HashMap<K, List<T>> res = new HashMap<>();
+    public static <T, K, E extends Throwable> LinkedHashMap<K, List<T>> associateByAndMerge(Iterable<T> list, ThrowingFunction<T, K, E> keyFunc) throws E {
+        LinkedHashMap<K, List<T>> res = new LinkedHashMap<>();
         for (T elem : list) {
             res.computeIfAbsent(keyFunc.apply(elem), k -> new ArrayList<>()).add(elem);
         }
         return res;
     }
+
+    public static <T, K, V, E extends Throwable> LinkedHashMap<K, List<V>> toPairsAndMerge(Iterable<T> list, ThrowingFunction<T, Pair<K, V>, E> pairFunc) throws E {
+        LinkedHashMap<K, List<V>> res = new LinkedHashMap<>();
+        for (T elem : list) {
+            Pair<K, V> pair = pairFunc.apply(elem);
+            res.computeIfAbsent(pair.getA(), k -> new ArrayList<>()).add(pair.getB());
+        }
+        return res;
+    }
+
 
 }

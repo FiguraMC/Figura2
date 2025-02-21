@@ -39,6 +39,7 @@ public class CustomItemModelPart extends RootModelPart {
         }
         return ItemTransform.NO_TRANSFORM;
     }
+
     private static ItemTransform getTransformOrNone(ItemDisplayContext context, Map<ItemDisplayContext, AvatarMaterials.ItemPartTransform> transforms, ItemDisplayContext fallback) {
         if (transforms.containsKey(context)) {
             AvatarMaterials.ItemPartTransform transform = transforms.get(context);

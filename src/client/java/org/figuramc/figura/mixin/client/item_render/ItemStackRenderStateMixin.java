@@ -7,17 +7,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.CustomItems;
 import org.figuramc.figura.ducks.client.ItemStackRenderStateAccess;
-import org.figuramc.figura.model.renderers.FiguraRenderers;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
@@ -40,6 +37,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
     @Shadow ItemDisplayContext displayContext;
     @Shadow boolean isLeftHand;
 
+    @Shadow private ItemStackRenderState.LayerRenderState[] layers;
     // Static math classes for not allocating
     @Unique private static final FiguraTransformStack MATRIX_STACK = new FiguraTransformStack();
     @Unique private static final Quaternionf TEMP_QUAT = new Quaternionf(); // Temporary for calculations
@@ -74,12 +72,18 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
         // If we found one, render it:
         MATRIX_STACK.setFromVanilla(poseStack);
         if (modelPart instanceof CustomItemModelPart customModel) {
-            // Custom model, apply its own transforms:
-            applyTransform(customModel.itemTransforms.getTransform(itemDisplayContext), bl);
+            // Custom model, apply its own transform if it has one.
+            // Otherwise, if no custom transform is specified, fall back to the vanilla one.
+            ItemTransform customOrFallbackTransform = customModel.itemTransforms.getTransform(itemDisplayContext);
+            if (this.layers.length > 0 && customOrFallbackTransform.equals(ItemTransform.NO_TRANSFORM))
+                customOrFallbackTransform = this.layers[0].model.getTransforms().getTransform(itemDisplayContext);
+            applyTransform(customOrFallbackTransform, bl);
             MATRIX_STACK.translate(0, -0.5f, 0); // Undo BB's 8-unit translation they like to do
         } else {
-            // PNG model, apply default item transforms...
-            if (itemDisplayContext == ItemDisplayContext.GROUND) {
+            // PNG model. If possible, copy transforms from the first layer.
+            if (this.layers.length > 0) {
+                applyTransform(this.layers[0].model.getTransforms().getTransform(itemDisplayContext), bl);
+            } else if (itemDisplayContext == ItemDisplayContext.GROUND) {
                 MATRIX_STACK.translate(0, 0.125f, 0);
                 MATRIX_STACK.scale(0.5f, 0.5f, 0.5f);
             }
@@ -92,7 +96,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
     }
 
     /**
-     * Copy-pasted from ItemTransform class, changed to use our custom matrix stack to avoid allocating
+     * Copy-pasted from ItemTransform class, changed to use our custom matrix stack to avoid some allocations
      */
     @Unique
     private static void applyTransform(ItemTransform transform, boolean isLeftHanded) {

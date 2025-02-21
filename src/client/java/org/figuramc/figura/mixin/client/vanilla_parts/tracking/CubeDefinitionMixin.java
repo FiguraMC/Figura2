@@ -14,11 +14,10 @@ public class CubeDefinitionMixin {
     // instead of being multiplied by the "texture scale" values.
 
     // This may not always work if other mods decide to create Cube objects without
-    // using the bake() method.
+    // using the bake() method, but it's the best we have.
     @ModifyReturnValue(method = "bake", at = @At("RETURN"))
-    public ModelPart.Cube ensureTextureSize(ModelPart.Cube cube, int i, int j) {
-        ((CubeTrackingAccess) cube).figura$setTextureWidth(i);
-        ((CubeTrackingAccess) cube).figura$setTextureHeight(j);
+    public ModelPart.Cube ensureTextureSize(ModelPart.Cube cube, int trueTextureWidth, int trueTextureHeight) {
+        ((CubeTrackingAccess) cube).figura$getTextureSize().set(trueTextureWidth, trueTextureHeight);
         return cube;
     }
 }

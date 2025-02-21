@@ -1,9 +1,14 @@
 package org.figuramc.figura.ducks.client;
 
-// Accessor to grab custom fields in CubeTrackingMixin
+import org.joml.Vector2f;
+import org.joml.Vector3f;
+
+// Accessor to grab custom fields in CubeTrackingMixin.
+// Texture size values should always be integers for vanilla mobs.
 public interface CubeTrackingAccess {
-    int figura$getTextureWidth();
-    int figura$getTextureHeight();
-    void figura$setTextureWidth(int width);
-    void figura$setTextureHeight(int height);
+    // Getters also work as setters because mutable
+    Vector2f figura$getTextureSize();
+    Vector3f figura$getInflate();
+    // Getter for mirrored
+    boolean figura$getMirrored();
 }

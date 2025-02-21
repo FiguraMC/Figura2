@@ -3,8 +3,7 @@ package org.figuramc.figura.util;
 import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
 import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @SuppressWarnings("unused")
 public class MapUtils {
@@ -27,6 +26,14 @@ public class MapUtils {
         Map<K2, V> result = new HashMap<>();
         for (Map.Entry<K1, V> entry : map.entrySet())
             result.put(func.apply(entry.getKey()), entry.getValue());
+        return result;
+    }
+
+    public static <K, V> Map<K, List<V>> merge(List<Map<K, V>> maps) {
+        Map<K, List<V>> result = new LinkedHashMap<>();
+        for (Map<K, V> map : maps)
+            for (Map.Entry<K, V> entry : map.entrySet())
+                result.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).add(entry.getValue());
         return result;
     }
 
