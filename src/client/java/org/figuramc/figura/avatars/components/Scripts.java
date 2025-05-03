@@ -10,29 +10,49 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.ScriptRuntimeType;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 // The Scripts component should generally be at or near the END of the list of components.
 // Other components probably should not rely on Scripts, and instead Scripts should rely on them.
 public class Scripts implements AvatarComponent {
 
+    // It's important that all possible dependents be mentioned here!
+    public static final int ID = AvatarComponent.createId(EntityRoot.class, EntityUser.class, VanillaRendering.class);
+    public int getId() { return ID; }
+
     // The Script Runtimes which are in use by this avatar.
     private List<ScriptRuntime> scriptRuntimes;
-    // The avatar
+    // The avatar, set during initialize()
     private Avatar<?> self;
+
+    // Optional dependent components
+    public @Nullable EntityRoot entityRoot;
+    public @Nullable EntityUser entityUser;
+    public @Nullable VanillaRendering vanillaRendering;
+
+    public Scripts(@Nullable EntityRoot entityRoot, @Nullable EntityUser entityUser, @Nullable VanillaRendering vanillaRendering) {
+        this.entityRoot = entityRoot;
+        this.entityUser = entityUser;
+        this.vanillaRendering = vanillaRendering;
+    }
 
     @Override
     public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
         this.self = self;
-        this.scriptRuntimes = sortScripts(materials, self);
+        this.scriptRuntimes = sortScripts(materials);
     }
+
+    public @Nullable AllocationTracker getAllocationTracker() { return self.getAllocationTracker(); }
 
     // Helper to try running code, catch any error, and error out the Avatar if so
     private boolean tryOrError(ThrowingRunnable<ScriptError> runnable, @Translatable String stage) {
@@ -77,10 +97,9 @@ public class Scripts implements AvatarComponent {
     }
 
     /**
-     * Static helper method that will sort scripts by extension into the proper runtime type,
-     * and create the runtimes.
+     * Helper method that will sort scripts by extension into the proper runtime type and create the runtimes.
      */
-    private static List<ScriptRuntime> sortScripts(AvatarMaterials materials, Avatar<?> avatar) throws AvatarLoadingException {
+    private List<ScriptRuntime> sortScripts(AvatarMaterials materials) throws AvatarLoadingException {
         Map<ScriptRuntimeType, Map<String, byte[]>> scriptsByType = new HashMap<>();
         for (var script : materials.scripts()) {
             String ext = IOUtils.getExtension(script.name());
@@ -99,7 +118,7 @@ public class Scripts implements AvatarComponent {
         // Create the list:
         List<ScriptRuntime> runtimes = new ArrayList<>();
         for (var entry : scriptsByType.entrySet())
-            runtimes.add(entry.getKey().newRuntime(avatar, entry.getValue()));
+            runtimes.add(entry.getKey().newRuntime(this, entry.getValue()));
         return runtimes;
     }
 

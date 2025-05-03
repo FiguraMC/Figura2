@@ -4,24 +4,24 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.MultiBufferSource;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.model.renderers.FiguraRenderers;
+import org.figuramc.figura.manage.AvatarSubManager;
+import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.FiguraTransformStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Avatar<K> {
 
     public final K user; // The key which accesses this Avatar in its corresponding AvatarSubManager<K>
     public final AvatarMaterials.MetadataMaterials metadata;
-    private final AvatarComponent[] components;
-    private final Map<Class<?>, AvatarComponent> componentsByType = new IdentityHashMap<>();
+    private final @Nullable AvatarComponent[] components; // Components, where ID -> component if present, null if not
+    private final @NotNull AvatarComponent[] presentComponents; // Only the non-null components, used for iteration
 
     private @Nullable AvatarError error;
 
@@ -29,49 +29,35 @@ public class Avatar<K> {
     // making it faster in cases where full permission is granted.
     private @Nullable AllocationTracker allocationTracker;
 
-    public Avatar(K user, AvatarMaterials materials, AvatarComponent... components) throws AvatarLoadingException {
+    public Avatar(K user, AvatarMaterials materials, Collection<AvatarComponent> componentSet) throws AvatarLoadingException {
         // Init fields
         this.user = user;
         this.metadata = materials.metadata();
-        this.components = components;
-        for (AvatarComponent component : components) componentsByType.put(component.getClass(), component);
-
-        // Initialize each component
-        for (AvatarComponent component : components) component.initialize(materials, this);
+        // Init components array using IDs system.
+        // This ensures that dependencies end up in the array earlier than that which depends on them.
+        int maxComponent = componentSet.stream().mapToInt(AvatarComponent::getId).max().orElse(-1);
+        this.components = new AvatarComponent[maxComponent + 1];
+        for (AvatarComponent component : componentSet)
+            this.components[component.getId()] = component;
+        // Create presentComponents array by removing null elements for faster iteration.
+        this.presentComponents = Arrays.stream(this.components).filter(Objects::nonNull).toArray(AvatarComponent[]::new);
+        // Initialize each component in order
+        for (AvatarComponent component : presentComponents) {
+            component.initialize(materials, this);
+        }
     }
 
+
+    // Access this using the static field <subclass of AvatarComponent>.ID.
+    // This field should exist if they followed the implementation instructions in AvatarComponent correctly.
     @SuppressWarnings("unchecked")
-    public <T extends AvatarComponent> @Nullable T getComponent(Class<T> type) {
+    public <T extends AvatarComponent> @Nullable T getComponent(int id) {
         // Errored avatars act like they have no components.
         // All mixins and such will look for a component on a given avatar and try to use it;
         // but they will be unable to get this component if the avatar is errored.
         if (isErrored()) return null;
-        return (T) componentsByType.get(type);
-    }
-
-    // Ensure that an instance of "before" appears earlier than any instance of "self", and return that instance.
-    public <T extends AvatarComponent> T assertDependency(Class<T> before, Class<? extends AvatarComponent> self) {
-        @Nullable T maybe = optionalDependency(before, self);
-        if (maybe == null) throw new IllegalStateException("Invalid state in Avatar construction - component \"" + self.getSimpleName() + "\" depends on component \"" + before.getSimpleName() + "\" before it!");
-        return maybe;
-    }
-
-    // If an instance of "before" appears earlier than any instance of "self", return it.
-    // If one appears after self, error.
-    // If none exists at all, return null.
-    @SuppressWarnings("unchecked")
-    public <T extends AvatarComponent> @Nullable T optionalDependency(Class<T> before, Class<? extends AvatarComponent> self) {
-        boolean foundSelf = false;
-        for (AvatarComponent component : components) {
-            if (before.isInstance(component)) {
-                if (foundSelf) throw new IllegalStateException("Invalid state in Avatar construction - component \"" + self.getSimpleName() + "\" depends on component \"" + before.getSimpleName() + "\" before it!");
-                return (T) component;
-            }
-            if (component.getClass() == self) {
-                foundSelf = true;
-            }
-        }
-        return null;
+        if (id >= components.length) return null;
+        return (T) components[id];
     }
 
     // Track a given object as a memory root.
@@ -83,38 +69,17 @@ public class Avatar<K> {
         return allocationTracker;
     }
 
-//    // Error out the avatar with the given message and reason.
-//    // The reason will be shown to chat (TODO only if host), and printed in more detail in the console.
-//    public void error(Throwable reason) {
-//        // Mark as errored with the given reason
-//        error = reason;
-//        // Notify components:
-//        for (AvatarComponent component : components)
-//            component.onError(reason);
-//        // Report the error to user.
-//        if (reason instanceof FiguraException ex) {
-//
-//        }
-//
-//        switch (reason) {
-//            default -> ErrorReporting.unexpectedError(message, reason);
-//        }
-//        //noinspection StringConcatenationArgumentToLogCall
-//        FiguraMod.LOGGER.error("Avatar with user (" + user + ") encountered an error: ", reason);
-//        ChatUtils.reportErrorWithReason(message, reason);
-//    }
-
     public void error(AvatarError reason) {
         // Mark as errored
         this.error = reason;
         // Notify components:
-        for (AvatarComponent component : components)
+        for (AvatarComponent component : presentComponents)
             component.onError(reason);
         // Report the error to user
         ErrorReporting.avatarRuntimeError(reason);
     }
 
-    // We want to use this function only when necessary; for most usages, the fact
+    // We want to use this function only when strictly necessary; for most usages, the fact
     // that an errored avatar acts like it has no components is good enough.
     public boolean isErrored() {
         return error != null;
@@ -122,44 +87,33 @@ public class Avatar<K> {
 
     // Run on cleanup. Should be used to prevent memory leaks.
     public void destroy() {
-        for (AvatarComponent component : components)
+        for (AvatarComponent component : presentComponents)
             component.destroy();
     }
 
     // Should be run on the main thread, which is why it's not part of the constructor!
     public void mainThreadInitialize() {
-        if (!RenderSystem.isOnRenderThreadOrInit())
-            throw new IllegalStateException("Function should only be called on render thread or init! Bug in Figura!");
+        if (!RenderSystem.isOnRenderThread())
+            throw new IllegalStateException("Function should only be called on render thread! Bug in Figura!");
         // Run the components' main thread init functions.
-        for (AvatarComponent component : components)
+        for (AvatarComponent component : presentComponents)
             if (component.mainThreadInitialize()) break;
     }
 
     // Runs each tick. Just ticks each component in the order they were added to the Avatar.
     public void tick() {
         if (isErrored()) return; // Don't tick if errored
-        for (AvatarComponent component : components)
+        for (AvatarComponent component : presentComponents)
             if (component.tick()) break;
-    }
-
-    // Whether the Avatar is completely, fully ready for usage.
-    // This cannot usually be the case immediately after the constructor because
-    // certain asynchronous tasks need to be done. For example, uploading textures.
-    public boolean isReadyAsync() {
-        // Avatar is ready async if all of its components are ready async.
-        for (AvatarComponent component : components)
-            if (!component.isReadyAsync())
-                return false;
-        return true;
     }
 
     // Various helper methods
 
     // Attempt to render the model part, and error the avatar if it fails.
-    public void tryRenderModelPart(RootModelPart part, MultiBufferSource bufferSource, FiguraTransformStack transformStack, float tickDelta, int light, int overlay) {
+    public void tryRenderModelPart(FiguraModelPartRenderer partRenderer, MultiBufferSource bufferSource, FiguraTransformStack transformStack, float tickDelta, int light, int overlay) {
         if (isErrored()) return;
         try {
-            FiguraRenderers.getCurrentRenderer().render(part, bufferSource, transformStack, tickDelta, light, overlay);
+            partRenderer.render(bufferSource, transformStack, tickDelta, light, overlay);
         } catch (ScriptError ex) {
             error(new AvatarError("figura.error.runtime.model_part.callback", ex, true));
         } catch (StackOverflowError ex) {
@@ -168,7 +122,5 @@ public class Avatar<K> {
             error(new AvatarError("figura.error.runtime.model_part.unexpected", other, true));
         }
     }
-
-
 
 }

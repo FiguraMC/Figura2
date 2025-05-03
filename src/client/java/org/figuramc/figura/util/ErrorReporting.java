@@ -16,6 +16,10 @@ import org.figuramc.figura.util.exception.FiguraException;
 /**
  * Class with helpers for reporting errors at various stages in Figura lifecycle.
  * Error reporters are statically typed in order to give good messages and formatting.
+ *
+ * Note: This class and related error-handling code could probably be improved A LOT...
+ * this is better than the original version of the error handling code, but it's still
+ * very clunky to deal with.
  */
 public class ErrorReporting {
 
@@ -37,7 +41,7 @@ public class ErrorReporting {
                 .append(Component.literal("[").append(Component.translatable("figura.error.hover_for_reason")).append(Component.literal("]"))
                         .withStyle(Style.EMPTY
                                 .withColor(ChatFormatting.AQUA)
-                                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverMessage))
+                                .withHoverEvent(new HoverEvent.ShowText(hoverMessage))
                         ));
         // Report to chat and to the console
         Minecraft.getInstance().gui.getChat().addMessage(result);

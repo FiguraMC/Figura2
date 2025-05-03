@@ -53,15 +53,12 @@ public class AvatarSubManager<K> {
                     continue;
                 }
 
-                // We have the result. Wait until it's ready-async:
-                if (result.isReadyAsync()) {
-                    // Once the result is completely ready:
-                    // - Remove from the in-progress map and add to the loaded map
-                    // - Run its main-thread initialization
-                    inProgressAvatars.remove(key);
-                    loadedAvatars.put(key, result);
-                    result.mainThreadInitialize();
-                }
+                // Now that the result is ready:
+                // - Remove from the in-progress map and add to the loaded map
+                // - Run its main-thread initialization
+                inProgressAvatars.remove(key);
+                loadedAvatars.put(key, result);
+                result.mainThreadInitialize();
             }
         }
 

@@ -44,9 +44,8 @@ public class RenderLayerAliases {
         put(WolfArmorLayer.class, "WolfArmor");
         put(WolfCollarLayer.class, "WolfCollar");
         put(CatCollarLayer.class, "CatCollar");
-        put(HorseArmorLayer.class, "HorseArmor");
+        put(SimpleEquipmentLayer.class, "Equipment");
         put(HorseMarkingLayer.class, "HorseMarkingLayer");
-        put(SaddleLayer.class, "Saddle");
         put(SheepWoolLayer.class, "SheepFur");
         put(MushroomCowMushroomLayer.class, "MooshroomMushrooms");
         put(BreezeWindLayer.class, "BreezeWind");

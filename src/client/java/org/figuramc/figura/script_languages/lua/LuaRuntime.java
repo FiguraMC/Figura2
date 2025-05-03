@@ -5,9 +5,8 @@ import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
 import org.figuramc.figura.avatars.components.Scripts;
-import org.figuramc.figura.avatars.components.VanillaParts;
+import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.part.VanillaRootModelPart;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
@@ -15,11 +14,14 @@ import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.*;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptAction;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.*;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.Bit32Lib;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoreLibraries;
 import org.figuramc.figura.script_languages.lua.math.FiguraMath;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
+import org.figuramc.figura.script_languages.lua.vanilla.VanillaTable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -41,7 +43,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
     /**
      * The starting point for the creation of a Lua Runtime.
      */
-    public LuaRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException {
+    public LuaRuntime(Scripts scriptsComponent, Map<String, byte[]> scripts) throws AvatarLoadingException {
         // LuaError can happen at basically any time, so wrap the whole thing :P
         try {
             // Create the LuaState.
@@ -50,7 +52,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
                         // TODO throw an uncatchable error for timeout
                         return InterruptAction.CONTINUE;
                     })
-                    .allocationTracker(avatar.getAllocationTracker()) // Pass the allocation tracker
+                    .allocationTracker(scriptsComponent.getAllocationTracker()) // Pass the allocation tracker
                     .build();
 
             // Add basic globals
@@ -58,7 +60,7 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             Bit32Lib.add(state, state.globals());
 
             // Add types with metatables
-            this.metatables = new FiguraMetatables(state);
+            this.metatables = new FiguraMetatables(state, scriptsComponent);
 
             // Other
             FiguraRequire.createRequire(state, scripts); // Setup require()
@@ -77,46 +79,12 @@ public class LuaRuntime extends MarkedObjectBase implements ScriptRuntime {
             // Add global variable "models" because why not. Also todo make more organized.
             LuaTable models = ValueFactory.tableOf(state.allocationTracker);
             state.globals().rawset("models", models);
-            if (avatar.optionalDependency(EntityRoot.class, Scripts.class) != null)
-                models.rawset("entity", ModelPartAPI.wrap(avatar.assertDependency(EntityRoot.class, Scripts.class).getModelPart(), metatables));
+            if (scriptsComponent.entityRoot != null)
+                models.rawset("entity", ModelPartAPI.wrap(scriptsComponent.entityRoot.getModelPart(), metatables));
 
-            // Create "vanilla" table if we have vanilla parts
-            if (avatar.optionalDependency(VanillaParts.class, Scripts.class) != null) {
-                VanillaParts component = avatar.assertDependency(VanillaParts.class, Scripts.class);
-
-                // vanilla
-                LuaTable vanilla = ValueFactory.tableOf(state.allocationTracker);
-                state.globals().rawset("vanilla", vanilla);
-
-                // vanilla.cancelAllParts(). 0 arg getter, 1 arg setter.
-                vanilla.rawset("cancelAllParts", LibFunction.createV((s, args) -> {
-                    switch (args.count()) {
-                        case 0 -> { return ValueFactory.valueOf(component.cancelAllModelParts); }
-                        case 1 -> component.cancelAllModelParts = args.first().checkBoolean(s);
-                        default -> throw new LuaError("Invalid number of args to cancelAllParts(): expected 0 or 1", s.allocationTracker);
-                    }
-                    return Constants.NONE;
-                }));
-
-                // vanilla.parts
-                LuaTable parts = ValueFactory.tableOf(state.allocationTracker);
-                vanilla.rawset("parts", parts);
-                // Fill it with current parts:
-                for (var entry : component.partNameMap.entrySet())
-                    parts.rawset(entry.getKey(), ModelPartAPI.wrap(entry.getValue(), metatables));
-                // Add __index which will create a new part if none exists:
-                LuaTable partsMetatable = ValueFactory.tableOf(state.allocationTracker);
-                partsMetatable.rawset("__index", LibFunction.create((s, self, key) -> {
-                    String name = key.checkString(s);
-                    // If we don't already have a part for this key, create a new one
-                    VanillaRootModelPart newRoot = component.getOrCreatePart(name);
-                    // Store it back in the table for next time, and return it
-                    LuaValue wrapped = ModelPartAPI.wrap(newRoot, metatables);
-                    parts.rawset(key, wrapped);
-                    return wrapped;
-                }));
-                parts.setMetatable(state, partsMetatable);
-            }
+            // If we have the vanilla rendering component, add the vanilla rendering script elements
+            if (scriptsComponent.vanillaRendering != null)
+                state.globals().rawset("vanilla", VanillaTable.create(state, metatables, scriptsComponent.vanillaRendering));
 
         } catch (LuaError error) {
             throw new AvatarLoadingException("figura.error.internal.script.lua.setup_failed", error, false);

@@ -1,5 +1,6 @@
 package org.figuramc.figura.avatars.components;
 
+import net.minecraft.client.renderer.entity.EntityRenderer;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
@@ -7,9 +8,11 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.ClientUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
+import org.figuramc.figura.util.RenderUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Must be placed on an Avatar<UUID> used by an Entity.
@@ -19,16 +22,23 @@ import java.util.UUID;
  */
 public class EntityUser implements AvatarComponent {
 
-    private UUID uuid; // Constant, set at initialization
+    public static final int ID = AvatarComponent.createId();
+    public int getId() { return ID; }
+
+    private final UUID uuid; // Constant, set at initialization
     private boolean justChanged; // Tracks whether the entity was just updated. Works as a flag for other components.
     private @Nullable Entity entity; // Changes during tick(). Other components access it and use it.
 
+    public EntityUser(UUID uuid) {
+        this.uuid = uuid;
+    }
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) {
-        // Obtain the UUID
-        if (!(self.user instanceof UUID userUUID)) throw new IllegalArgumentException("EntityUser AvatarComponent requires an Avatar with a UUID (Tied to an entity)");
-        this.uuid = userUUID;
+    public boolean mainThreadInitialize() {
+        // Fetch the initial entity
+        entity = ClientUtils.getEntityByUUID(uuid);
+        if (entity != null) justChanged = true;
+        return false;
     }
 
     // Each tick, maybe update entity

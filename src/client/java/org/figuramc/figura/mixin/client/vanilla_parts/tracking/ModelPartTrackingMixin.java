@@ -1,8 +1,7 @@
 package org.figuramc.figura.mixin.client.vanilla_parts.tracking;
 
-import org.figuramc.figura.ducks.client.ModelPartTrackingAccess;
 import net.minecraft.client.model.geom.ModelPart;
-import org.figuramc.figura.vanillamodel.ModelPartAlias;
+import org.figuramc.figura.ducks.client.ModelPartTrackingAccess;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,9 +19,7 @@ public class ModelPartTrackingMixin implements ModelPartTrackingAccess {
      * Adds "name" and "parent" fields to the model part. We attempt to
      * set these, whenever possible, when creating the model part.
      */
-    @Unique public @Nullable String modelPartName;
-    // Alias set by ModelPartTracker
-    @Unique public @Nullable ModelPartAlias alias;
+    @Unique public @Nullable String modelPartName = "root"; // Name is "root" by default
     @Unique public @Nullable ModelPart parent;
 
     // Inject into constructor:
@@ -39,10 +36,7 @@ public class ModelPartTrackingMixin implements ModelPartTrackingAccess {
         }
     }
 
-    @Override public void figura$setName(String name) { modelPartName = name; }
     @Override public @Nullable String figura$getName() { return modelPartName; }
-    @Override public ModelPartAlias figura$getAlias() { return alias; }
-    @Override public void figura$setAlias(ModelPartAlias alias) { this.alias = alias; }
     @Override public @Nullable ModelPart figura$getParent() { return parent; }
 
 }

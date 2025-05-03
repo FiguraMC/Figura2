@@ -1,33 +1,36 @@
 package org.figuramc.figura.vanillamodel;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
+import com.google.gson.JsonObject;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.renderer.entity.EnderDragonRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EvokerFangsRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityType;
+import org.apache.commons.lang3.mutable.MutableInt;
+import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.ducks.client.CubeTrackingAccess;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.JsonUtils;
 import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Quaternionf;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
-import oshi.util.tuples.Pair;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.*;
-import java.util.function.Predicate;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * This class is responsible for exporting a given entity type
@@ -41,153 +44,109 @@ import java.util.function.Predicate;
  * <p>
  * Potentially, at some point in the future, a function could be
  * added to export a specific entity in the world, as it appears on a
- * particular frame, including the textures.
+ * particular frame, including the textures; this would be pretty difficult though.
  * <p>
  * TODO do something about model part scale. We can't export it right now.
  */
 public class EntityExporter {
 
-
-    public static final Predicate<ModelPart> LITERALLY_ALL_PARTS = part -> true;
-
-    public static JsonObject exportEntity(EntityType<?> entityType, Predicate<ModelPart> predicate) {
+    public static JsonObject exportEntity(EntityType<?> entityType) {
         EntityRenderer<?, ?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().renderers.get(entityType);
-        return fromEntityRenderer(renderer, predicate);
+        return fromEntityRenderer(renderer);
     }
 
-    public static JsonObject exportPlayer(PlayerSkin.Model type, Predicate<ModelPart> predicate) {
+    public static JsonObject exportPlayer(PlayerSkin.Model type) {
         EntityRenderer<?, ?> renderer = Minecraft.getInstance().getEntityRenderDispatcher().playerRenderers.get(type);
-        return fromEntityRenderer(renderer, predicate);
+        return fromEntityRenderer(renderer);
     }
 
-    private static JsonObject fromEntityRenderer(EntityRenderer<?, ?> renderer, Predicate<ModelPart> predicate) {
+    private static JsonObject fromEntityRenderer(EntityRenderer<?, ?> renderer) {
         boolean isLivingEntity = renderer instanceof LivingEntityRenderer;
+        LinkedHashMap<Vector2f, JsonObject> generatedTextures = new LinkedHashMap<>(); // Order matters
 
-        List<Pair<Vector2f, JsonObject>> generatedTextures = new ArrayList<>();
-        int[] nextUniqueGroupId = new int[1];
-
+        // Process model part roots
         JsonArray roots = new JsonArray();
-        Vector3f startOrigin = isLivingEntity ? new Vector3f(0, 24, 0) : new Vector3f();
-        for (ModelPart part : ModelPartTracker.traceEntityRenderer(renderer))
-            processModelPart(part, roots, predicate, startOrigin, new Quaternionf(), isLivingEntity, generatedTextures, nextUniqueGroupId);
+        Map<String, MutableInt> dedupNameMap = new HashMap<>();
+        ModelNames.getModelsByName(renderer).forEach((name, model) -> {
+            roots.add(processModelPart(name, null, model.root(), isLivingEntity, generatedTextures, dedupNameMap));
+        });
 
+        // Place textures in json
         JsonArray textures = new JsonArray();
-        for (var pair : generatedTextures) textures.add(pair.getB());
+        for (var tex : generatedTextures.values()) textures.add(tex);
 
-        JsonObject rootPart = new JsonObject();
-        rootPart.addProperty("name", "");
-        rootPart.add("origin", JsonUtils.ZERO_VEC_3);
-        rootPart.add("rotation", JsonUtils.ZERO_VEC_3);
-        rootPart.add("children", roots);
-        rootPart.add("cubes", new JsonArray());
-        rootPart.add("meshes", new JsonArray());
-
+        // Create the final json object
         JsonObject figmodel = new JsonObject();
-        figmodel.add("part_data", rootPart);
+        figmodel.add("roots", roots);
         figmodel.add("textures", textures);
         return figmodel;
     }
 
-    // Recursively traverse, and add parts to the array.
-    // Keep all the generated textures stored according to UV size.
-    private static void processModelPart(ModelPart part, JsonArray roots, Predicate<ModelPart> predicate, Vector3f parentOrigin, Quaternionf parentQuat, boolean isLivingEntity, List<Pair<Vector2f, JsonObject>> generatedTextures, int[] nextUniqueGroupId) {
+    // Recursively convert the model part to json group format
+    private static JsonObject processModelPart(String modelName, @Nullable String partName, ModelPart part, boolean isLivingEntity, LinkedHashMap<Vector2f, JsonObject> generatedTextures, Map<String, MutableInt> nameDeduplicator) {
 
-        // Structure
-        String name = ModelPartTracker.getAliasOrName(part);
-        String vanillaRoot = ModelPartTracker.getAliasOrFullName(part);
-        boolean replaceVanillaRoot = true; // On by default, more popular
+        // De-duplicate the part name
+        String dedupPartName;
+        if (partName == null) {
+            dedupPartName = modelName;
+        } else if (nameDeduplicator.containsKey(partName)) {
+            dedupPartName = partName + nameDeduplicator.get(partName).getAndIncrement();
+        } else {
+            dedupPartName = partName;
+            nameDeduplicator.put(partName, new MutableInt(2)); // Start count at 2 (head, head2, etc.)
+        }
 
-        // Transform
+        // Fetch transforms
         PartPose initialPose = part.getInitialPose();
         Vector3f pos = new Vector3f(initialPose.x(), initialPose.y(), initialPose.z());
-        Vector3f rotRadians = new Vector3f(initialPose.xRot(), initialPose.yRot(), initialPose.zRot());
+        Vector3f rot = new Vector3f(initialPose.xRot(), initialPose.yRot(), initialPose.zRot()).mul(Mth.RAD_TO_DEG);
+        // Flip and translate stuff if it's a living entity
         if (isLivingEntity) {
             pos.mul(-1, -1, 1);
-            rotRadians.mul(-1, 1, 1);
+            if (partName == null) pos.add(0, 24, 0);
+            rot.mul(-1, -1, 1);
         }
-        // Modify pos according to the parent's pos/rot:
-        pos.rotate(parentQuat).add(parentOrigin);
-        // Modify our rot accordingly too:
-        Quaternionf ourQuat = parentQuat.rotateZYX(rotRadians.z, rotRadians.y, rotRadians.x, new Quaternionf());
-        ourQuat.getEulerAnglesZYX(rotRadians);
-        Vector3f rot = rotRadians.mul(Mth.RAD_TO_DEG, new Vector3f()); // Get degrees
 
-        // Process children recursively
-        for (ModelPart child : part.children.values())
-            processModelPart(child, roots, predicate, pos, ourQuat, isLivingEntity, generatedTextures, nextUniqueGroupId);
-
-        // If predicate fails, quit out.
-        if (!predicate.test(part)) return;
-
-        // Process cubes, collecting in a map
-        Map<Vector2f, JsonArray> cubesByTexSize = new LinkedHashMap<>();
+        // Process cubes and get the texture index
+        JsonArray cubes = new JsonArray();
+        int texIndex = -1;
         for (ModelPart.Cube cube : part.cubes) {
-            JsonObject cubeJson = processCube2(cube, isLivingEntity);
-            Vector2f texSize = ((CubeTrackingAccess) cube).figura$getTextureSize();
-            cubesByTexSize.computeIfAbsent(texSize, x -> new JsonArray()).add(cubeJson);
-        }
-
-        // Process the map
-        JsonArray children = new JsonArray();
-        JsonArray cubes;
-        int texIndex;
-
-        // Based on the number of cube groups, do things.
-        switch (cubesByTexSize.size()) {
-            // No groups, no cubes, no texture.
-            case 0 -> {
-                cubes = new JsonArray();
-                texIndex = -1;
-            }
-            // 1 group only, use its values directly.
-            case 1 -> {
-                var entry = cubesByTexSize.entrySet().iterator().next();
-                texIndex = ListUtils.findIndex(generatedTextures, pair -> pair.getA().equals(entry.getKey()));
+            cubes.add(processCube(cube, isLivingEntity));
+            if (texIndex == -1) {
+                Vector2f texSize = ((CubeTrackingAccess) cube).figura$getTextureSize();
+                texIndex = ListUtils.indexOf(generatedTextures.keySet(), texSize);
                 if (texIndex == -1) {
-                    generatedTextures.add(new Pair<>(entry.getKey(), genBlankTexture(entry.getKey())));
+                    JsonObject generatedTexture = genBlankTexture(texSize);
+                    generatedTextures.put(texSize, generatedTexture);
                     texIndex = generatedTextures.size() - 1;
                 }
-                cubes = entry.getValue();
-            }
-            default -> {
-                // Multiple groups, so split. (Should be rare...)
-                for (var entry : cubesByTexSize.entrySet()) {
-                    int subTexIndex = ListUtils.findIndex(generatedTextures, pair -> pair.getA().equals(entry.getKey()));
-                    if (subTexIndex == -1) {
-                        generatedTextures.add(new Pair<>(entry.getKey(), genBlankTexture(entry.getKey())));
-                        subTexIndex = generatedTextures.size() - 1;
-                    }
-
-                    JsonObject newGroup = new JsonObject();
-                    newGroup.addProperty("name", "tex_split_" + ++nextUniqueGroupId[0]);
-                    newGroup.add("origin", JsonUtils.ZERO_VEC_3);
-                    newGroup.add("rotation", JsonUtils.ZERO_VEC_3);
-                    newGroup.add("children", new JsonArray());
-                    newGroup.addProperty("texture_index", subTexIndex);
-                    newGroup.add("cubes", entry.getValue());
-                    newGroup.add("meshes", new JsonArray());
-                    children.add(newGroup);
-                }
-                cubes = new JsonArray();
-                texIndex = -1;
             }
         }
 
-        // Create group and add to list
+        // Process children
+        JsonArray children = new JsonArray();
+        for (var child : part.children.entrySet()) {
+            String childName = child.getKey();
+            ModelPart childPart = child.getValue();
+            JsonObject jsonChild = processModelPart(modelName, childName, childPart, isLivingEntity, generatedTextures, nameDeduplicator);
+            children.add(jsonChild);
+        }
+
+        // Create and return the final group
         JsonObject group = new JsonObject();
-        group.addProperty("name", name);
+        group.addProperty("name", dedupPartName);
         group.add("origin", JsonUtils.toJson(pos));
         group.add("rotation", JsonUtils.toJson(rot));
-        group.add("children", children); // No children in vanilla models, parts are flattened
+        group.add("children", children);
         if (texIndex != -1) group.addProperty("texture_index", texIndex);
         group.add("cubes", cubes);
         group.add("meshes", new JsonArray());
-        group.addProperty("vanilla_root", vanillaRoot);
-        group.addProperty("replace_vanilla_root", replaceVanillaRoot);
-        roots.add(group);
+        String mimicPart = modelName + "/" + (partName != null ? partName : "root");
+        group.addProperty("mimic_part", mimicPart);
+        return group;
     }
 
-    private static JsonObject processCube2(ModelPart.Cube cube, boolean isLivingEntity) {
+    private static JsonObject processCube(ModelPart.Cube cube, boolean isLivingEntity) {
         // Fetch values
         Vector2f texSize = ((CubeTrackingAccess) cube).figura$getTextureSize();
         boolean mirrored = ((CubeTrackingAccess) cube).figura$getMirrored();
@@ -256,83 +215,6 @@ public class EntityExporter {
         uvMax.set(i, temp);
     }
 
-
-    // Process the cube and return it.
-    private static final int[] cubeFaceIndexMapping = new int[] { 2, 4, 0, 1, 3, 5 }; // Based on ordering of cube faces in ModelPart.Cube class
-    private static final int[] livingEntityFaceIndexMapping = new int[] { 4, 2, 1, 0, 3, 5 }; // Swap x and y ordering...
-//    private static final boolean swapX
-    private static JsonObject processCube(ModelPart.Cube cube, boolean isLivingEntity) {
-        // Fetch or create texture
-        Vector2f texSize = ((CubeTrackingAccess) cube).figura$getTextureSize();
-        // Process cube faces
-        @Nullable ModelPart.Polygon[] faces = cube.polygons;
-        JsonArray facesArray = new JsonArray();
-        for (int i = 0; i < 6; i++) {
-
-            @Nullable ModelPart.Polygon face = faces[cubeFaceIndexMapping[i]];
-            if (face == null) {
-                facesArray.add(JsonNull.INSTANCE);
-            } else {
-
-                float u2 = face.vertices()[0].u() * texSize.x();
-                float v2 = face.vertices()[0].v() * texSize.y();
-                float u1 = face.vertices()[2].u() * texSize.x();
-                float v1 = face.vertices()[2].v() * texSize.y();
-
-
-
-
-//                Vector2f uvMin = new Vector2f(Float.POSITIVE_INFINITY);
-//                Vector2f uvMax = new Vector2f(Float.NEGATIVE_INFINITY);
-//                for (var vert : face.vertices()) {
-//                    Vector2f uv = new Vector2f(vert.u(), vert.v());
-//                    uvMin.min(uv);
-//                    uvMax.max(uv);
-//                }
-//                uvMin.mul(texSize);
-//                uvMax.mul(texSize);
-//
-                JsonObject jsonFace = new JsonObject();
-//                jsonFace.add("uv_min", JsonUtils.toJson(uvMin));
-//                jsonFace.add("uv_max", JsonUtils.toJson(uvMax));
-                jsonFace.add("uv_min", JsonUtils.toJson(u1, v1));
-                jsonFace.add("uv_max", JsonUtils.toJson(u2, v2));
-                jsonFace.addProperty("rotation", 0);
-                facesArray.add(jsonFace);
-            }
-        }
-        // Fetch x/y/z values
-        Vector3f inflate = ((CubeTrackingAccess) cube).figura$getInflate();
-        Vector3f min = new Vector3f(cube.minX, cube.minY, cube.minZ);
-        Vector3f max = new Vector3f(cube.maxX, cube.maxY, cube.maxZ);
-        // Modify according to isLivingEntity
-        if (isLivingEntity) {
-            // Flip on x and y axes
-            min.mul(-1, -1, 1);
-            max.mul(-1, -1, 1);
-            // Swap min and max in XY coordinates
-            Vector3f temp = new Vector3f(min);
-            min.set(max.x, max.y, min.z);
-            max.set(temp.x, temp.y, max.z);
-            // Swap UV faces in XY axes
-            JsonElement temp2 = facesArray.get(0);
-            facesArray.set(0, facesArray.get(1));
-            facesArray.set(1, temp2);
-            temp2 = facesArray.get(2);
-            facesArray.set(2, facesArray.get(3));
-            facesArray.set(3, temp2);
-        }
-        // Create cube itself and add
-        JsonObject jsonCube = new JsonObject();
-        jsonCube.add("origin", JsonUtils.ZERO_VEC_3);
-        jsonCube.add("rotation", JsonUtils.ZERO_VEC_3);
-        jsonCube.add("from", JsonUtils.toJson(min));
-        jsonCube.add("to", JsonUtils.toJson(max));
-        jsonCube.add("inflate", JsonUtils.toJson(inflate));
-        jsonCube.add("faces", facesArray);
-        return jsonCube;
-    }
-
     private static JsonObject genBlankTexture(Vector2f size) {
         // Fetch png base 64...
         int w = (int) size.x;
@@ -351,23 +233,6 @@ public class EntityExporter {
         texture.add("uv_size", JsonUtils.toJson(size));
         texture.addProperty("png_bytes_base64", pngBase64);
         return texture;
-    }
-
-    /**
-     * Configurable options for the exporter, can be used as a predicate.
-     * It will only accept certain specific
-     */
-    public record ExporterOptions(EnumSet<ModelPartAlias.Group> groups) implements Predicate<ModelPart> {
-
-        public ExporterOptions(ModelPartAlias.Group... groups) {
-            this(groups.length == 0 ? EnumSet.noneOf(ModelPartAlias.Group.class) : EnumSet.copyOf(Arrays.asList(groups)));
-        }
-
-        @Override
-        public boolean test(ModelPart part) {
-            if (!ModelPartTracker.hasAlias(part)) return false; // Only accept aliased parts
-            return groups.containsAll(ModelPartTracker.getAlias(part).groups()); // Only accept parts where we have all of their groups enabled
-        }
     }
 
 }

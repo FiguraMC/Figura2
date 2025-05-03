@@ -14,7 +14,6 @@ public abstract class MarkedLuaValue extends LuaValue {
         super(type);
     }
 
-
     @Override
     public final long count(MemoryCounter counter, int depth) {
         // If mark is equal already, quit out right away.
@@ -26,6 +25,8 @@ public abstract class MarkedLuaValue extends LuaValue {
     }
 
     // Class-specific behavior, conveniently doesn't need to worry about marking logic.
+    // Generally, implementations will call "counter.trace(field, depth)" on each traceable field,
+    // then return the size of this object (not including traced fields)
     protected abstract long traceNoMark(MemoryCounter counter, int depth);
 
 }

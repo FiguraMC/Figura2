@@ -1,49 +1,46 @@
 package org.figuramc.figura.model.texture;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.TextureUtil;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.util.PngInfo;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.RenderUtils;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.util.Mth;
-import net.minecraft.util.PngInfo;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class FiguraTextureAtlas extends AbstractTexture {
-
-    public final ResourceLocation location;
-    public final int width, height;
-
-    public final NativeImage image;
-    private boolean isClosed = false;
+public class FiguraTextureAtlas extends StandaloneAvatarTexture {
 
     private static final AtomicInteger next_id = new AtomicInteger();
-    private FiguraTextureAtlas(int totalWidth, int totalHeight, List<TextureRectangle> rectangles) throws AvatarLoadingException {
-        // Unique location
-        location = FiguraMod.id("figura_atlases/" + next_id.getAndIncrement());
-        // Power-of-two-ify
-        width = Mth.smallestEncompassingPowerOfTwo(totalWidth);
-        height = Mth.smallestEncompassingPowerOfTwo(totalHeight);
-        // Create the native image
-        image = new NativeImage(width, height, true); // True: zero-initialize, instead of having uninitialized random texture
 
-        // For each rectangle, upload its data.
+    protected FiguraTextureAtlas(ResourceLocation location, DynamicTexture backingTexture) {
+        super(location, backingTexture);
+    }
+
+    /**
+     * Create and upload the atlas.
+     */
+    private static FiguraTextureAtlas create(int totalWidth, int totalHeight, List<TextureRectangle> rectangles) throws AvatarLoadingException {
+        // Unique location
+        int id = next_id.getAndIncrement();
+        ResourceLocation location = FiguraMod.id("figura_atlases/" + id);
+        // Power-of-two-ify
+        int width = Mth.smallestEncompassingPowerOfTwo(totalWidth);
+        int height = Mth.smallestEncompassingPowerOfTwo(totalHeight);
+        // Create the NativeImage and fill it
+        NativeImage backingImage = new NativeImage(width, height, true);
         for (TextureRectangle rectangle : rectangles) {
-            try(NativeImage png = NativeImage.read(rectangle.data)) {
-                png.copyRect(image,
+            try(NativeImage png = NativeImage.read(rectangle.data)) { // Try with resources to close the image
+                png.copyRect(backingImage,
                         0, 0, // Png pos
                         rectangle.x, rectangle.y, // Atlas pos
                         rectangle.width, rectangle.height, // Size to copy
@@ -52,30 +49,20 @@ public class FiguraTextureAtlas extends AbstractTexture {
             } catch (IOException ex) {
                 throw new AvatarLoadingException("figura.error.loading.invalid_png", ex, false, rectangle.name);
             } finally {
-                // Free rectangle data
+                // Free rectangle name and data
                 rectangle.name = null;
                 rectangle.data = null;
             }
         }
+        // Return a future on the render thread, creating and uploading the image
+        String debugName = "Figura Texture Atlas #" + id;
+        return new FiguraTextureAtlas(location, new DynamicTexture(() -> debugName, backingImage));
     }
 
-    @Override
-    public void close() {
-        if (isClosed) return;
-        isClosed = true;
-        image.close(); // Close the native image resource
-    }
+    // The texture will be destroyed eventually. There is no need to use the returned future if you don't care when the texture is destroyed.
 
-    public void destroy() {
-        close();
-        Minecraft.getInstance().getTextureManager().release(this.location); // Delete the texture from the game's texture manager
-    }
-
-    // Uploads the texture to the texture manager,
-    // committing any changes that happened CPU-side.
-    public void upload() {
-        RenderUtils.uploadTexture(() -> isClosed, this, location, image);
-    }
+    // Uploads the texture to the texture manager, committing any changes that happened CPU-side.
+    // This happens on the render thread, so this returns a future indicating uploading is complete.
 
     // Builder
     public static Builder builder() { return new Builder(); }
@@ -93,6 +80,9 @@ public class FiguraTextureAtlas extends AbstractTexture {
             return rect;
         }
 
+        /**
+         * Create and upload the atlas. If there are no textures to atlas, returns null.
+         */
         public @Nullable FiguraTextureAtlas build() throws AvatarLoadingException {
             if (rectangles.isEmpty()) return null;
 
@@ -145,7 +135,7 @@ public class FiguraTextureAtlas extends AbstractTexture {
                 }
             }
 
-            return new FiguraTextureAtlas(totalWidth, totalHeight, rectangles);
+            return FiguraTextureAtlas.create(totalWidth, totalHeight, rectangles);
         }
 
     }

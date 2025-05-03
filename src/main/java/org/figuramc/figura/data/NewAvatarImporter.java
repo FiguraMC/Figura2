@@ -38,9 +38,7 @@ public class NewAvatarImporter {
         var hud = readRecursiveModel(root, "hud", textures);
         var world = readRecursiveModel(root, "world", textures).children();
 
-        var vanilla = readVanillaParts(root, textures);
-
-        return new AvatarMaterials(metadata, scripts, textures, world, entity, hud, vanilla, items);
+        return new AvatarMaterials(metadata, scripts, textures, world, entity, hud, items);
     }
 
     private static AvatarMaterials.MetadataMaterials readMetadata(Path root) throws AvatarImportingException, IOException {
@@ -109,39 +107,6 @@ public class NewAvatarImporter {
                 }, (p, m) -> null);
         // Map values and return
         return MapUtils.mapValues(pairs, pair -> new AvatarMaterials.CustomItem(pair.left, pair.right));
-    }
-
-    // Example since this function is densely functional stuff, and it's hard to understand:
-    // The model folder:
-    // avatar/
-    //- avatar.json
-    //- vanilla/
-    //- - thing1.figmodel
-    //- - - Group named "head1", parented to "FIGURA_HEAD"
-    //- - - Group named "myLeftArm" parented to "FIGURA_LEFT_ARM"
-    //- - thing2.figmodel
-    //- - - Group named "head2", parented to "FIGURA_HEAD"
-    // Results in this map, where a[b, c] means b and c are children of a:
-    // "FIGURA_HEAD" -> vanilla[thing1[head1], thing2[head2]]
-    // "FIGURA_LEFT_ARM" -> vanilla[thing1[myLeftArm]]
-    private static Map<String, AvatarMaterials.VanillaRootPartMaterials> readVanillaParts(Path root, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException, IOException {
-        Path vanillaRootPath = root.resolve("vanilla");
-        return IOUtils.<Map<String, AvatarMaterials.VanillaRootPartMaterials>, AvatarImportingException>recursiveProcess(vanillaRootPath,
-                figmodel -> {
-                    AvatarMaterials.ModelPartMaterials mats = readFigModel(root, figmodel, textures);
-                    if (mats == null) return null;
-                    return MapUtils.mapValues(ListUtils.toPairsAndMerge(mats.children(), part -> {
-                        JsonObject json = part.groupJson();
-                        String vanillaRoot = json == null ? null : JsonUtils.getStringOrDefault(json, "vanilla_root", null);
-                        if (vanillaRoot == null)
-                            throw new AvatarImportingException("figura.error.importing.no_vanilla_root", part.name(), IOUtils.stringRelativeTo(figmodel, root));
-                        boolean replaceRoot = JsonUtils.getBooleanOrDefault(json, "replace_vanilla_root", false);
-                        // Zero out part origin/rotation, these are inherited from the vanilla part
-                        part.origin().zero();
-                        part.rotation().zero();
-                        return new Pair<>(vanillaRoot, new AvatarMaterials.VanillaRootPartMaterials(part, replaceRoot));
-                    }), parts -> AvatarMaterials.VanillaRootPartMaterials.wrapper(mats.name(), parts));
-                }, (folder, models) -> MapUtils.mapValues(MapUtils.merge(models), parts -> AvatarMaterials.VanillaRootPartMaterials.wrapper(folder.toFile().getName(), parts)));
     }
 
     private static @Nullable AvatarMaterials.ModelPartMaterials readFigModel(Path root, Path path, ArrayList<AvatarMaterials.TextureMaterials> textures) throws AvatarImportingException, IOException {

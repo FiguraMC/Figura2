@@ -1,26 +1,18 @@
 package org.figuramc.figura.model.renderers;
 
-import net.minecraft.client.renderer.MultiBufferSource;
-import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.script_hooks.ScriptError;
+import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
-import org.figuramc.figura.util.FiguraTransformStack;
 
 /**
- * A renderer which can render a part. One exists per rendering backend.
+ * A rendering backend, which can create renderers for Figura model parts.
  */
-public interface FiguraPartRenderer {
+public interface FiguraRenderingBackend {
 
     /**
-     * Render the part, using the given context information.
+     * Create a renderer that can render the given part.
+     * This may be an expensive operation!
      */
-    void render(
-            RootModelPart root,
-            MultiBufferSource bufferSource,
-            FiguraTransformStack matrixStack,
-            float tickDelta,
-            int light, int overlay
-    ) throws ScriptError, StackOverflowError;
+    FiguraModelPartRenderer createRenderer(FiguraModelPart part);
     
     /**
      * State for the renderer, must be memory-countable and destroyable.

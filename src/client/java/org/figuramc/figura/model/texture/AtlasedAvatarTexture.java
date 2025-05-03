@@ -6,6 +6,8 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector4f;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * An avatar texture that is backed by a FiguraTextureAtlas.
  * The atlas must therefore exist, so we assert it at compile time.
@@ -22,16 +24,16 @@ public class AtlasedAvatarTexture extends AvatarTexture {
         this.locationInAtlas = atlasBuilder.insert(materials.name(), materials.data());
     }
 
-    @Override public void upload() {}
-    @Override public void destroy() {}
+    @Override public CompletableFuture<Void> upload() { return CompletableFuture.completedFuture(null); }
+    @Override public CompletableFuture<Void> destroy() { return CompletableFuture.completedFuture(null); }
     @Override public ResourceLocation getLocation() {
         assert texturesComponent.atlas != null;
         return this.texturesComponent.atlas.location;
     }
     @Override public Vector4f getUvValues() {
         assert texturesComponent.atlas != null;
-        float atlasWidth = (float) texturesComponent.atlas.width;
-        float atlasHeight = (float) texturesComponent.atlas.height;
+        float atlasWidth = (float) texturesComponent.atlas.backingTexture.getPixels().getWidth();
+        float atlasHeight = (float) texturesComponent.atlas.backingTexture.getPixels().getHeight();
         return new Vector4f(
                 locationInAtlas.getX() / atlasWidth,
                 locationInAtlas.getY() / atlasHeight,
@@ -41,9 +43,9 @@ public class AtlasedAvatarTexture extends AvatarTexture {
     }
     @Override public int getWidth() { return this.locationInAtlas.getWidth(); }
     @Override public int getHeight() { return this.locationInAtlas.getHeight(); }
-    @Override public int getPixelRGBA(int x, int y) {
+    @Override public int getPixel(int x, int y) {
         assert texturesComponent.atlas != null;
-        return texturesComponent.atlas.image.getPixelABGR(this.locationInAtlas.getX() + x, this .locationInAtlas.getY() + y);
+        return texturesComponent.atlas.backingTexture.getPixels().getPixel(this.locationInAtlas.getX() + x, this .locationInAtlas.getY() + y);
     }
 
 }

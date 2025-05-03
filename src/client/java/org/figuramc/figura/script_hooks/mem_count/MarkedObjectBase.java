@@ -22,5 +22,7 @@ public abstract class MarkedObjectBase implements MemoryCountable {
     }
 
     // Class-specific behavior, conveniently doesn't need to worry about marking logic.
+    // Generally, implementations will call "counter.trace(field, depth)" on each traceable field,
+    // then return the size of this object (not including traced fields)
     protected abstract long traceNoMark(MemoryCounter counter, int depth);
 }

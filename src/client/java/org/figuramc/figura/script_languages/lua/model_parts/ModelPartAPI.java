@@ -19,14 +19,9 @@ public class ModelPartAPI {
 
     // Wrap an object into a userdata given the metatables
     public static LuaUserdata wrap(FiguraModelPart obj, FiguraMetatables metatables) {
-        //noinspection SwitchStatementWithTooFewBranches
         return switch (obj) {
-            case RootModelPart root -> switch (root) {
-                case VanillaRootModelPart vanilla -> userdataOf(vanilla, metatables.vanillaRootModelPart);
-                case WorldRootModelPart world -> userdataOf(world, metatables.worldRootModelPart);
-                case CustomItemModelPart item -> userdataOf(item, metatables.customItemModelPart);
-                default -> userdataOf(root, metatables.rootModelPart);
-            };
+            case WorldRootedModelPart world -> userdataOf(world, metatables.worldRootModelPart);
+            case CustomItemModelPart item -> userdataOf(item, metatables.customItemModelPart);
             default -> userdataOf(obj, metatables.modelPart);
         };
     }
@@ -166,8 +161,8 @@ public class ModelPartAPI {
                 case FiguraRenderType.EndGateway e -> valueOf("END_GATEWAY", s.allocationTracker);
                 case FiguraRenderType.Basic basic -> {
                     LuaTable result = tableOf(s.allocationTracker);
-                    if (basic.mainTex() != null) result.rawset("mainTex", valueOf(basic.mainTex().toString(), s.allocationTracker));
-                    if (basic.emissiveTex() != null) result.rawset("emissiveTex", valueOf(basic.emissiveTex().toString(), s.allocationTracker));
+                    if (basic.mainTex != null) result.rawset("mainTex", valueOf(basic.mainTex.toString(), s.allocationTracker));
+                    if (basic.emissiveTex != null) result.rawset("emissiveTex", valueOf(basic.emissiveTex.toString(), s.allocationTracker));
                     yield result;
                 }
             };
@@ -231,12 +226,8 @@ public class ModelPartAPI {
 
         metatable.rawset(NAME, valueOf("ModelPart", t));
 
-        // Special __index: gets child by name if it's not a method
-        metatable.rawset(INDEX, LibFunction.create((s, p, k) -> {
-            // Try to rawget from metatable for method, if it exists then return it
-            LuaValue rawResult = metatable.rawget(k);
-            if (!rawResult.isNil()) return rawResult;
-            // Otherwise, custom __index time, gets child
+        FiguraMetatables.setupInheritance(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
+            // Fetch the child
             FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
             LuaString name = k.checkLuaString(s);
             for (FiguraModelPart child : part.children) {
@@ -245,7 +236,6 @@ public class ModelPartAPI {
             }
             return NIL;
         }));
-
         
         return metatable;
     }

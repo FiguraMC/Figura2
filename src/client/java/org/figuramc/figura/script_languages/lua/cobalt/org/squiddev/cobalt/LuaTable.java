@@ -27,10 +27,13 @@ package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.util.exception.functional.ThrowingBiConsumer;
+import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
 
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
@@ -333,6 +336,16 @@ public final class LuaTable extends MarkedLuaValue {
 
 			idx = next[idx];
 			if (idx < 0) return -1;
+		}
+	}
+
+	// Call the BiConsumer on each (key, value) pair in the table
+	public void forEach(ThrowingBiConsumer<LuaValue, LuaValue, LuaError> consumer) throws LuaError {
+		LuaValue k = Constants.NIL;
+		while (true) {
+			Varargs n = this.next(k);
+			if ((k = n.first()).isNil()) break;
+			consumer.accept(k, n.arg(2));
 		}
 	}
 

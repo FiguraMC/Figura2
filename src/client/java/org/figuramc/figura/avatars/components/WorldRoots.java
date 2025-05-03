@@ -1,27 +1,28 @@
 package org.figuramc.figura.avatars.components;
 
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.model.part.WorldRootModelPart;
+import org.figuramc.figura.model.part.WorldRootedModelPart;
+import org.figuramc.figura.model.renderers.Renderable;
 import org.figuramc.figura.util.ListUtils;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
 public class WorldRoots implements AvatarComponent {
 
-    private List<WorldRootModelPart> worldRoots;
+    public static final int ID = AvatarComponent.createId(Textures.class);
+    public int getId() { return ID; }
 
-    @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) {
-        Textures texturesComponent = self.assertDependency(Textures.class, getClass());
-        worldRoots = ListUtils.map(materials.worldRoots(), mats -> new WorldRootModelPart(mats, texturesComponent.textures));
+    private final List<Renderable<WorldRootedModelPart>> worldRoots;
+
+    public WorldRoots(AvatarMaterials materials, Textures textures, @Nullable VanillaRendering vanillaRendering) {
+        worldRoots = ListUtils.map(materials.worldRoots(), mats -> new Renderable<>(new WorldRootedModelPart(mats, textures.textures, vanillaRendering)));
     }
 
+    // Destroy renderer data
     @Override
     public void destroy() {
-        for (WorldRootModelPart worldRoot : worldRoots)
-            worldRoot.destroy();
+        for (var root : worldRoots) root.destroy();
     }
 }

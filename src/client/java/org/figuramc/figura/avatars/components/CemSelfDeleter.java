@@ -7,6 +7,7 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.manage.AvatarManager;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Deletes the avatar when its entity is unloaded.
@@ -14,13 +15,15 @@ import java.util.UUID;
  */
 public class CemSelfDeleter implements AvatarComponent {
 
-    private UUID key;
-    private EntityUser entityUser;
+    private final UUID key;
+    private final EntityUser entityUser;
 
-    @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) {
-        key = (UUID) self.user; // Assert, must be on an entity avatar
-        entityUser = self.assertDependency(EntityUser.class, getClass());
+    public static final int ID = AvatarComponent.createId(EntityUser.class);
+    public int getId() { return ID; }
+
+    public CemSelfDeleter(UUID key, EntityUser entityUser) {
+        this.key = key;
+        this.entityUser = entityUser;
     }
 
     @Override

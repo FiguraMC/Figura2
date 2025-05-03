@@ -308,53 +308,6 @@ public class Vector4API {
                 valueOf(v1.checkUserdata(s, Vector4d.class).equals(v2.checkUserdata(s, Vector4d.class)))
         ));
 
-        // Indexing. Check metatable first, otherwise turn into swizzle.
-        metatable.rawset(INDEX, LibFunction.create((s, v, k) -> {
-            // Check if it's a method, if so return it
-            LuaValue method = metatable.rawget(k);
-            if (!method.isNil()) return method;
-
-            // Otherwise, custom index
-            Vector4d self = v.checkUserdata(s, Vector4d.class);
-            // Numeric key, index it like an array
-            if (k.type() == TNUMBER) {
-                return valueOf(switch (k.toInteger()) {
-                    case 1 -> self.x;
-                    case 2 -> self.y;
-                    case 3 -> self.z;
-                    case 4 -> self.w;
-                    default -> throw ErrorFactory.argError(s, k, "integer 1 to 4");
-                });
-            }
-            // Key should be a string then
-            LuaString key = k.checkLuaString(s);
-            // Otherwise, get the swizzle going
-            try {
-                return switch (key.length()) {
-                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0)));
-                    case 2 -> Vector2API.wrap(new Vector2d(
-                            getSwizzle(self, (char) key.charAt(0)),
-                            getSwizzle(self, (char) key.charAt(1))
-                    ), metatables);
-                    case 3 -> Vector3API.wrap(new Vector3d(
-                            getSwizzle(self, (char) key.charAt(0)),
-                            getSwizzle(self, (char) key.charAt(1)),
-                            getSwizzle(self, (char) key.charAt(2))
-                    ), metatables);
-                    case 4 -> Vector4API.wrap(new Vector4d(
-                            getSwizzle(self, (char) key.charAt(0)),
-                            getSwizzle(self, (char) key.charAt(1)),
-                            getSwizzle(self, (char) key.charAt(2)),
-                            getSwizzle(self, (char) key.charAt(3))
-                    ), metatables);
-                    default -> NIL; // Not a swizzle, return nil
-                };
-            } catch (InvalidSwizzleException ex) {
-                // If swizzle failed, just return nil
-                return NIL;
-            }
-        }));
-
         // Newindex, always swizzle.
         metatable.rawset(NEWINDEX, LibFunction.create((s, vec, key, value) -> {
             Vector4d self = vec.checkUserdata(s, Vector4d.class);
@@ -394,6 +347,48 @@ public class Vector4API {
                 default -> throw new LuaError("Invalid swizzle - length must be 1 to 4 chars, got '" + k + "'", tr);
             }
             return NIL;
+        }));
+
+        // Custom indexing for swizzle
+        FiguraMetatables.setupInheritance(state, metatable, null, LibFunction.create((s, v, k) -> {
+            Vector4d self = v.checkUserdata(s, Vector4d.class);
+            // Numeric key, index it like an array
+            if (k.type() == TNUMBER) {
+                return valueOf(switch (k.toInteger()) {
+                    case 1 -> self.x;
+                    case 2 -> self.y;
+                    case 3 -> self.z;
+                    case 4 -> self.w;
+                    default -> throw ErrorFactory.argError(s, k, "integer 1 to 4");
+                });
+            }
+            // Key should be a string then
+            LuaString key = k.checkLuaString(s);
+            // Otherwise, get the swizzle going
+            try {
+                return switch (key.length()) {
+                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0)));
+                    case 2 -> Vector2API.wrap(new Vector2d(
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1))
+                    ), metatables);
+                    case 3 -> Vector3API.wrap(new Vector3d(
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1)),
+                            getSwizzle(self, (char) key.charAt(2))
+                    ), metatables);
+                    case 4 -> Vector4API.wrap(new Vector4d(
+                            getSwizzle(self, (char) key.charAt(0)),
+                            getSwizzle(self, (char) key.charAt(1)),
+                            getSwizzle(self, (char) key.charAt(2)),
+                            getSwizzle(self, (char) key.charAt(3))
+                    ), metatables);
+                    default -> NIL; // Not a swizzle, return nil
+                };
+            } catch (InvalidSwizzleException ex) {
+                // If swizzle failed, just return nil
+                return NIL;
+            }
         }));
 
         // Return the metatable

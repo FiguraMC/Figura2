@@ -1,5 +1,5 @@
 plugins {
-	id("fabric-loom") version "1.9-SNAPSHOT"
+	id("fabric-loom") version "1.10-SNAPSHOT"
 	id("maven-publish")
 }
 
@@ -46,8 +46,8 @@ dependencies {
 	mappings(loom.officialMojangMappings())
 	modImplementation("net.fabricmc:fabric-loader:${property("fabric_loader_version")}")
 
-	modCompileOnly("maven.modrinth:sodium:${property("sodium_version")}")
-	modCompileOnly("maven.modrinth:iris:${property("iris_version")}")
+//	modCompileOnly("maven.modrinth:sodium:${property("sodium_version")}")
+//	modCompileOnly("maven.modrinth:iris:${property("iris_version")}")
 
 	// Fabric API (only the modules we need, to reduce code size and dependence on one loader)
 	arrayOf("fabric-api-base", "fabric-resource-loader-v0").forEach {

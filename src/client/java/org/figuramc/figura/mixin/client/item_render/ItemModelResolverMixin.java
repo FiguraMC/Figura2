@@ -18,8 +18,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ItemModelResolver.class)
 public class ItemModelResolverMixin {
 
-    @Inject(method = "updateForTopItem", at = @At(value = "FIELD", shift = At.Shift.AFTER, target = "Lnet/minecraft/client/renderer/item/ItemStackRenderState;isLeftHand:Z"))
-    public void updateItemStackField(ItemStackRenderState itemStackRenderState, ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, Level level, LivingEntity livingEntity, int i, CallbackInfo ci) {
+    @Inject(method = "updateForTopItem", at = @At("RETURN"))
+    public void updateItemStackField(ItemStackRenderState itemStackRenderState, ItemStack itemStack, ItemDisplayContext itemDisplayContext, Level level, LivingEntity livingEntity, int i, CallbackInfo ci) {
         ((ItemStackRenderStateAccess) itemStackRenderState).figura$setItemStack(itemStack);
     }
 

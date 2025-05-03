@@ -25,8 +25,9 @@ public class FigModelImporter {
         try {
             // Process textures and generate a mapping
             ModelLocalTexture[] textureMapping = processTextures(figmodel.getAsJsonArray("textures"), prefix + "/" + fileName, textures);
-            // Process model parts and return
-            return processGroup(figmodel.getAsJsonObject("part_data"), textureMapping, fileName);
+            // Process root model parts, wrap together into one part, and return
+            ArrayList<AvatarMaterials.ModelPartMaterials> roots = ListUtils.map(figmodel.getAsJsonArray("roots"), root -> processGroup(root.getAsJsonObject(), textureMapping));
+            return AvatarMaterials.ModelPartMaterials.wrapper(fileName, roots);
         } catch (Throwable t) {
             throw new AvatarImportingException("figura.error.importing.invalid_figmodel", prefix + "/" + fileName);
         }
@@ -121,13 +122,16 @@ public class FigModelImporter {
         return mapping;
     }
 
-    private static AvatarMaterials.ModelPartMaterials processGroup(JsonObject group, ModelLocalTexture[] textureMapping, @Nullable String nameOverride) {
+    private static AvatarMaterials.ModelPartMaterials processGroup(JsonObject group, ModelLocalTexture[] textureMapping) {
         // Structure
-        String name = nameOverride != null ? nameOverride : group.get("name").getAsString();
+        String name = group.get("name").getAsString();
         Vector3f origin = JsonUtils.parseVec3f(group.getAsJsonArray("origin"));
         Vector3f rotation = JsonUtils.parseVec3f(group.getAsJsonArray("rotation"));
         ArrayList<AvatarMaterials.ModelPartMaterials> children = ListUtils.map(group.getAsJsonArray("children"),
-                child -> processGroup(child.getAsJsonObject(), textureMapping, null));
+                child -> processGroup(child.getAsJsonObject(), textureMapping));
+
+        // Mimic
+        String mimicPart = JsonUtils.getStringOrDefault(group, "mimic_part", null);
 
         // Rendering
         int textureIndex = JsonUtils.getIntOrDefault(group, "texture_index", -1);
@@ -138,7 +142,7 @@ public class FigModelImporter {
                 mesh -> processMesh(mesh.getAsJsonObject(), textureMapping[textureIndex].uvSize()));
 
         // Return
-        return new AvatarMaterials.ModelPartMaterials(name, origin, rotation, children, mappedTextureIndex, cubes, meshes, group);
+        return new AvatarMaterials.ModelPartMaterials(name, origin, rotation, children, mimicPart, mappedTextureIndex, cubes, meshes);
     }
 
     private static AvatarMaterials.CubeData processCube(JsonObject cube, Vector2f uvSize) {

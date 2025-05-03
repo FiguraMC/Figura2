@@ -18,7 +18,7 @@ public class GameRendererMixin {
         float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
         AvatarManager.forEachAvatar(avatar -> {
             Scripts scripts;
-            if ((scripts = avatar.getComponent(Scripts.class)) != null)
+            if ((scripts = avatar.getComponent(Scripts.ID)) != null)
                 scripts.renderEvent(tickDelta);
         });
     }

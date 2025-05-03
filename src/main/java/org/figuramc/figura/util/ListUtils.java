@@ -179,7 +179,17 @@ public class ListUtils {
         return result;
     }
 
-    public static <T, E extends Throwable> int findIndex(List<T> list, ThrowingFunction<T, Boolean, E> predicate) throws E {
+    public static <T, E extends Throwable> int indexOf(Iterable<T> iterable, T value) {
+        int index = 0;
+        for (T item : iterable) {
+            if (Objects.equals(value, item))
+                return index;
+            index++;
+        }
+        return -1;
+    }
+
+    public static <T, E extends Throwable> int findIndex(Iterable<T> list, ThrowingFunction<T, Boolean, E> predicate) throws E {
         int index = 0;
         for (T item : list) {
             if (predicate.apply(item))

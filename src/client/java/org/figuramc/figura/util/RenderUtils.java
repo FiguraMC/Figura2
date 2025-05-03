@@ -1,49 +1,37 @@
 package org.figuramc.figura.util;
 
-import com.mojang.blaze3d.pipeline.RenderCall;
-import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.model.EntityModel;
-import net.minecraft.client.renderer.entity.EnderDragonRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.EvokerFangsRenderer;
-import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4d;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public class RenderUtils {
 
-    /**
-     * Says "RenderCall", but is just a runnable
-     */
-    public static void executeOnRenderThread(RenderCall r) {
-        if (RenderSystem.isOnRenderThreadOrInit())
-            r.execute();
-        else
-            RenderSystem.recordRenderCall(r);
-    }
-
     public static <T extends Entity> EntityRenderer<? super T, ?> getRenderer(T entity) {
         return Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(entity);
     }
+    @SuppressWarnings("unchecked")
+    public static <T extends Entity> EntityRenderer<? super T, ?> getRenderer(EntityType<T> type, @Nullable PlayerSkin.Model playerType) {
+        if (type == EntityType.PLAYER)
+            return (EntityRenderer<? super T, ?>) Minecraft.getInstance().getEntityRenderDispatcher().playerRenderers.get(playerType);
+        return (EntityRenderer<? super T, ?>) Minecraft.getInstance().getEntityRenderDispatcher().renderers.get(type);
+    }
 
-    public static void uploadTexture(Supplier<Boolean> closed, AbstractTexture tex, ResourceLocation location, NativeImage image) {
-        if (closed.get()) return;
-        RenderUtils.executeOnRenderThread(() -> {
-            if (closed.get()) return;
-            TextureManager manager = Minecraft.getInstance().getTextureManager();
-            manager.register(location, tex);
-            TextureUtil.prepareImage(tex.getId(), image.getWidth(), image.getHeight());
-            image.upload(0, 0, 0, false);
-        });
+    // Create an object on the render thread, and return a future of it.
+    public static <T> CompletableFuture<T> createOnRenderThread(Supplier<T> supplier) {
+        // If on render thread, run right away, otherwise queue it
+        return CompletableFuture.supplyAsync(supplier, RenderSystem.isOnRenderThread() ? Runnable::run : RenderSystem::queueFencedTask);
+    }
+    // Run a task on the render thread, returning a future for its completion
+    public static CompletableFuture<Void> runOnRenderThread(Runnable runnable) {
+        // If on render thread, run right away, otherwise queue it
+        return CompletableFuture.runAsync(runnable, RenderSystem.isOnRenderThread() ? Runnable::run : RenderSystem::queueFencedTask);
     }
 
 }

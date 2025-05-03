@@ -2,6 +2,8 @@ package org.figuramc.figura.util;
 
 import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
 import org.figuramc.figura.util.exception.functional.ThrowingFunction;
+import org.jetbrains.annotations.Nullable;
+import oshi.util.tuples.Pair;
 
 import java.util.*;
 

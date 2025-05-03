@@ -1,15 +1,15 @@
 package org.figuramc.figura.avatars.components;
 
 import net.minecraft.core.registries.BuiltInRegistries;
-import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.model.part.CustomItemModelPart;
-import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.util.ListUtils;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.model.part.CustomItemModelPart;
+import org.figuramc.figura.model.part.FiguraModelPart;
+import org.figuramc.figura.model.renderers.Renderable;
+import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,16 +21,15 @@ import java.util.List;
  */
 public class CustomItems implements AvatarComponent {
 
+    public static final int ID = AvatarComponent.createId(Textures.class);
+    public int getId() { return ID; }
+
     /**
      * The custom items which were determined by file names in the "items/" folder!
      */
-    private List<PartEntry> customItems;
+    private final List<PartEntry> customItems;
 
-    @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) {
-        // Depend on textures, needed for creating model parts
-        Textures texturesComponent = self.assertDependency(Textures.class, getClass());
-
+    public CustomItems(AvatarMaterials materials, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
         // Create the custom items
         customItems = ListUtils.mapNonNull(materials.customItemRoots().entrySet(), entry -> {
             // Convert the String pattern to a Matcher:
@@ -45,16 +44,16 @@ public class CustomItems implements AvatarComponent {
                 matcher = new Matcher.ExactMatcher(exactLocation);
             }
             // Convert the materials to a CustomItemModelPart
-            CustomItemModelPart mainPart = entry.getValue().model() != null ? new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), texturesComponent.textures) : null;
+            Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), texturesComponent.textures, vanillaRendering)) : null;
             // Convert the texture index to a RootModelPart
-            RootModelPart flatPart = entry.getValue().textureIndex() != -1 ? new RootModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex())) : null;
+            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex()))) : null;
             // Return the entry
             return new PartEntry(matcher, mainPart, flatPart);
         });
         Collections.sort(customItems); // Sort them, ensuring more specific ones are checked first (Exact matchers)
     }
 
-    public @Nullable RootModelPart getModelPart(ItemStack stack, ItemDisplayContext context) {
+    public @Nullable Renderable<? extends FiguraModelPart> getModelPart(ItemStack stack, ItemDisplayContext context) {
         // TODO: Once the API exists, try any custom callbacks before this for loop
         for (PartEntry entry : customItems) {
             if (!entry.matcher.matches(stack))
@@ -70,7 +69,7 @@ public class CustomItems implements AvatarComponent {
         return null;
     }
 
-    private record PartEntry(Matcher matcher, @Nullable CustomItemModelPart mainPart, @Nullable RootModelPart flatPart) implements Comparable<PartEntry> {
+    private record PartEntry(Matcher matcher, @Nullable Renderable<CustomItemModelPart> mainPart, @Nullable Renderable<FiguraModelPart> flatPart) implements Comparable<PartEntry> {
         @Override
         public int compareTo(@NotNull CustomItems.PartEntry o) {
             return this.matcher.compareTo(o.matcher);

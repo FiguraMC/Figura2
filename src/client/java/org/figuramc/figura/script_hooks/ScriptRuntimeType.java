@@ -1,6 +1,7 @@
 package org.figuramc.figura.script_hooks;
 
 import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.components.Scripts;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_languages.lua.LuaRuntime;
 import oshi.util.tuples.Pair;
@@ -22,8 +23,8 @@ public interface ScriptRuntimeType {
     List<ScriptRuntimeType> ALL_RUNTIME_TYPES = List.of(
        new ScriptRuntimeType() {
            @Override
-           public ScriptRuntime newRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException {
-               return new LuaRuntime(avatar, scripts);
+           public ScriptRuntime newRuntime(Scripts scriptsComponent, Map<String, byte[]> scripts) throws AvatarLoadingException {
+               return new LuaRuntime(scriptsComponent, scripts);
            }
 
            @Override
@@ -51,7 +52,7 @@ public interface ScriptRuntimeType {
     /**
      * Create a new ScriptRuntime in the given Avatar.
      */
-    ScriptRuntime newRuntime(Avatar<?> avatar, Map<String, byte[]> scripts) throws AvatarLoadingException;
+    ScriptRuntime newRuntime(Scripts scriptsComponent, Map<String, byte[]> scripts) throws AvatarLoadingException;
 
     /**
      * Get the name of this runtime type

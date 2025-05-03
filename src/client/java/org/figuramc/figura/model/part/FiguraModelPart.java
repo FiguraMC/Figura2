@@ -1,22 +1,26 @@
 package org.figuramc.figura.model.part;
 
+import net.minecraft.client.model.Model;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.model.renderers.FiguraPartRenderer;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
-import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.ListUtils;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
+import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
 import java.lang.Math;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -29,19 +33,19 @@ import java.util.Objects;
  * - This can be more efficient rendering-wise, because most of the time individual cubes are not articulated, allowing
  *   for less unneeded computation. When they do need to be articulated, one can simply add a group for said cube.
  */
-public class FiguraModelPart extends MarkedObjectBase {
+public class FiguraModelPart extends MarkedObjectBase implements Transformable {
 
     // General info
     public final String name;
-    private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
+    private final @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
 
     // Structure / modifications
     public final PartTransform transform = new PartTransform(); // The transform of this model part
-//    private List<Animator> animators; // The animators which affect this model part
+
+//    private  animators; // The animators which affect this model part
     public final ArrayList<FiguraModelPart> children; // The children of this model part in the hierarchy tree
 
     // Rendering
-    public @Nullable FiguraPartRenderer.NonRootState nonRootRenderState; // Temp state for the renderer to keep track of. Should be cleared when render type is modified.
     public final float[] vertices; // The vertices making up the cubes and meshes of the model part
     private @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally. Private because of contract with non-root render state.
     public int renderTypePriority; // If the render type priority is higher than the parent's, renderType can replace the current render types.
@@ -52,15 +56,39 @@ public class FiguraModelPart extends MarkedObjectBase {
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
 
-
-    protected FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, List<AvatarTexture> textures, @Nullable FiguraModelPart parent) {
+    // Vanilla parameter is used for mimics
+    public FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, List<AvatarTexture> textures, @Nullable VanillaRendering vanilla) {
         // Copy basic values out of the materials
         name = materials.name();
         this.parent = parent;
-        transform.setOrigin(materials.origin());
-        transform.setEulerDeg(materials.rotation());
+        // If both zero, skip setting it
+        if (!materials.origin().equals(0,0,0) || !materials.rotation().equals(0,0,0)) {
+            transform.setOrigin(materials.origin());
+            transform.setEulerDeg(materials.rotation());
+        }
+
+        // Set up mimicry
+        if (vanilla != null && materials.mimic() != null) {
+            int slash = materials.mimic().indexOf('/');
+            if (slash != -1) {
+                String modelName = materials.mimic().substring(0, slash);
+                String partName = materials.mimic().substring(slash + 1);
+                Map<String, Model> models = ModelNames.getModelsByName(vanilla.entityRenderer);
+                Model model = models.get(modelName);
+                if (model != null) {
+                    ModelPart part = model.getAnyDescendantWithName(partName).orElse(null);
+                    if (part != null) {
+                        VanillaRendering.VanillaPart scriptPart = vanilla.partMap.get(part);
+                        if (scriptPart != null) {
+                            transform.modifiers.add(scriptPart);
+                        }
+                    }
+                }
+            }
+        }
+
         // Get children
-        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, textures, this));
+        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, this, textures, vanilla));
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
@@ -108,7 +136,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         for (int x = -1; x <= w; x++) {
             float buildingState = 0;
             for (int y = -1; y <= h; y++) {
-                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y) >> 24) & 0xFF) + 253) / 254);
+                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((ARGB.alpha(texture.getPixel(x, y)) + 253) / 254);
                 if (x >= 0) {
                     byte prevOpacityState = opacityStates[y+1];
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
@@ -135,7 +163,7 @@ public class FiguraModelPart extends MarkedObjectBase {
         for (int y = -1; y <= h; y++) {
             float buildingState = 0;
             for (int x = -1; x <= w; x++) {
-                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((((texture.getPixelRGBA(x, y) >> 24) & 0xFF) + 253) / 254);
+                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((ARGB.alpha(texture.getPixel(x, y)) + 253) / 254);
                 if (y >= 0) {
                     byte prevOpacityState = opacityStates[x+1];
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
@@ -345,7 +373,6 @@ public class FiguraModelPart extends MarkedObjectBase {
     }
 
     public void setRenderType(@Nullable FiguraRenderType renderType) {
-        this.nonRootRenderState = null;
         this.renderType = renderType;
     }
 
@@ -353,21 +380,20 @@ public class FiguraModelPart extends MarkedObjectBase {
         return this.renderType;
     }
 
-    public void invokeCallbacks(List<ScriptCallback> functions, Object... args) throws ScriptError {
-        for (ScriptCallback f : functions)
-            f.call(args);
+    @Override
+    public PartTransform getTransform() {
+        return transform;
     }
-
 
     // // // // // // MEMORY LIMITING // // // // // //
 
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
         // Trace other reachable objects
+        counter.trace(transform, depth);
         for (FiguraModelPart child : children)
             counter.trace(child, depth);
         counter.trace(parent, depth);
-        counter.trace(nonRootRenderState, depth);
         for (ScriptCallback callback : preRenderCallbacks) counter.trace(callback, depth);
         for (ScriptCallback callback : midRenderCallbacks) counter.trace(callback, depth);
         for (ScriptCallback callback : postRenderCallbacks) counter.trace(callback, depth);
@@ -375,10 +401,12 @@ public class FiguraModelPart extends MarkedObjectBase {
         // Textures are reachable through render types, so this could be a memory exploit if we don't
         // trace them.
 
-        // Random guess around 200 bytes for the constant sized stuff, don't feel like counting all that
-        return 200
+        // Random guess around 60 bytes for the constant sized stuff, don't feel like counting all that
+        return 60
                 + CHAR_SIZE * name.length()
                 + FLOAT_SIZE * vertices.length
                 + POINTER_SIZE * (preRenderCallbacks.size() + midRenderCallbacks.size() + postRenderCallbacks.size());
     }
+
+
 }

@@ -1,6 +1,7 @@
 package org.figuramc.figura.util.exception;
 
 import org.figuramc.figura.util.exception.functional.ThrowingFunction;
+import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
 import org.figuramc.figura.util.exception.functional.ThrowingSupplier;
 
 import java.util.function.Function;
@@ -11,6 +12,18 @@ public class ExceptionUtils {
 
     // Wrap checked exceptions in the given runtime exception wrapper.
     // Runtime exceptions are not wrapped.
+    public static Runnable wrapChecked(ThrowingRunnable<?> throwingRunnable, Function<Throwable, ? extends RuntimeException> runtimeWrapper) {
+        return () -> {
+            try {
+                throwingRunnable.run();
+            } catch (Throwable e) {
+                if (e instanceof RuntimeException re)
+                    throw re;
+                throw runtimeWrapper.apply(e);
+            }
+        };
+    }
+
     public static <T> Supplier<T> wrapChecked(ThrowingSupplier<T, ?> throwingSupplier, Function<Throwable, ? extends RuntimeException> runtimeWrapper) {
         return () -> {
             try {

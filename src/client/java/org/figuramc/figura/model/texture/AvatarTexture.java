@@ -6,17 +6,20 @@ import org.figuramc.figura.manage.AvatarLoadingException;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector4f;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * A generic avatar texture as seen from a script.
  * Subclassed by "Standalone", "Atlased", and "Vanilla" variations.
  */
 public abstract class AvatarTexture {
 
+    // Create a texture and upload it.
     public static AvatarTexture from(Textures textureComponent, AvatarMaterials.TextureMaterials materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
         switch (materials) {
             case AvatarMaterials.TextureMaterials.OwnedTexture owned -> {
                 if (owned.noAtlas()) {
-                    return new StandaloneAvatarTexture(owned);
+                    return StandaloneAvatarTexture.create(owned);
                 } else {
                     return new AtlasedAvatarTexture(textureComponent, owned, atlasBuilder);
                 }
@@ -27,10 +30,13 @@ public abstract class AvatarTexture {
         }
     }
 
-    // Begin uploading the texture using `RenderUtils.executeOnRenderThread(...)`.
-    public abstract void upload();
+    // Upload the texture, committing any changes.
+    // This must happen on the render thread, so it returns a future indicating it's complete.
+    public abstract CompletableFuture<Void> upload();
     // Ensure that any backing native resources are closed.
-    public abstract void destroy();
+    // Must happen on the render thread, so it returns a future.
+    // If you don't care when the destruction completes, only that it happens eventually, feel free to ignore result.
+    public abstract CompletableFuture<Void> destroy();
     // Get the ResourceLocation of a backing texture for this texture.
     public abstract ResourceLocation getLocation();
     // Get UV values that let a part use this texture.
@@ -40,6 +46,6 @@ public abstract class AvatarTexture {
     // Width/Height, and ability to get a pixel at a given position
     public abstract int getWidth();
     public abstract int getHeight();
-    public abstract int getPixelRGBA(int x, int y); // x, y relative to texture position
+    public abstract int getPixel(int x, int y); // Use the Minecraft ARGB class with the returned int
 
 }

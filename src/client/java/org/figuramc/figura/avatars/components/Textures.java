@@ -1,6 +1,5 @@
 package org.figuramc.figura.avatars.components;
 
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
@@ -17,33 +16,25 @@ import java.util.List;
  */
 public class Textures implements AvatarComponent {
 
+    public static final int ID = AvatarComponent.createId();
+    public int getId() { return ID; }
+
     // The atlas texture. Textures which don't opt out of being atlased go in here to keep things more efficient.
-    public @Nullable FiguraTextureAtlas atlas;
-    public List<AvatarTexture> textures;
-    private boolean isReadyAsync = false;
+    public final @Nullable FiguraTextureAtlas atlas;
+    public final List<AvatarTexture> textures;
 
-    @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
-
-        // Create all the textures:
+    public Textures(AvatarMaterials materials) throws AvatarLoadingException {
         FiguraTextureAtlas.Builder atlasBuilder = FiguraTextureAtlas.builder();
         textures = ListUtils.map(materials.textures(), mats -> AvatarTexture.from(this, mats, atlasBuilder));
         atlas = atlasBuilder.build();
-
-        // Upload all textures
-        if (atlas != null) atlas.upload();
-        for (AvatarTexture texture : textures) texture.upload();
-        // Once all textures are uploaded, mark as ready
-        RenderUtils.executeOnRenderThread(() -> isReadyAsync = true);
     }
 
     @Override
-    public boolean isReadyAsync() { return isReadyAsync; }
-    @Override
     public void destroy() {
-        RenderUtils.executeOnRenderThread(() -> {
+        RenderUtils.runOnRenderThread(() -> {
             if (atlas != null) atlas.destroy();
             for (AvatarTexture texture : textures) texture.destroy();
+            textures.clear();
         });
     }
 

@@ -1,14 +1,7 @@
 package org.figuramc.figura.script_languages.lua;
 
-import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
-
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * Events logic in another class for safe keeping.

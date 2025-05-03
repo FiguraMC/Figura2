@@ -18,8 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
-// A similar mixin is applied for any class that should flip and translate.
-// See RenderUtils.shouldFlipAndTranslate().
 @SuppressWarnings({"unchecked", "rawtypes"})
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
@@ -38,28 +36,29 @@ public class LivingEntityRendererMixin {
     @SuppressWarnings("UnreachableCode")
     @Inject(
             method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
-            at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;getRenderType(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;ZZZ)Lnet/minecraft/client/renderer/RenderType;")
+            at = @At(value = "INVOKE", shift = At.Shift.BEFORE, target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V")
     )
-    public void onRenderLivingEntity(LivingEntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
+    public void afterRenderLivingEntity(LivingEntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
         // Fetch entity
         LivingEntity livingEntity = (LivingEntity) ((EntityRenderStateAccess) renderState).figura$getEntity();
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(livingEntity.getUUID());
         if (avatar == null)  { CemManager.tryGetCem(livingEntity); return; }
-        EntityRoot root = avatar.getComponent(EntityRoot.class);
-        if (root == null) return;
-        FiguraTransformStack matrixStack = new FiguraTransformStack(poseStack);
-        // Undo the problematic translations above:
-        // This has to be 1.500 exactly. NOT 1.501.
-        // I have not been able to figure out why,
-        // even though I have probably stared at the
-        // vanilla source code for entity rendering for weeks in total.
-        matrixStack.translate(0, 1.500f, 0);
-        matrixStack.scale(-1, -1, 1);
-        // Grab the overlay:
-        float whiteOverlayProgress = ((LivingEntityRenderer) (Object) this).getWhiteOverlayProgress(renderState);
-        int overlayCoords = LivingEntityRenderer.getOverlayCoords(renderState, whiteOverlayProgress);
-        // Render
-        float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
-        root.render(avatar, multiBufferSource, matrixStack, tickDelta, light, overlayCoords);
+        EntityRoot root = avatar.getComponent(EntityRoot.ID);
+        if (root != null) {
+            FiguraTransformStack matrixStack = new FiguraTransformStack(poseStack);
+            // Undo the problematic translations above:
+            // This has to be 1.500 exactly. NOT 1.501.
+            // I have not been able to figure out why,
+            // even though I have probably stared at the
+            // vanilla source code for entity rendering for weeks in total.
+            matrixStack.translate(0, 1.500f, 0);
+            matrixStack.scale(-1, -1, 1);
+            // Grab the overlay:
+            float whiteOverlayProgress = ((LivingEntityRenderer) (Object) this).getWhiteOverlayProgress(renderState);
+            int overlayCoords = LivingEntityRenderer.getOverlayCoords(renderState, whiteOverlayProgress);
+            // Render
+            float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
+            root.render(avatar, multiBufferSource, matrixStack, tickDelta, light, overlayCoords);
+        }
     }
 }

@@ -1,11 +1,12 @@
 package org.figuramc.figura.manage;
 
-import org.figuramc.figura.avatars.AvatarTemplate;
+import org.figuramc.figura.avatars.AvatarTemplates;
 import org.figuramc.figura.data.AvatarImportingException;
 import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.data.NewAvatarImporter;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.util.ErrorReporting;
+import org.figuramc.figura.util.RenderUtils;
 import org.figuramc.figura.util.exception.ExceptionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -61,8 +62,10 @@ public class CemManager {
             // If the result is null, this entity has no CEM, so just do nothing and return.
             if (result == null) return;
             // Otherwise, this entity has CEM, so launch a task to load it.
-            AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() ->
-                    AvatarTemplate.CEM_AVATAR.construct(uuid, result), CompletionException::new)));
+            AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(
+                    () -> AvatarTemplates.cemAvatar(uuid, RenderUtils.getRenderer(entity), result),
+                    CompletionException::new
+            ), Runnable::run)); // TODO: Fix texture loading so it can work in an off thread instead of render thread
         } catch (CompletionException ex) {
             Throwable cause = ex.getCause();
             // For now, always report CEM errors to chat.

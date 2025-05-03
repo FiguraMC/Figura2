@@ -3,38 +3,47 @@ package org.figuramc.figura.model.renderers.compatible;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.model.part.FiguraModelPart;
-import org.figuramc.figura.model.part.RootModelPart;
-import org.figuramc.figura.model.renderers.FiguraPartRenderer;
-import org.figuramc.figura.model.shader.FiguraRenderType;
+import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
+import org.figuramc.figura.script_hooks.ScriptCallback;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
-import java.util.ArrayList;
 import java.util.List;
 
-public class CompatibleRenderer implements FiguraPartRenderer {
+public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelPartRenderer {
 
-    public static final CompatibleRenderer INSTANCE = new CompatibleRenderer();
-    private CompatibleRenderer() {}
+    private final FiguraModelPart root;
+
+    public CompatibleRenderer(FiguraModelPart root) {
+        this.root = root;
+    }
 
     @Override
     public void render(
-            RootModelPart root,
             MultiBufferSource bufferSource,
             FiguraTransformStack matrixStack,
             float tickDelta,
             int light, int overlay
     ) throws ScriptError, StackOverflowError {
         recursiveRender(root, bufferSource, List.of(), 0, matrixStack, tickDelta, light, overlay);
+    }
+
+    @Override
+    public void destroy() {
+        // Nothing to destroy
+    }
+
+    @Override
+    protected long traceNoMark(MemoryCounter counter, int depth) {
+        counter.trace(root, depth);
+        return OBJECT_SIZE + POINTER_SIZE;
     }
 
     private void recursiveRender(
@@ -48,7 +57,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
             int overlay
     ) throws ScriptError, StackOverflowError {
 
-        part.invokeCallbacks(part.preRenderCallbacks, tickDelta);
+        for (ScriptCallback callback : part.preRenderCallbacks) callback.call(tickDelta);
 
         // Cancel if not invisible
         if (!part.transform.getVisible())
@@ -56,23 +65,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
 
         // Update render types if we can and this has priority
         if (part.getRenderType() != null && part.renderTypePriority >= renderTypePriority) {
-            // If it already has a cached render type, use it! Otherwise, compute and cache.
-            @Nullable State partState = (State) part.nonRootRenderState;
-            if (partState == null) {
-                // Create the Minecraft RenderTypes by reading the part's figura render type.
-                List<RenderType> types = switch (part.getRenderType()) {
-                    case FiguraRenderType.EndPortal p -> List.of(RenderType.endPortal());
-                    case FiguraRenderType.EndGateway g -> List.of(RenderType.endGateway());
-                    case FiguraRenderType.Basic(@Nullable ResourceLocation mainTex, @Nullable ResourceLocation emissiveTex) -> {
-                        List<RenderType> layers = new ArrayList<>();
-                        if (mainTex != null) layers.add(RenderType.entityTranslucent(mainTex, true));
-                        if (emissiveTex != null) layers.add(RenderType.eyes(emissiveTex));
-                        yield layers;
-                    }
-                };
-                part.nonRootRenderState = partState = new State(types);
-            }
-            currentRenderTypes = partState.minecraftRenderTypes;
+            currentRenderTypes = part.getRenderType().compatibleRenderTypes();
             renderTypePriority = part.renderTypePriority;
         }
 
@@ -83,7 +76,7 @@ public class CompatibleRenderer implements FiguraPartRenderer {
 //        for (Animator animator : animators)
 //            animator.affect(matrixStack);
 
-        part.invokeCallbacks(part.midRenderCallbacks, tickDelta);
+        for (ScriptCallback callback : part.midRenderCallbacks) callback.call(tickDelta);
 
         // Render children recursively
         for (FiguraModelPart child : part.children)
@@ -114,25 +107,10 @@ public class CompatibleRenderer implements FiguraPartRenderer {
             }
         }
 
-        part.invokeCallbacks(part.postRenderCallbacks, tickDelta);
+        for (ScriptCallback callback : part.postRenderCallbacks) callback.call(tickDelta);
 
         // Pop matrix stack
         matrixStack.pop();
     }
-
-    public static class State extends MarkedObjectBase implements NonRootState {
-
-        public final List<RenderType> minecraftRenderTypes;
-
-        public State(List<RenderType> types) {
-            this.minecraftRenderTypes = types;
-        }
-
-        @Override
-        protected long traceNoMark(MemoryCounter counter, int depth) {
-            throw new UnsupportedOperationException("TODO");
-        }
-    }
-
 
 }

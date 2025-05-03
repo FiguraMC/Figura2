@@ -1,10 +1,11 @@
 package org.figuramc.figura.data;
 
-import com.google.gson.JsonObject;
 import net.minecraft.world.item.ItemDisplayContext;
-import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.Nullable;
-import org.joml.*;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.joml.Vector4i;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
@@ -32,7 +33,6 @@ import java.util.Map;
  *   --------------------------
  *   |        Raw Bytes       |
  *   --------------------------
- *
  */
 public record AvatarMaterials(
         MetadataMaterials metadata,
@@ -41,7 +41,6 @@ public record AvatarMaterials(
         List<ModelPartMaterials> worldRoots,
         ModelPartMaterials entityRoot,
         ModelPartMaterials hudRoot,
-        Map<String, VanillaRootPartMaterials> vanillaPartRoots,
         Map<String, CustomItem> customItemRoots
 ) {
 
@@ -62,14 +61,14 @@ public record AvatarMaterials(
     public record ModelPartMaterials(
             // Structuring
             String name, Vector3f origin, Vector3f rotation, ArrayList<ModelPartMaterials> children,
+            // Vanilla part to mimic if any, in the form "ModelName/PartName" ("ENTITY/head")
+            @Nullable String mimic,
             // Rendering data
-            int textureIndex, List<CubeData> cubes, List<MeshData> meshes,
-            // Json data. Not serialized, used only during import to make things simpler
-            @Nullable @NoSerialize JsonObject groupJson
+            int textureIndex, List<CubeData> cubes, List<MeshData> meshes
     ) {
         // Shorthand for creating a wrapper around some children with a name
         public static ModelPartMaterials wrapper(String name, ArrayList<ModelPartMaterials> children) {
-            return new ModelPartMaterials(name, new Vector3f(), new Vector3f(), children, -1, List.of(), List.of(), null);
+            return new ModelPartMaterials(name, new Vector3f(), new Vector3f(), children, null, -1, List.of(), List.of());
         }
     }
     public record CubeData(Vector3f origin, Vector3f rotation, Vector3f from, Vector3f to, Vector3f inflate, @Nullable CubeFace[] faces) {}
@@ -79,17 +78,7 @@ public record AvatarMaterials(
     public record VertexData(Vector3f pos, @Nullable SkinningData skinningData) {}
     public record SkinningData(Vector4i offsets, Vector4f weights) {}
 
-    // VANILLA PARTS
-    public record VanillaRootPartMaterials(ModelPartMaterials partData, boolean replaceVanillaRoot) {
-        // Shorthand to wrap parts together
-        public static VanillaRootPartMaterials wrapper(String name, List<VanillaRootPartMaterials> children) {
-            boolean anyReplace = ListUtils.any(children, VanillaRootPartMaterials::replaceVanillaRoot);
-            return new VanillaRootPartMaterials(ModelPartMaterials.wrapper(name, ListUtils.map(children, VanillaRootPartMaterials::partData)), anyReplace);
-        }
-    }
-
     // CUSTOM ITEMS
-    // Either both null, or neither null
     public record CustomItem(@Nullable CustomItemModel model, int textureIndex) {}
     public record CustomItemModel(ModelPartMaterials model, EnumMap<ItemDisplayContext, ItemPartTransform> transforms) {}
     public record ItemPartTransform(Vector3f translation, Vector3f rotation, Vector3f scale) {}

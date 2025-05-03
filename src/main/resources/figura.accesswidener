@@ -13,11 +13,11 @@ accessible field net/minecraft/client/renderer/texture/TextureManager byPath Lja
 accessible method com/mojang/blaze3d/platform/NativeImage getPixelABGR (II)I
 
 # Render types and shaders
-accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
-accessible method net/minecraft/client/renderer/ShaderManager createPreprocessor (Ljava/util/Map;Lnet/minecraft/resources/ResourceLocation;)Lcom/mojang/blaze3d/preprocessor/GlslPreprocessor;
+#accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;ILnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+#accessible method net/minecraft/client/renderer/ShaderManager createPreprocessor (Ljava/util/Map;Lnet/minecraft/resources/ResourceLocation;)Lcom/mojang/blaze3d/preprocessor/GlslPreprocessor;
 
-# Getting transforms of original item model, to use as fallback when overriding
-accessible field net/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState model Lnet/minecraft/client/resources/model/BakedModel;
+# Getting transform of original item model, to use as fallback when overriding
+accessible field net/minecraft/client/renderer/item/ItemStackRenderState$LayerRenderState transform Lnet/minecraft/client/renderer/block/model/ItemTransform;
 
 # Fetching ModelPart info
 accessible field net/minecraft/client/model/geom/ModelPart cubes Ljava/util/List;

@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.figuramc.figura.FiguraModClient;
@@ -14,7 +15,8 @@ import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.CustomItems;
 import org.figuramc.figura.ducks.client.ItemStackRenderStateAccess;
 import org.figuramc.figura.model.part.CustomItemModelPart;
-import org.figuramc.figura.model.part.RootModelPart;
+import org.figuramc.figura.model.part.FiguraModelPart;
+import org.figuramc.figura.model.renderers.Renderable;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,7 +37,6 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
 
     // Shadowed
     @Shadow ItemDisplayContext displayContext;
-    @Shadow boolean isLeftHand;
 
     @Shadow private ItemStackRenderState.LayerRenderState[] layers;
     // Static math classes for not allocating
@@ -48,7 +49,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
         // Push null, so that model parts inside this item are not considered part of the enclosing avatar's vanilla model...
         FiguraModClient.AVATAR_RENDERING_STACK.push(null);
         // Try to override with a figura custom part:
-        boolean overrode = tryFiguraOverride(peekedAvatar, itemStack, displayContext, isLeftHand, poseStack, multiBufferSource, i, j);
+        boolean overrode = tryFiguraOverride(peekedAvatar, itemStack, displayContext, poseStack, multiBufferSource, i, j);
         // If we didn't override, then call the original method
         if (!overrode) original.call(poseStack, multiBufferSource, i, j);
         // Finally, pop the stack and assert.
@@ -63,12 +64,13 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
 
     // Try figura override. Return true if successfully overrode with a figura part, false otherwise.
     @Unique
-    private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, boolean bl, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay) {
+    private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay) {
         // Look for an overriding model part
         CustomItems itemsComponent;
-        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.class)) == null) return false;
-        RootModelPart modelPart = itemsComponent.getModelPart(itemStack, itemDisplayContext);
-        if (modelPart == null) return false;
+        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.ID)) == null) return false;
+        Renderable<? extends FiguraModelPart> renderablePart = itemsComponent.getModelPart(itemStack, itemDisplayContext);
+        if (renderablePart == null) return false;
+        FiguraModelPart modelPart = renderablePart.part;
         // If we found one, render it:
         MATRIX_STACK.setFromVanilla(poseStack);
         if (modelPart instanceof CustomItemModelPart customModel) {
@@ -76,13 +78,13 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
             // Otherwise, if no custom transform is specified, fall back to the vanilla one.
             ItemTransform customOrFallbackTransform = customModel.itemTransforms.getTransform(itemDisplayContext);
             if (this.layers.length > 0 && customOrFallbackTransform.equals(ItemTransform.NO_TRANSFORM))
-                customOrFallbackTransform = this.layers[0].model.getTransforms().getTransform(itemDisplayContext);
-            applyTransform(customOrFallbackTransform, bl);
-            MATRIX_STACK.translate(0, -0.5f, 0); // Undo BB's 8-unit translation they like to do
+                customOrFallbackTransform = this.layers[0].transform;
+            applyTransform(customOrFallbackTransform, displayContext.leftHand());
+            MATRIX_STACK.translate(0.5f, 0.0f, 0.5f); // Undo BB's 8-unit translation they like to do
         } else {
             // PNG model. If possible, copy transforms from the first layer.
             if (this.layers.length > 0) {
-                applyTransform(this.layers[0].model.getTransforms().getTransform(itemDisplayContext), bl);
+                applyTransform(this.layers[0].transform, displayContext.leftHand());
             } else if (itemDisplayContext == ItemDisplayContext.GROUND) {
                 MATRIX_STACK.translate(0, 0.125f, 0);
                 MATRIX_STACK.scale(0.5f, 0.5f, 0.5f);
@@ -90,7 +92,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
             MATRIX_STACK.translate(-0.5f, -0.5f, -0.5f);
         }
         float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
-        avatar.tryRenderModelPart(modelPart, multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
+        avatar.tryRenderModelPart(renderablePart.renderer, multiBufferSource, MATRIX_STACK, tickDelta, light, overlay);
         // Successfully overrode it!
         return true;
     }
@@ -100,20 +102,30 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
      */
     @Unique
     private static void applyTransform(ItemTransform transform, boolean isLeftHanded) {
-        if (transform == ItemTransform.NO_TRANSFORM) {
-            return;
+        if (transform != ItemTransform.NO_TRANSFORM) {
+            float tx = transform.translation().x();
+            float ty = transform.translation().y();
+            float tz = transform.translation().z();
+
+            float rx = transform.rotation().x() * Mth.DEG_TO_RAD;
+            float ry = transform.rotation().y() * Mth.DEG_TO_RAD;
+            float rz = transform.rotation().z() * Mth.DEG_TO_RAD;
+
+            float sx = transform.scale().x();
+            float sy = transform.scale().y();
+            float sz = transform.scale().z();
+
+            if (isLeftHanded) {
+                tx = -tx;
+                ry = -ry;
+                rz = -rz;
+            }
+
+            MATRIX_STACK.translate(tx, ty, tz);
+            MATRIX_STACK.rotate(TEMP_QUAT.rotationXYZ(rx, ry, rz));
+            MATRIX_STACK.scale(sx, sy, sz);
         }
-        float f = transform.rotation.x();
-        float g = transform.rotation.y();
-        float h = transform.rotation.z();
-        if (isLeftHanded) {
-            g = -g;
-            h = -h;
-        }
-        int i = isLeftHanded ? -1 : 1;
-        MATRIX_STACK.translate((float)i * transform.translation.x(), transform.translation.y(), transform.translation.z());
-        MATRIX_STACK.rotate(TEMP_QUAT.rotationXYZ(f * ((float)Math.PI / 180), g * ((float)Math.PI / 180), h * ((float)Math.PI / 180)));
-        MATRIX_STACK.scale(transform.scale.x(), transform.scale.y(), transform.scale.z());
+        MATRIX_STACK.translate(-0.5f, -0.5f, -0.5f);
     }
 
 

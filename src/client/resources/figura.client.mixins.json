@@ -9,7 +9,6 @@
     "entity_render.EntityRenderDispatcherMixin",
     "entity_render.EntityRendererMixin",
     "entity_render.EntityRenderStateMixin",
-    "entity_render.ItemInHandRendererMixin",
     "entity_render.LivingEntityRendererMixin",
     "general_render.GameRendererMixin",
     "item_render.ItemModelResolverMixin",

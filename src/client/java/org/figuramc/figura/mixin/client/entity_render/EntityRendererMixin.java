@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
+import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.ducks.client.EntityRenderStateAccess;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
@@ -35,10 +36,11 @@ public class EntityRendererMixin {
         Entity entity = ((EntityRenderStateAccess) renderState).figura$getEntity();
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
         if (avatar == null) { CemManager.tryGetCem(entity); return; }
-        EntityRoot root = avatar.getComponent(EntityRoot.class);
-        if (root == null) return;
-        float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
-        root.render(avatar, multiBufferSource, new FiguraTransformStack(poseStack), tickDelta, light, OverlayTexture.NO_OVERLAY);
+        EntityRoot root = avatar.getComponent(EntityRoot.ID);
+        if (root != null) {
+            float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
+            root.render(avatar, multiBufferSource, new FiguraTransformStack(poseStack), tickDelta, light, OverlayTexture.NO_OVERLAY);
+        }
     }
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))
