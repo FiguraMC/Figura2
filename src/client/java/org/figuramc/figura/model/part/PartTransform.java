@@ -65,9 +65,9 @@ public class PartTransform extends MarkedObjectBase {
     public void mulScale(Vector3fc multiplier) { this.scale.mul(multiplier); markDirty(); }
     public void mulScale(float x, float y, float z) { this.scale.mul(x, y, z); markDirty(); }
 
-    public void setColor(Vector4f color) { this.color.set(color); markDirtyNoMatrix(); }
+    public void setColor(Vector4fc color) { this.color.set(color); markDirtyNoMatrix(); }
     public void setColor(float r, float g, float b, float a) { this.color.set(r, g, b, a); markDirtyNoMatrix(); }
-    public Vector4f getColor() { return this.color; }
+    public Vector4fc getColor() { return this.color; }
 
     public void setEulerRad(Vector3fc euler) { this.rotation.set(euler); this.rotQuatState = QUAT_NEEDS_UPDATE; this.quaternion.rotationZYX(euler.z(), euler.y(), euler.x()); markDirty(); }
     public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); this.rotQuatState = QUAT_NEEDS_UPDATE; markDirty(); }

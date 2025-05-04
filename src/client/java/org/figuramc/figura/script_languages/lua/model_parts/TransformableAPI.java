@@ -9,7 +9,9 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaSt
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
+import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
 import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.tableOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
@@ -32,7 +34,7 @@ public class TransformableAPI {
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:origin(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:origin(): expected 0, 1, or 3", s.allocationTracker);
             }
             return args.first();
         }));
@@ -48,7 +50,7 @@ public class TransformableAPI {
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:pos(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:pos(): expected 0, 1, or 3", s.allocationTracker);
             }
             return args.first();
         }));
@@ -64,7 +66,7 @@ public class TransformableAPI {
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:rot(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:rot(): expected 0, 1, or 3", s.allocationTracker);
             }
             return args.first();
         }));
@@ -80,7 +82,7 @@ public class TransformableAPI {
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:rad(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:rad(): expected 0, 1, or 3", s.allocationTracker);
             }
             return args.first();
         })); // Angles in radians
@@ -100,26 +102,26 @@ public class TransformableAPI {
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:scale(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:scale(): expected 0, 1, or 3", s.allocationTracker);
             }
             return args.first();
         }));
-        // color() accepts 0 args, 1 vector3 arg, or 3 numeric args.
+        // color() accepts 0 args, 1 vector4 arg, or 4 numeric args.
         metatable.rawset("color", LibFunction.createV((s, args) -> {
             Transformable part = args.first().checkUserdata(s, Transformable.class);
             switch (args.count()) {
-                case 1 -> { return Vector3API.wrap(part.getTransform().getColor().xyz(new Vector3d()), metatables); }
+                case 1 -> { return Vector4API.wrap(new Vector4d(part.getTransform().getColor()), metatables); }
                 case 2 -> {
-                    Vector3d vec = args.arg(2).checkUserdata(s, Vector3d.class);
-                    part.getTransform().setColor((float) vec.x, (float) vec.y, (float) vec.z, part.getTransform().getColor().w);
+                    Vector4d vec = args.arg(2).checkUserdata(s, Vector4d.class);
+                    part.getTransform().setColor((float) vec.x, (float) vec.y, (float) vec.z, (float) vec.w);
                 }
-                case 4 -> part.getTransform().setColor(
+                case 5 -> part.getTransform().setColor(
                         (float) args.arg(2).checkDouble(s),
                         (float) args.arg(3).checkDouble(s),
                         (float) args.arg(4).checkDouble(s),
-                        part.getTransform().getColor().w
+                        (float) args.arg(5).checkDouble(s)
                 );
-                default -> throw new LuaError("Invalid number of args to ModelPart:color(): expected 0, 1, or 3", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:color(): expected 0, 1, or 4", s.allocationTracker);
             }
             return args.first();
         }));
@@ -128,7 +130,7 @@ public class TransformableAPI {
             switch (args.count()) {
                 case 1 -> { return valueOf(part.getTransform().getVisible()); }
                 case 2 -> part.getTransform().setVisible(args.arg(2).checkBoolean(s));
-                default -> throw new LuaError("Invalid number of args to ModelPart:vis(): expected 0 or 1", s.allocationTracker);
+                default -> throw new LuaError("Invalid number of args to Transformable:vis(): expected 0 or 1", s.allocationTracker);
             }
             return args.first();
         }));

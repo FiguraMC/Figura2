@@ -219,7 +219,8 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
                 .translate(-o.x, -o.y, -o.z)
         ;
 
-        Matrix3f normalMat = transform.normal(new Matrix3f());
+        // Also scale normal matrix to compensate
+        Matrix3f normalMat = transform.normal(new Matrix3f()).scale(1.0f / 16);
 
         for (int i = 0; i < 6; i++) {
             @Nullable AvatarMaterials.CubeFace face = cubeData.faces()[i];
@@ -290,9 +291,10 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
                 .scale(1.0f / 16)
                 .translate(o.x, o.y, o.z)
                 .rotate(new Quaternionf().rotationXYZ(r.x * Mth.DEG_TO_RAD, r.y * Mth.DEG_TO_RAD, r.z * Mth.DEG_TO_RAD)) // Meshes use XYZ rotation order! This is different from other part types!
-//                .translate(-o.x, -o.y, -o.z) // Meshes use their origins as translations, unlike cubes which use them only as pivot points!
+                // .translate(-o.x, -o.y, -o.z) // Meshes use their origins as translations, unlike cubes which use them only as pivot points, which is why this is commented out!
         ;
-        Matrix3f normalMat = transform.normal(new Matrix3f());
+        // Also scale normal matrix to compensate
+        Matrix3f normalMat = transform.normal(new Matrix3f()).scale(1.0f / 16);
 
         // Create the faces...
         List<AvatarMaterials.VertexData> vertices = meshData.vertices();
@@ -303,7 +305,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             AvatarMaterials.VertexData v1 = vertices.get(face.x);
             AvatarMaterials.VertexData v2 = vertices.get(face.y);
             AvatarMaterials.VertexData v3 = vertices.get(face.z);
-            Vector3f normal = computeNormal(v1.pos(), v2.pos(), v3.pos());
+            Vector3f normal = computeNormal(v1.pos(), v2.pos(), v3.pos()).mul(1.0f / 16); // Scale the normal by 1/16 as well
             meshVert(arr, v1, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             meshVert(arr, v2, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             meshVert(arr, v3, normal, uvs.get(uv++), transform, normalMat, uvModifier);
@@ -355,19 +357,18 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             float skinningWeight0, float skinningWeight1, float skinningWeight2, float skinningWeight3,
             @Nullable Matrix4f transform, @Nullable Matrix3f normalMat, Vector4f uvModifier
     ) {
-        if (transform != null) {
-            Vector3f pos = new Vector3f(x, y, z).mulPosition(transform);
-            arr.add(pos.x); arr.add(pos.y); arr.add(pos.z);
-        } else {
-            arr.add(x); arr.add(y); arr.add(z);
-        }
-        if (normalMat != null) {
-            Vector3f norm = new Vector3f(nx, ny, nz).mul(normalMat);
-            arr.add(norm.x); arr.add(norm.y); arr.add(norm.z);
-        } else {
-            arr.add(nx); arr.add(ny); arr.add(nz);
-        }
+        // Pos
+        Vector3f pos = new Vector3f(x, y, z);
+        if (transform != null) pos.mulPosition(transform);
+        arr.add(pos.x); arr.add(pos.y); arr.add(pos.z);
+        // Normal
+        Vector3f norm = new Vector3f(nx, ny, nz);
+        if (normalMat != null) norm.mul(normalMat);
+        norm.normalize();
+        arr.add(norm.x); arr.add(norm.y); arr.add(norm.z);
+        // UV
         arr.add(u * uvModifier.z + uvModifier.x); arr.add(v * uvModifier.w + uvModifier.y);
+        // Mesh skinning
         arr.add(skinningOffset0); arr.add(skinningOffset1); arr.add(skinningOffset2); arr.add(skinningOffset3);
         arr.add(skinningWeight0); arr.add(skinningWeight1); arr.add(skinningWeight2); arr.add(skinningWeight3);
     }

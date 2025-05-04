@@ -142,6 +142,7 @@ public class ModelPartRenderMixin {
     @Unique private static final Quaternionf tempQuat = new Quaternionf();
 
     // Apply transforms to the pose stack, much the same way vanilla would.
+    // TODO: Accept arbitrary matrices in figuraTransform instead of just origin/rot/scale/pos
     @Unique private void applyTransforms(PoseStack poseStack) {
         // Detect if we need to invert X/Y pos/rot because of living-entity-ness:
         float inv = currentComponent.entityRenderer instanceof LivingEntityRenderer<?,?,?> ? -1f : 1f;
