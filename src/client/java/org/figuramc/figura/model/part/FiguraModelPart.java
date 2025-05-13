@@ -4,11 +4,12 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
-import org.figuramc.figura.script_hooks.ScriptCallback;
+import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.ListUtils;
@@ -37,7 +38,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
 
     // General info
     public final String name;
-    private final @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
+    private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
 
     // Structure / modifications
     public final PartTransform transform = new PartTransform(); // The transform of this model part
@@ -56,8 +57,21 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
 
+    // Construct a simple empty wrapper part around the given children
+    public FiguraModelPart(String name, @Nullable FiguraModelPart parent, List<FiguraModelPart> children) {
+        this.name = name;
+        this.parent = parent;
+        this.children = new ArrayList<>(children);
+        for (FiguraModelPart child : children) {
+            if (child.parent != null)
+                throw new IllegalStateException("When constructing a wrapper part, the childrens' parent must be null!");
+            child.parent = this;
+        }
+        this.vertices = new float[0];
+    }
+
     // Vanilla parameter is used for mimics
-    public FiguraModelPart(AvatarMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, List<AvatarTexture> textures, @Nullable VanillaRendering vanilla) {
+    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanilla) {
         // Copy basic values out of the materials
         name = materials.name();
         this.parent = parent;
@@ -66,6 +80,8 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             transform.setOrigin(materials.origin());
             transform.setEulerDeg(materials.rotation());
         }
+
+        // TODO: Add animators as modifiers, before the mimic modifier
 
         // Set up mimicry
         if (vanilla != null && materials.mimic() != null) {
@@ -88,7 +104,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         }
 
         // Get children
-        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, this, textures, vanilla));
+        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, this, moduleIndex, texturesComponent, vanilla));
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
@@ -96,7 +112,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         do {
             if (materials.textureIndex() != -1) {
                 // If tex index is not -1, then generate a render type from the texture:
-                AvatarTexture tex = textures.get(materials.textureIndex());
+                AvatarTexture tex = texturesComponent.getTexture(moduleIndex, materials.textureIndex());
                 renderType = new FiguraRenderType.Basic(tex.getLocation(), null);
                 // Also, set the UV modifier from the texture (for atlases)
                 uvModifier.set(tex.getUvValues());
@@ -114,8 +130,8 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
 
         // Get vertices
         FloatArrayList vertexData = new FloatArrayList();
-        for (AvatarMaterials.CubeData cubeData : materials.cubes()) addVertices(vertexData, cubeData, uvModifier);
-        for (AvatarMaterials.MeshData meshData : materials.meshes()) addVertices(vertexData, meshData, uvModifier);
+        for (ModuleMaterials.CubeData cubeData : materials.cubes()) addVertices(vertexData, cubeData, uvModifier);
+        for (ModuleMaterials.MeshData meshData : materials.meshes()) addVertices(vertexData, meshData, uvModifier);
         vertices = vertexData.toArray(new float[0]);
     }
 
@@ -205,7 +221,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
     }
 
 
-    private static void addVertices(FloatArrayList vertexData, AvatarMaterials.CubeData cubeData, Vector4f uvModifier) {
+    private static void addVertices(FloatArrayList vertexData, ModuleMaterials.CubeData cubeData, Vector4f uvModifier) {
         Vector3f f = cubeData.from().sub(cubeData.inflate(), new Vector3f());
         Vector3f t = cubeData.to().add(cubeData.inflate(), new Vector3f());
         Vector3f o = cubeData.origin();
@@ -223,7 +239,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         Matrix3f normalMat = transform.normal(new Matrix3f()).scale(1.0f / 16);
 
         for (int i = 0; i < 6; i++) {
-            @Nullable AvatarMaterials.CubeFace face = cubeData.faces()[i];
+            @Nullable ModuleMaterials.CubeFace face = cubeData.faces()[i];
             if (face == null) continue;
             float u1 = face.uv().x();
             float v1 = face.uv().y();
@@ -282,7 +298,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         }
     }
 
-    private static void addVertices(FloatArrayList arr, AvatarMaterials.MeshData meshData, Vector4f uvModifier) {
+    private static void addVertices(FloatArrayList arr, ModuleMaterials.MeshData meshData, Vector4f uvModifier) {
 
         // Scale down by 1/16 and rotate around its origin:
         Vector3f o = meshData.origin();
@@ -297,21 +313,21 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         Matrix3f normalMat = transform.normal(new Matrix3f()).scale(1.0f / 16);
 
         // Create the faces...
-        List<AvatarMaterials.VertexData> vertices = meshData.vertices();
+        List<ModuleMaterials.VertexData> vertices = meshData.vertices();
         List<Vector2f> uvs = meshData.uvs();
         int uv = 0;
         for (Vector4i face : meshData.indices()) {
             // Always do 3 vertices
-            AvatarMaterials.VertexData v1 = vertices.get(face.x);
-            AvatarMaterials.VertexData v2 = vertices.get(face.y);
-            AvatarMaterials.VertexData v3 = vertices.get(face.z);
+            ModuleMaterials.VertexData v1 = vertices.get(face.x);
+            ModuleMaterials.VertexData v2 = vertices.get(face.y);
+            ModuleMaterials.VertexData v3 = vertices.get(face.z);
             Vector3f normal = computeNormal(v1.pos(), v2.pos(), v3.pos()).mul(1.0f / 16); // Scale the normal by 1/16 as well
             meshVert(arr, v1, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             meshVert(arr, v2, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             meshVert(arr, v3, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             if (face.w != -1) {
                 // This is a quad, add the 4th vertex
-                AvatarMaterials.VertexData v4 = vertices.get(face.w);
+                ModuleMaterials.VertexData v4 = vertices.get(face.w);
                 meshVert(arr, v4, normal, uvs.get(uv++), transform, normalMat, uvModifier);
             } else {
                 // This is a triangle but minecraft likes quads, so emit the 3rd vertex again
@@ -324,7 +340,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         return v2.sub(v1, new Vector3f()).cross(v3.sub(v1, new Vector3f())).normalize();
     }
 
-    private static void meshVert(FloatArrayList arr, AvatarMaterials.VertexData vertexData, Vector3f normalVec, Vector2f uv, Matrix4f transform, Matrix3f normalMat, Vector4f uvModifier) {
+    private static void meshVert(FloatArrayList arr, ModuleMaterials.VertexData vertexData, Vector3f normalVec, Vector2f uv, Matrix4f transform, Matrix3f normalMat, Vector4f uvModifier) {
         Vector3f p = vertexData.pos();
         if (vertexData.skinningData() == null) {
             emitVert(arr,

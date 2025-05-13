@@ -1,13 +1,9 @@
 package org.figuramc.figura.avatars.components;
 
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.manage.AvatarManager;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Deletes the avatar when its entity is unloaded.

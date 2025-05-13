@@ -11,9 +11,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.EntityType;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.FiguraModClient;
+import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.avatars.AvatarTemplates;
-import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.data.NewAvatarImporter;
+import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.data.ModuleImporter;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
@@ -53,8 +54,9 @@ public class ClientLevelMixin {
 
             AvatarManager.ENTITY_AVATARS.load(ClientUtils.getLocalUUID(), CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
                 Path avatarPath = FiguraDir.AVATARS.get().resolve("test_avatar");
-                AvatarMaterials materials = NewAvatarImporter.importPath(avatarPath);
-                return AvatarTemplates.localPlayer(ClientUtils.getLocalUUID(), RenderUtils.getRenderer(Minecraft.getInstance().player), materials);
+                ModuleMaterials materials = ModuleImporter.importPath(avatarPath);
+                AvatarModules modules = new AvatarModules(materials);
+                return AvatarTemplates.localPlayer(ClientUtils.getLocalUUID(), RenderUtils.getRenderer(Minecraft.getInstance().player), modules);
             }, CompletionException::new), Runnable::run)); // TODO: Fix texture loading so this can work on an off-thread instead of render thread
 
             FiguraModClient.LOADED_TEST_AVATAR = true;

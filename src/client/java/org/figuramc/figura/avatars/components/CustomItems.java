@@ -5,16 +5,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.Renderable;
-import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * A component that handles rendering custom items instead of vanilla ones.
@@ -29,9 +28,9 @@ public class CustomItems implements AvatarComponent {
      */
     private final List<PartEntry> customItems;
 
-    public CustomItems(AvatarMaterials materials, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
+    public CustomItems(AvatarModules modules, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
         // Create the custom items
-        customItems = ListUtils.mapNonNull(materials.customItemRoots().entrySet(), entry -> {
+        customItems = modules.modules.stream().flatMap(mod -> mod.materials.customItemRoots().entrySet().stream().map(entry -> {
             // Convert the String pattern to a Matcher:
             String pattern = entry.getKey();
             if (pattern.isEmpty()) return null;
@@ -44,13 +43,12 @@ public class CustomItems implements AvatarComponent {
                 matcher = new Matcher.ExactMatcher(exactLocation);
             }
             // Convert the materials to a CustomItemModelPart
-            Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), texturesComponent.textures, vanillaRendering)) : null;
+            Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), mod.index, texturesComponent, vanillaRendering)) : null;
             // Convert the texture index to a RootModelPart
-            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(pattern, texturesComponent.textures.get(entry.getValue().textureIndex()))) : null;
+            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(pattern, texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()))) : null;
             // Return the entry
             return new PartEntry(matcher, mainPart, flatPart);
-        });
-        Collections.sort(customItems); // Sort them, ensuring more specific ones are checked first (Exact matchers)
+        })).filter(Objects::nonNull).sorted().toList();
     }
 
     public @Nullable Renderable<? extends FiguraModelPart> getModelPart(ItemStack stack, ItemDisplayContext context) {

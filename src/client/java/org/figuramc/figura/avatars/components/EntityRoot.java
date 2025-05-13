@@ -3,11 +3,15 @@ package org.figuramc.figura.avatars.components;
 import net.minecraft.client.renderer.MultiBufferSource;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.Renderable;
 import org.figuramc.figura.util.FiguraTransformStack;
+import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public class EntityRoot implements AvatarComponent {
 
@@ -17,14 +21,16 @@ public class EntityRoot implements AvatarComponent {
     private final Renderable<FiguraModelPart> root;
 
     // Vanilla rendering parameter if possible, this will allow mimics to work
-    public EntityRoot(AvatarMaterials materials, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
-        // Create the model part from materials
-        root = new Renderable<>(new FiguraModelPart(materials.entityRoot(), null, texturesComponent.textures, vanillaRendering));
-    }
-
-    // Ensure called after initialize()
-    public FiguraModelPart getModelPart() {
-        return root.part;
+    public EntityRoot(AvatarModules modules, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
+        // Wrap the entity roots of each module into a new wrapper part
+        List<FiguraModelPart> roots = ListUtils.mapNonNull(modules.modules, mod -> {
+            if (mod.materials.entityRoot() == null) return null;
+            FiguraModelPart part = new FiguraModelPart(mod.materials.entityRoot(), null, mod.index, texturesComponent, vanillaRendering);
+            // Also store the parts in the module objects to be later accessed
+            mod.entityRoot = part;
+            return part;
+        });
+        this.root = new Renderable<>(new FiguraModelPart("entity_root", null, roots));
     }
 
     // Render the entity root.

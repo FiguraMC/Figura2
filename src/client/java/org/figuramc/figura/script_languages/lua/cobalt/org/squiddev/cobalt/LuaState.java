@@ -350,6 +350,7 @@ public final class LuaState extends MarkedObjectBase {
 		counter.trace(threadMetatable, depth);
 
 		counter.trace(globals, depth);
+		counter.trace(registry, depth);
 		counter.trace(currentThread, depth);
 		counter.trace(mainThread, depth);
 		return OBJECT_SIZE;

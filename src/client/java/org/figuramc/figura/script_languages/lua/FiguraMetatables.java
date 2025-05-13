@@ -10,7 +10,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
 import org.figuramc.figura.script_languages.lua.model_parts.TransformableAPI;
-import org.figuramc.figura.script_languages.lua.model_parts.VanillaPartAPI;
+import org.figuramc.figura.script_languages.lua.vanilla.VanillaPartAPI;
 import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
@@ -21,6 +21,10 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 public class FiguraMetatables extends MarkedObjectBase {
 
     // Fields containing metatables, to access quickly java-side
+
+    // Avatar
+    public final LuaTable module;
+    public final LuaTable callback; // ScriptCallback
 
     // Math objects
     public final LuaTable vec2;
@@ -39,6 +43,10 @@ public class FiguraMetatables extends MarkedObjectBase {
 
 
     public FiguraMetatables(LuaState state, Scripts scriptsComponent) throws LuaError {
+        // Avatar
+        module = ModuleAPI.createMetatable(state, this);
+        callback = CallbackAPI.createMetatable(state, this);
+
         // Math objects
         vec2 = null; // TODO
         vec3 = null;
@@ -131,6 +139,8 @@ public class FiguraMetatables extends MarkedObjectBase {
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
         // Trace everything
+        counter.trace(module, depth);
+        counter.trace(callback, depth);
         counter.trace(vec2, depth);
         counter.trace(vec3, depth);
         counter.trace(vec4, depth);

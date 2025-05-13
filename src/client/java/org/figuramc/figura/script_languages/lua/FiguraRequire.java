@@ -20,21 +20,21 @@ public class FiguraRequire {
     // Helpful constants
     public static final LuaString REQUIRE_KEY = LuaString.valueOf(null, "figura_require");
     public static final LuaString LOADED_KEY = LuaString.valueOf(null, "figura_loaded");
-    public static final LuaString DOT_LUA = LuaString.valueOf(null, ".lua");
 
-    public static void createRequire(LuaState state, Map<String, byte[]> scripts) throws LuaError, AvatarLoadingException {
-
-        // Define require() using the passed scripts:
-        // Fill in the require table in the registry.
+    public static LuaValue createRequire(LuaState state, LuaTable _ENV, int index, Map<String, byte[]> scripts) throws LuaError, AvatarLoadingException {
+        // Define require() for this module using its scripts
         // Use a registry table for memory tracing
-        LuaTable functionStorage = state.registry().getSubTable(REQUIRE_KEY);
+        LuaTable functionStorage = new LuaTable(state.allocationTracker);
+        state.registry().getSubTable(REQUIRE_KEY).rawset(index + 1, functionStorage);
+        state.registry().getSubTable(LOADED_KEY).rawset(index + 1, new LuaTable(state.allocationTracker));
+
         for (var script : scripts.entrySet()) {
             String name = script.getKey();
             byte[] code = script.getValue();
             try {
                 // Compile to a closure, and put it in the require() table.
                 // Use @ because it's a file name.
-                LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, state.globals());
+                LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, _ENV);
                 functionStorage.rawset(name, closure);
             } catch (CompileException ex) {
                 throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, false, name, ex.getMessage());
@@ -42,16 +42,15 @@ public class FiguraRequire {
                 throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, true, name, ex.getMessage());
             }
         }
-        // Create require function
-        state.globals().rawset("require", LibFunction.createS((s, di, args) -> {
-            LuaString nonfinal_fileName = args.first().checkLuaString(s);
-            // Append with .lua if not already
-            if (!nonfinal_fileName.endsWith(".lua"))
-                nonfinal_fileName = LuaString.valueOfStrings(s.allocationTracker, new LuaValue[]{ nonfinal_fileName, DOT_LUA }, 0, 2, nonfinal_fileName.length() + 4);
-            final LuaString fileName = nonfinal_fileName; // Thank you java lambdas for requiring this!!!!! /s
+        // Create require function (only captured variable is a single int, so we don't need to worry about tracing this lambda)
+        return LibFunction.createS((s, di, args) -> {
+            // First arg is file name (without the .lua)
+            LuaString fileName = args.first().checkLuaString(s);
             // Fetch tables
-            LuaTable isLoaded = s.registry().getSubTable(LOADED_KEY); // String -> boolean. Nil = not loaded, false = currently being loaded (detect loops), true = fully loaded and done
-            LuaTable requireTable = s.registry().getSubTable(REQUIRE_KEY); // String -> value, either the function or the cached return value
+            // String -> boolean. Nil = not loaded, false = currently being loaded (detect loops), true = fully loaded and done
+            LuaTable isLoaded = s.registry().getSubTable(LOADED_KEY).rawget(index + 1).checkTable(s, "Bug with Figura Lua registry for require(); expected table but did not find");
+            // String -> value, either the function or the cached return value
+            LuaTable requireTable = s.registry().getSubTable(REQUIRE_KEY).rawget(index + 1).checkTable(s, "Bug with Figura Lua registry for require(); expected table but did not find");
             // If already loaded, return from cache
             LuaValue alreadyLoaded = isLoaded.rawget(fileName);
             if (alreadyLoaded == Constants.TRUE) return requireTable.rawget(fileName);
@@ -68,8 +67,7 @@ public class FiguraRequire {
             requireTable.rawset(fileName, result);
             // Return the result.
             return result;
-        }));
-
+        });
     }
 
 }

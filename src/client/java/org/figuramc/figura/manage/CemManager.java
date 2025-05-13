@@ -1,9 +1,10 @@
 package org.figuramc.figura.manage;
 
+import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.avatars.AvatarTemplates;
-import org.figuramc.figura.data.AvatarImportingException;
-import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.data.NewAvatarImporter;
+import org.figuramc.figura.data.ModuleImportingException;
+import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.data.ModuleImporter;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.RenderUtils;
@@ -27,7 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CemManager {
 
-    private static final ConcurrentHashMap<EntityType<?>, CompletableFuture<@Nullable AvatarMaterials>> IMPORTED_MATERIALS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<EntityType<?>, CompletableFuture<@Nullable ModuleMaterials>> IMPORTED_MATERIALS = new ConcurrentHashMap<>();
 
     public static void clear() {
         synchronized (IMPORTED_MATERIALS) {
@@ -45,25 +46,25 @@ public class CemManager {
         if (AvatarManager.ENTITY_AVATARS.isInProgress(uuid)) return;
         EntityType<?> type = entity.getType();
         // Fetch the materials, or begin a task for them
-        CompletableFuture<@Nullable AvatarMaterials> materials = IMPORTED_MATERIALS.computeIfAbsent(type,
+        CompletableFuture<@Nullable ModuleMaterials> materials = IMPORTED_MATERIALS.computeIfAbsent(type,
                 t -> CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
                     // Try to load for this type
                     ResourceLocation entityTypeLocation = BuiltInRegistries.ENTITY_TYPE.getKey(t);
                     String modId = entityTypeLocation.getNamespace();
                     String entityName = entityTypeLocation.getPath();
                     Path entityDir = FiguraDir.CEM.get().resolve(modId).resolve(entityName);
-                    return Files.exists(entityDir) ? NewAvatarImporter.importPath(entityDir) : null;
+                    return Files.exists(entityDir) ? ModuleImporter.importPath(entityDir) : null;
                 }, CompletionException::new)));
         // If the task isn't complete yet, just return out.
         if (!materials.isDone()) return;
         try {
             // Fetch the result. If this doesn't throw, then it completed without error.
-            @Nullable AvatarMaterials result = materials.getNow(null);
+            @Nullable ModuleMaterials result = materials.getNow(null);
             // If the result is null, this entity has no CEM, so just do nothing and return.
             if (result == null) return;
             // Otherwise, this entity has CEM, so launch a task to load it.
             AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(
-                    () -> AvatarTemplates.cemAvatar(uuid, RenderUtils.getRenderer(entity), result),
+                    () -> AvatarTemplates.cemAvatar(uuid, RenderUtils.getRenderer(entity), new AvatarModules(result)),
                     CompletionException::new
             ), Runnable::run)); // TODO: Fix texture loading so it can work in an off thread instead of render thread
         } catch (CompletionException ex) {
@@ -71,7 +72,7 @@ public class CemManager {
             // For now, always report CEM errors to chat.
             //noinspection SwitchStatementWithTooFewBranches
             switch (cause) {
-                case AvatarImportingException importingException -> ErrorReporting.avatarImporting(importingException);
+                case ModuleImportingException importingException -> ErrorReporting.avatarImporting(importingException);
                 default -> ErrorReporting.unexpectedError(cause);
             }
         } catch (Throwable unexpected) {

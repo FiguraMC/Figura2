@@ -556,6 +556,10 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 		throw ErrorFactory.argError(state, this, "function");
 	}
 
+	public LuaFunction checkFunction(LuaState state, String message) throws LuaError {
+		throw new LuaError(message, state.allocationTracker);
+	}
+
 	/**
 	 * Check that the value is numeric, and convert and cast value to int, or throw {@link LuaError} if not numeric
 	 * <p>
@@ -675,6 +679,10 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 */
 	public LuaTable checkTable(LuaState state) throws LuaError {
 		throw ErrorFactory.argError(state, this, "table");
+	}
+
+	public LuaTable checkTable(LuaState state, String message) throws LuaError {
+		throw new LuaError(message, state.allocationTracker);
 	}
 
 	/**

@@ -49,6 +49,11 @@ public abstract sealed class LuaFunction extends MarkedLuaValue permits LibFunct
 	}
 
 	@Override
+	public LuaFunction checkFunction(LuaState state, String message) {
+		return this;
+	}
+
+	@Override
 	public final LuaTable getMetatable(LuaState state) {
 		return state.functionMetatable;
 	}

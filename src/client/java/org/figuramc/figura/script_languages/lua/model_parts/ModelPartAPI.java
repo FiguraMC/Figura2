@@ -1,18 +1,18 @@
 package org.figuramc.figura.script_languages.lua.model_parts;
 
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import org.figuramc.figura.model.part.*;
+import org.figuramc.figura.model.part.CustomItemModelPart;
+import org.figuramc.figura.model.part.FiguraModelPart;
+import org.figuramc.figura.model.part.WorldRootedModelPart;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
-import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
-import org.joml.Vector3d;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NAME;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NIL;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
 
 public class ModelPartAPI {

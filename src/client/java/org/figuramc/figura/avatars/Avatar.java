@@ -2,9 +2,7 @@ package org.figuramc.figura.avatars;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.MultiBufferSource;
-import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
-import org.figuramc.figura.manage.AvatarSubManager;
 import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
@@ -19,7 +17,6 @@ import java.util.*;
 public class Avatar<K> {
 
     public final K user; // The key which accesses this Avatar in its corresponding AvatarSubManager<K>
-    public final AvatarMaterials.MetadataMaterials metadata;
     private final @Nullable AvatarComponent[] components; // Components, where ID -> component if present, null if not
     private final @NotNull AvatarComponent[] presentComponents; // Only the non-null components, used for iteration
 
@@ -29,10 +26,9 @@ public class Avatar<K> {
     // making it faster in cases where full permission is granted.
     private @Nullable AllocationTracker allocationTracker;
 
-    public Avatar(K user, AvatarMaterials materials, Collection<AvatarComponent> componentSet) throws AvatarLoadingException {
+    public Avatar(K user, AvatarModules modules, Collection<AvatarComponent> componentSet) throws AvatarLoadingException {
         // Init fields
         this.user = user;
-        this.metadata = materials.metadata();
         // Init components array using IDs system.
         // This ensures that dependencies end up in the array earlier than that which depends on them.
         int maxComponent = componentSet.stream().mapToInt(AvatarComponent::getId).max().orElse(-1);
@@ -43,7 +39,7 @@ public class Avatar<K> {
         this.presentComponents = Arrays.stream(this.components).filter(Objects::nonNull).toArray(AvatarComponent[]::new);
         // Initialize each component in order
         for (AvatarComponent component : presentComponents) {
-            component.initialize(materials, this);
+            component.initialize(modules, this);
         }
     }
 

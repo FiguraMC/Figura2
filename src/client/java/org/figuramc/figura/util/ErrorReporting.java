@@ -9,7 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatars.AvatarError;
-import org.figuramc.figura.data.AvatarImportingException;
+import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.exception.FiguraException;
 
@@ -48,7 +48,7 @@ public class ErrorReporting {
         FiguraMod.LOGGER.error(javaString, ex);
     }
 
-    public static void avatarImporting(AvatarImportingException ex) { helper(ex, "Error during avatar importing", "figura.error.importing"); }
+    public static void avatarImporting(ModuleImportingException ex) { helper(ex, "Error during avatar importing", "figura.error.importing"); }
     public static void avatarLoading(AvatarLoadingException ex) { helper(ex, "Error during avatar loading", "figura.error.loading"); }
     public static void avatarRuntimeError(AvatarError ex) { helper(ex, "Error in running avatar", ex.translationKey, ex.args); }
 

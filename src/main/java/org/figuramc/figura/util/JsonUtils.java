@@ -4,12 +4,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import org.figuramc.figura.util.exception.functional.ThrowingFunction;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector2fc;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+
+import java.util.List;
 
 public class JsonUtils {
 
@@ -41,6 +44,13 @@ public class JsonUtils {
         JsonPrimitive prim = elem.getAsJsonPrimitive();
         if (!prim.isBoolean()) return defaultVal;
         return prim.getAsBoolean();
+    }
+
+    public static <T, E extends Throwable> List<T> getListOrEmpty(JsonObject object, String key, ThrowingFunction<JsonElement, T, E> tFetcher) throws E {
+        JsonElement elem = object.get(key);
+        if (elem == null || !elem.isJsonArray()) return List.of();
+        JsonArray array = elem.getAsJsonArray();
+        return ListUtils.map(array, tFetcher);
     }
 
     public static Vector2f parseVec2f(JsonArray arr) {

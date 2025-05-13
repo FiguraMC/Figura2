@@ -1,18 +1,12 @@
 package org.figuramc.figura.avatars.components;
 
-import net.minecraft.client.renderer.entity.EntityRenderer;
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.data.AvatarMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.ClientUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
-import org.figuramc.figura.util.RenderUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Must be placed on an Avatar<UUID> used by an Entity.

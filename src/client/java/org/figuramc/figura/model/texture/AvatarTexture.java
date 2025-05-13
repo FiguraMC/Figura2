@@ -1,7 +1,7 @@
 package org.figuramc.figura.model.texture;
 
 import org.figuramc.figura.avatars.components.Textures;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector4f;
@@ -15,16 +15,16 @@ import java.util.concurrent.CompletableFuture;
 public abstract class AvatarTexture {
 
     // Create a texture and upload it.
-    public static AvatarTexture from(Textures textureComponent, AvatarMaterials.TextureMaterials materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
+    public static AvatarTexture from(Textures textureComponent, ModuleMaterials.TextureMaterials materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
         switch (materials) {
-            case AvatarMaterials.TextureMaterials.OwnedTexture owned -> {
+            case ModuleMaterials.TextureMaterials.OwnedTexture owned -> {
                 if (owned.noAtlas()) {
                     return StandaloneAvatarTexture.create(owned);
                 } else {
                     return new AtlasedAvatarTexture(textureComponent, owned, atlasBuilder);
                 }
             }
-            case AvatarMaterials.TextureMaterials.VanillaTexture vanilla -> {
+            case ModuleMaterials.TextureMaterials.VanillaTexture vanilla -> {
                 return new VanillaAvatarTexture(vanilla);
             }
         }

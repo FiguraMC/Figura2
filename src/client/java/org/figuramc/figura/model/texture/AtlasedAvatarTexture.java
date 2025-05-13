@@ -1,7 +1,7 @@
 package org.figuramc.figura.model.texture;
 
 import org.figuramc.figura.avatars.components.Textures;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector4f;
@@ -19,7 +19,7 @@ public class AtlasedAvatarTexture extends AvatarTexture {
     // Keep a reference to the atlas through the texture component
     private final Textures texturesComponent;
 
-    public AtlasedAvatarTexture(Textures texturesComponent, AvatarMaterials.TextureMaterials.OwnedTexture materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
+    public AtlasedAvatarTexture(Textures texturesComponent, ModuleMaterials.TextureMaterials.OwnedTexture materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
         this.texturesComponent = texturesComponent;
         this.locationInAtlas = atlasBuilder.insert(materials.name(), materials.data());
     }

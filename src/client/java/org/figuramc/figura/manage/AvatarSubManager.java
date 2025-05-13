@@ -1,7 +1,7 @@
 package org.figuramc.figura.manage;
 
 import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.data.AvatarImportingException;
+import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.util.ErrorReporting;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +33,7 @@ public class AvatarSubManager<K> {
                     // For now, we'll ALWAYS report to chat/console.
                     // Maybe later we'll disable this for multiplayer avatars (whenever we get to that lol)
                     switch (cause) {
-                        case AvatarImportingException importingException -> ErrorReporting.avatarImporting(importingException);
+                        case ModuleImportingException importingException -> ErrorReporting.avatarImporting(importingException);
                         case AvatarLoadingException loadingException -> ErrorReporting.avatarLoading(loadingException);
                         default -> ErrorReporting.unexpectedError(cause);
                     }

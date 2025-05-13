@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.FiguraMod;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.RenderUtils;
 import org.joml.Vector4f;
@@ -37,7 +37,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
     }
 
     // Create and upload the texture.
-    public static StandaloneAvatarTexture create(AvatarMaterials.TextureMaterials.OwnedTexture materials) throws AvatarLoadingException {
+    public static StandaloneAvatarTexture create(ModuleMaterials.TextureMaterials.OwnedTexture materials) throws AvatarLoadingException {
         int id = next_id.getAndIncrement();
         ResourceLocation location = FiguraMod.id("figura_textures/" + id);
         ByteBuffer buffer = BufferUtils.createByteBuffer(materials.data().length);

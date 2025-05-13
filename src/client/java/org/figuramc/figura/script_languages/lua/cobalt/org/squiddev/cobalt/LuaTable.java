@@ -123,6 +123,11 @@ public final class LuaTable extends MarkedLuaValue {
 		return this;
 	}
 
+	@Override
+	public LuaTable checkTable(LuaState state, String message) {
+		return this;
+	}
+
 	/**
 	 * Preallocate the array part of a table to be a certain size,
 	 * <p>
@@ -340,7 +345,7 @@ public final class LuaTable extends MarkedLuaValue {
 	}
 
 	// Call the BiConsumer on each (key, value) pair in the table
-	public void forEach(ThrowingBiConsumer<LuaValue, LuaValue, LuaError> consumer) throws LuaError {
+	public <E extends Throwable> void forEach(ThrowingBiConsumer<LuaValue, LuaValue, E> consumer) throws E, LuaError {
 		LuaValue k = Constants.NIL;
 		while (true) {
 			Varargs n = this.next(k);

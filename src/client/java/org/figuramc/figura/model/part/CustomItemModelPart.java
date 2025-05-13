@@ -1,7 +1,8 @@
 package org.figuramc.figura.model.part;
 
+import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
@@ -20,8 +21,8 @@ public class CustomItemModelPart extends FiguraModelPart {
 
     public final ItemTransforms itemTransforms;
 
-    public CustomItemModelPart(AvatarMaterials.ModelPartMaterials materials, Map<ItemDisplayContext, AvatarMaterials.ItemPartTransform> transforms, List<AvatarTexture> textures, @Nullable VanillaRendering vanilla) {
-        super(materials, null, textures, vanilla);
+    public CustomItemModelPart(ModuleMaterials.ModelPartMaterials materials, Map<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanilla) {
+        super(materials, null, moduleIndex, texturesComponent, vanilla);
         this.itemTransforms = new ItemTransforms(
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_LEFT_HAND, transforms, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND),
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, transforms),
@@ -34,17 +35,17 @@ public class CustomItemModelPart extends FiguraModelPart {
         );
     }
 
-    private static ItemTransform getTransformOrNone(ItemDisplayContext context, Map<ItemDisplayContext, AvatarMaterials.ItemPartTransform> transforms) {
+    private static ItemTransform getTransformOrNone(ItemDisplayContext context, Map<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms) {
         if (transforms.containsKey(context)) {
-            AvatarMaterials.ItemPartTransform transform = transforms.get(context);
+            ModuleMaterials.ItemPartTransform transform = transforms.get(context);
             return new ItemTransform(transform.rotation(), transform.translation().mul(1.0f / 16, new Vector3f()), transform.scale());
         }
         return ItemTransform.NO_TRANSFORM;
     }
 
-    private static ItemTransform getTransformOrNone(ItemDisplayContext context, Map<ItemDisplayContext, AvatarMaterials.ItemPartTransform> transforms, ItemDisplayContext fallback) {
+    private static ItemTransform getTransformOrNone(ItemDisplayContext context, Map<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms, ItemDisplayContext fallback) {
         if (transforms.containsKey(context)) {
-            AvatarMaterials.ItemPartTransform transform = transforms.get(context);
+            ModuleMaterials.ItemPartTransform transform = transforms.get(context);
             return new ItemTransform(transform.rotation(), transform.translation().mul(1.0f / 16, new Vector3f()), transform.scale());
         }
         return getTransformOrNone(fallback, transforms);

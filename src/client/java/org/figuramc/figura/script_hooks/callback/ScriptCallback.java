@@ -1,5 +1,6 @@
-package org.figuramc.figura.script_hooks;
+package org.figuramc.figura.script_hooks.callback;
 
+import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 
 /**
@@ -9,7 +10,13 @@ import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 public interface ScriptCallback extends MemoryCountable {
 
     /**
-     * Invoke the callback with the given args.
+     * Get the type of this callback
+     */
+    CallbackType.Func type();
+
+    /**
+     * Invoke the callback, applying translations, with the given args.
      */
     Object call(Object... args) throws ScriptError;
+
 }

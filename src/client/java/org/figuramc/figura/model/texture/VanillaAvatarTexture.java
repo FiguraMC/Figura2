@@ -1,6 +1,6 @@
 package org.figuramc.figura.model.texture;
 
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.data.ModuleMaterials;
 import net.minecraft.resources.ResourceLocation;
 import org.joml.Vector4f;
 
@@ -13,7 +13,7 @@ public class VanillaAvatarTexture extends AvatarTexture {
 
     private final ResourceLocation location;
 
-    public VanillaAvatarTexture(AvatarMaterials.TextureMaterials.VanillaTexture vanillaTexture) {
+    public VanillaAvatarTexture(ModuleMaterials.TextureMaterials.VanillaTexture vanillaTexture) {
         location = ResourceLocation.parse(vanillaTexture.resourceLocation());
     }
 

@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
-import org.figuramc.figura.script_hooks.ScriptCallback;
+import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;

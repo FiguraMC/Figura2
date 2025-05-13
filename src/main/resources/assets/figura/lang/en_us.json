@@ -19,8 +19,15 @@
   "figura.error.importing.unknown_item_display_context": "Custom item model \"%s\" uses an unrecognized display context: \"%s\". Recognized contexts are: %s",
   "figura.error.importing.unknown_texture_data_header": "Failed to read Blockbench texture \"%s\", because there was no base64 header. Likely a bug with Figura, or an incompatible Blockbench version.",
 
+  "figura.error.importing.scripts.no_language_set": "To use scripts, you must set the \"language\" field in avatar.json. For example, \"language\": \"lua\"",
+  "figura.error.importing.scripts.unexpected_extension": "Unexpected file extension for file \"%s\". Valid file extensions for language \"%s\": [%s]",
+  "figura.error.importing.scripts.lua.no_main": "For a module with language = \"lua\", you must have a file \"scripts/main.lua\".",
+
+  "figura.error.importing.metadata.dependency_format": "The \"dependencies\" field in metadata json must be an object mapping strings to strings.",
+
   "figura.error.loading": "Error while loading avatar.",
   "figura.error.loading.invalid_png": "Failed to process texture \"%s\". Are you sure this is a valid PNG file?",
+  "figura.error.loading.script.unknown_language": "Unknown language \"%s\". Currently the only supported language is \"lua\".",
   "figura.error.loading.script.no_extension": "Script \"%s\" has no file extension.",
   "figura.error.loading.script.unknown_extension": "Script \"%s\" has an unknown file extension. Recognized extensions are: %s",
   "figura.error.loading.script.lua.compile_error": "Script \"%s\" failed to compile: \n%s",

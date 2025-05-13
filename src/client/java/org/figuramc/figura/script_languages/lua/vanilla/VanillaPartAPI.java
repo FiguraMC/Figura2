@@ -1,4 +1,4 @@
-package org.figuramc.figura.script_languages.lua.model_parts;
+package org.figuramc.figura.script_languages.lua.vanilla;
 
 import net.minecraft.client.model.geom.ModelPart;
 import org.figuramc.figura.avatars.components.VanillaRendering;

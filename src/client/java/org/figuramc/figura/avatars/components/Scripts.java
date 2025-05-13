@@ -5,22 +5,16 @@ import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.avatars.AvatarError;
-import org.figuramc.figura.data.AvatarMaterials;
+import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
-import org.figuramc.figura.script_hooks.ScriptRuntimeType;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.util.IOUtils;
+import org.figuramc.figura.script_languages.lua.LuaRuntime;
 import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+import java.util.*;
 
 // The Scripts component should generally be at or near the END of the list of components.
 // Other components probably should not rely on Scripts, and instead Scripts should rely on them.
@@ -32,6 +26,7 @@ public class Scripts implements AvatarComponent {
 
     // The Script Runtimes which are in use by this avatar.
     private List<ScriptRuntime> scriptRuntimes;
+
     // The avatar, set during initialize()
     private Avatar<?> self;
 
@@ -47,9 +42,9 @@ public class Scripts implements AvatarComponent {
     }
 
     @Override
-    public void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {
+    public void initialize(AvatarModules modules, Avatar<?> self) throws AvatarLoadingException {
         this.self = self;
-        this.scriptRuntimes = sortScripts(materials);
+        this.scriptRuntimes = setupRuntimes(modules);
     }
 
     public @Nullable AllocationTracker getAllocationTracker() { return self.getAllocationTracker(); }
@@ -96,29 +91,28 @@ public class Scripts implements AvatarComponent {
         for (var runtime : scriptRuntimes) runtime.destroy();
     }
 
-    /**
-     * Helper method that will sort scripts by extension into the proper runtime type and create the runtimes.
-     */
-    private List<ScriptRuntime> sortScripts(AvatarMaterials materials) throws AvatarLoadingException {
-        Map<ScriptRuntimeType, Map<String, byte[]>> scriptsByType = new HashMap<>();
-        for (var script : materials.scripts()) {
-            String ext = IOUtils.getExtension(script.name());
-            if (ext == null) throw new AvatarLoadingException("figura.error.loading.script.no_extension", script.name());
-            ScriptRuntimeType runtime = ScriptRuntimeType.TYPE_BY_EXTENSION.get(ext);
-            if (runtime == null) throw new AvatarLoadingException(
-                    "figura.error.loading.script.unknown_extension",
-                    script.name(),
-                    ScriptRuntimeType.ALL_RUNTIME_TYPES.stream().flatMap(rt -> rt.validFileExtensions().stream()).map(s -> "." + s).collect(Collectors.joining(", "))
-            );
-            // Otherwise, insert it to the result map.
-            scriptsByType
-                    .computeIfAbsent(runtime, t -> new HashMap<>())
-                    .put(script.name(), script.data());
-        }
-        // Create the list:
+    // TODO expose this as an API to mods/addons in an official way, so they can add languages
+    @FunctionalInterface
+    public interface RuntimeCreator {
+        ScriptRuntime createRuntime(Scripts scriptsComponent, AvatarModules allModules) throws AvatarLoadingException;
+    }
+    public static final Map<String, RuntimeCreator> RUNTIME_CREATORS = new HashMap<>();
+    static {
+        RUNTIME_CREATORS.put("lua", LuaRuntime::new);
+    }
+
+    // Determine which runtimes these modules use, and create them accordingly
+    private List<ScriptRuntime> setupRuntimes(AvatarModules modules) throws AvatarLoadingException {
         List<ScriptRuntime> runtimes = new ArrayList<>();
-        for (var entry : scriptsByType.entrySet())
-            runtimes.add(entry.getKey().newRuntime(this, entry.getValue()));
+        Set<String> done = new HashSet<>();
+        for (AvatarModules.Module module : modules.modules) {
+            String lang = module.materials.metadata().language();
+            if (lang == null) continue;
+            if (!done.add(lang)) continue;
+            RuntimeCreator creator = RUNTIME_CREATORS.get(lang);
+            if (creator == null) throw new AvatarLoadingException("figura.error.loading.script.unknown_language", lang);
+            runtimes.add(creator.createRuntime(this, modules));
+        }
         return runtimes;
     }
 

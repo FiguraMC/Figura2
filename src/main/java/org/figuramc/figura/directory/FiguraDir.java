@@ -23,7 +23,7 @@ public class FiguraDir {
     public static final SubModDirectory AVATARS = new SubModDirectory("avatars");
     public static final SubModDirectory CEM = new SubModDirectory("cem");
     public static final SubModDirectory EXPORTS = new SubModDirectory("exports");
-    public static final SubModDirectory SHARED_SCRIPTS = new SubModDirectory("shared_scripts");
+    public static final SubModDirectory COMMON_MODULES = new SubModDirectory("common_modules");
 
     // Fetch the main mod directory. If there isn't one, ask the player for it.
     // Note: As long as this is running on a separate thread, it won't block the entire client when asking for the directory, I think

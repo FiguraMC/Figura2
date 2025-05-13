@@ -1,7 +1,6 @@
 package org.figuramc.figura.avatars;
 
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.avatars.components.*;
 import org.figuramc.figura.manage.AvatarLoadingException;
 
@@ -13,25 +12,25 @@ import java.util.UUID;
  */
 public class AvatarTemplates {
 
-    public static Avatar<UUID> localPlayer(UUID key, EntityRenderer<?, ?> entityRenderer, AvatarMaterials materials) throws AvatarLoadingException {
-        Textures textures = new Textures(materials);
+    public static Avatar<UUID> localPlayer(UUID key, EntityRenderer<?, ?> entityRenderer, AvatarModules modules) throws AvatarLoadingException {
+        Textures textures = new Textures(modules);
         VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer);
-        EntityRoot entityRoot = new EntityRoot(materials, textures, vanillaRendering);
+        EntityRoot entityRoot = new EntityRoot(modules, textures, vanillaRendering);
         EntityUser entityUser = new EntityUser(key);
-        CustomItems customItems = new CustomItems(materials, textures, vanillaRendering);
+        CustomItems customItems = new CustomItems(modules, textures, vanillaRendering);
         Scripts scripts = new Scripts(entityRoot, entityUser, vanillaRendering);
-        return new Avatar<>(key, materials, List.of(textures, entityRoot, entityUser, vanillaRendering, customItems, scripts));
+        return new Avatar<>(key, modules, List.of(textures, entityRoot, entityUser, vanillaRendering, customItems, scripts));
     }
 
-    public static Avatar<UUID> cemAvatar(UUID key, EntityRenderer<?, ?> entityRenderer, AvatarMaterials materials) throws AvatarLoadingException {
-        Textures textures = new Textures(materials);
+    public static Avatar<UUID> cemAvatar(UUID key, EntityRenderer<?, ?> entityRenderer, AvatarModules modules) throws AvatarLoadingException {
+        Textures textures = new Textures(modules);
         VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer);
-        EntityRoot entityRoot = new EntityRoot(materials, textures, vanillaRendering);
+        EntityRoot entityRoot = new EntityRoot(modules, textures, vanillaRendering);
         EntityUser entityUser = new EntityUser(key);
         CemSelfDeleter cemSelfDeleter = new CemSelfDeleter(key, entityUser);
-        CustomItems customItems = new CustomItems(materials, textures, vanillaRendering);
+        CustomItems customItems = new CustomItems(modules, textures, vanillaRendering);
         Scripts scripts = new Scripts(entityRoot, entityUser, vanillaRendering);
-        return new Avatar<>(key, materials, List.of(textures, entityRoot, entityUser, cemSelfDeleter, vanillaRendering, customItems, scripts));
+        return new Avatar<>(key, modules, List.of(textures, entityRoot, entityUser, cemSelfDeleter, vanillaRendering, customItems, scripts));
     }
 
 }

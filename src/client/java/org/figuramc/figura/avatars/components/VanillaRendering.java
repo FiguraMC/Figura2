@@ -1,12 +1,11 @@
 package org.figuramc.figura.avatars.components;
 
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.model.part.PartTransform;
 import org.figuramc.figura.model.part.Transformable;
-import org.figuramc.figura.script_hooks.ScriptCallback;
+import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.vanillamodel.ModelNames;

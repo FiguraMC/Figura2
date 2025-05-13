@@ -1,6 +1,7 @@
 package org.figuramc.figura.data;
 
 import net.minecraft.world.item.ItemDisplayContext;
+import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -10,23 +11,20 @@ import org.joml.Vector4i;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Contains various types which are used for constructing Avatar instances, but can also be serialized.
- * AvatarMaterials acts as a central point for conversions and loading.
+ * Contains various types which are used for constructing modules, but can also be serialized.
+ * ModuleMaterials acts as a central point for conversions and loading.
  *   --------------------------
- *   |     Avatar folders     |
+ *   |     Module folders     |
  *   --------------------------
  *                |
  *                |
  *                v
- *   --------------------------          ------------------------
- *   |    Avatar Materials    |  ----->  |   Avatar Instances   |
- *   --------------------------          ------------------------
+ *   --------------------------          -----------------------             -----------------------
+ *   |    Module Materials    |  ----->  |   Module Instance   | ---Many---> |   Avatar Instance   |
+ *   --------------------------          -----------------------             -----------------------
  *           |         ^
  *           |         |
  *           v         |
@@ -34,18 +32,28 @@ import java.util.Map;
  *   |        Raw Bytes       |
  *   --------------------------
  */
-public record AvatarMaterials(
+public record ModuleMaterials(
         MetadataMaterials metadata,
         List<ScriptMaterials> scripts,
         List<TextureMaterials> textures,
         List<ModelPartMaterials> worldRoots,
-        ModelPartMaterials entityRoot,
-        ModelPartMaterials hudRoot,
-        Map<String, CustomItem> customItemRoots
+        @Nullable ModelPartMaterials entityRoot,
+        @Nullable ModelPartMaterials hudRoot,
+        TreeMap<String, CustomItem> customItemRoots // Tree map for sorted order
 ) {
 
     // METADATA
-    public record MetadataMaterials() {}
+    public record MetadataMaterials(
+            // When using scripts, this must be specified.
+            // If there are no scripts at all, this will be null.
+            @Nullable String language, // "lua" is currently the only valid option
+            // For now, dependencies are just strings. TODO improve/make more unique for backend package manager stuff
+            // We must maintain the ordering given in the json.
+            LinkedHashMap<String, String> dependencies,
+            // Exposed API elements:
+            // We simply maintain the ordering given in the json.
+            LinkedHashMap<String, CallbackType.Func> api
+    ) {}
 
     // SCRIPTS
     public record ScriptMaterials(String name, byte[] data) {}

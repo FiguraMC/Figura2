@@ -1,9 +1,7 @@
 package org.figuramc.figura.avatars;
 
-import org.figuramc.figura.data.AvatarMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public interface AvatarComponent {
@@ -24,7 +22,7 @@ public interface AvatarComponent {
 
     // This is called upon creation of an Avatar.
     // This method runs on an off-thread, so do not use anything requiring the main threads without appropriate wrapping.
-    default void initialize(AvatarMaterials materials, Avatar<?> self) throws AvatarLoadingException {}
+    default void initialize(AvatarModules modules, Avatar<?> self) throws AvatarLoadingException {}
 
     // Once loading is complete, this is run on the main/render thread, to instantiate the avatar.
     // Return true if there was an error and we should cancel further operations.
@@ -36,7 +34,8 @@ public interface AvatarComponent {
     // Run when there's an error
     default void onError(Throwable reason) {}
 
-    // Runs when the Avatar is ticked. Dependencies will always run before this, as declared in createId().
+    // Runs when the Avatar is ticked.
+    // Dependencies will always run before this, as declared in createId().
     // Return true if there was an error and we should cancel further operations.
     default boolean tick() { return false; }
 
