@@ -41,7 +41,7 @@ public class VanillaRendering implements AvatarComponent {
     }
 
     // Object accessible by scripts, interface to model part reading/writing.
-    public static class VanillaPart extends MarkedObjectBase implements Transformable, PartTransform.Modifier {
+    public static class VanillaPart extends MarkedObjectBase implements Transformable {
 
         // ModelPart to which this is linked
         public final ModelPart part;
@@ -57,7 +57,8 @@ public class VanillaRendering implements AvatarComponent {
         public final Vector3f
                 storedVanillaOrigin = new Vector3f(),
                 storedVanillaRotation = new Vector3f(), // Radians
-                storedVanillaScale = new Vector3f(1f);
+                storedVanillaScale = new Vector3f(1f),
+                storedVanillaPosition = new Vector3f();
 
         // Callbacks which run when the minecraft part is rendered
         public final ArrayList<ScriptCallback> vanillaRenderCallbacks = new ArrayList<>(0);
@@ -66,14 +67,6 @@ public class VanillaRendering implements AvatarComponent {
         @Override
         public PartTransform getTransform() {
             return figuraTransform;
-        }
-
-        // It can also be used as a modifier for mimic parts
-        @Override
-        public void modify(PartTransform transform) {
-            transform.addOrigin(storedVanillaOrigin);
-            transform.addEulerRad(storedVanillaRotation);
-            transform.mulScale(storedVanillaScale);
         }
 
         // Since ScriptVanillaPart objects just point to Minecraft's ModelPart,

@@ -1,5 +1,7 @@
 package org.figuramc.figura.mixin.client.vanilla_parts.render;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.geom.ModelPart;
@@ -14,16 +16,17 @@ import org.figuramc.figura.ducks.client.ModelPartTrackingAccess;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.joml.Quaternionf;
-import org.joml.Vector3fc;
+import org.joml.Vector3f;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * When the model part is rendered, find the current avatar and current part data.
@@ -31,100 +34,89 @@ import java.util.List;
  */
 @SuppressWarnings({"UnreachableCode", "DataFlowIssue"}) // IntelliJ doesn't like our accessor casts
 @Mixin(ModelPart.class)
-public class ModelPartRenderMixin {
+public abstract class ModelPartRenderMixin {
 
     @Shadow public float x, y, z, xRot, yRot, zRot, xScale, yScale, zScale;
     @Shadow public boolean visible = true;
 
     @Shadow private PartPose initialPose;
-    @Unique private boolean vanillaVisible;
+    @Shadow public boolean skipDraw;
+
+    @Shadow protected abstract void compile(PoseStack.Pose pose, VertexConsumer vertexConsumer, int i, int j, int k);
+
+    @Shadow @Final public Map<String, ModelPart> children;
     @Unique private static Avatar<?> currentAvatar = null;
     @Unique private static VanillaRendering currentComponent = null;
     @Unique private static VanillaRendering.VanillaPart currentPart = null;
 
-    @Inject(
-            method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V",
-            at = @At("HEAD")
-    )
-    public void preRender(PoseStack poseStack, VertexConsumer vertexConsumer, int light, int overlay, int color, CallbackInfo ci) {
-        // At the start of the render, find out information about the current part.
-        // If there is none, cancel out.
+    @WrapMethod(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V")
+    public void wrapRender(PoseStack poseStack, VertexConsumer vertexConsumer, int i, int j, int k, Operation<Void> original) {
+        // We make a custom render impl if Figura is involved with the part...
+        // this could maybe cause compat issues, TODO look into any such problems
+        if (checkFiguraInvolvement()) {
+            figuraCustomRender(poseStack, vertexConsumer, i, j, k);
+            resetFiguraInvolvement();
+        } else {
+            original.call(poseStack, vertexConsumer, i, j, k);
+        }
+    }
+
+    // Custom re-implementation of render() method which respects Figura
+    @Unique private void figuraCustomRender(PoseStack poseStack, VertexConsumer vertexConsumer, int i, int j, int k) {
+        if (this.visible) {
+            poseStack.pushPose();
+            runCallbacks(currentPart.vanillaRenderCallbacks);
+            applyTransforms(poseStack);
+            if (currentPart.figuraTransform.getVisible() && !currentComponent.hideAllModelParts && !this.skipDraw) {
+                this.compile(poseStack.last(), vertexConsumer, i, j, k);
+            }
+            for (ModelPart part : this.children.values()) {
+                currentPart = currentComponent.partMap.get(part); // Update currentPart
+                if (currentPart != null)
+                    ((ModelPartRenderMixin) (Object) part).figuraCustomRender(poseStack, vertexConsumer, i, j, k);
+                else
+                    part.render(poseStack, vertexConsumer, i, j, k);
+            }
+            poseStack.popPose();
+        }
+    }
+
+    // Cause translateAndRotate() to respect Figura's customizations
+    @WrapMethod(method = "translateAndRotate")
+    public void wrapTranslateAndRotate(PoseStack poseStack, Operation<Void> original) {
+        if (checkFiguraInvolvement()) {
+            applyTransforms(poseStack);
+            resetFiguraInvolvement();
+        } else {
+            original.call(poseStack);
+        }
+    }
+
+    // Return true if Figura is involved in the current part;
+    // If this returns true, then the "current" static fields will be set.
+    @Unique private boolean checkFiguraInvolvement() {
+        if (currentPart != null) return true;
         Avatar<?> peeked = FiguraModClient.AVATAR_RENDERING_STACK.peek();
-        if (peeked == null) { return; }
+        if (peeked == null) return false;
         VanillaRendering vanillaRendering = peeked.getComponent(VanillaRendering.ID);
-        if (vanillaRendering == null) { return; }
+        if (vanillaRendering == null) return false;
         VanillaRendering.VanillaPart scriptPart = vanillaRendering.partMap.get((ModelPart) (Object) this);
-        if (scriptPart == null) { return; }
-        // All checks are passed, let's go
+        if (scriptPart == null) return false;
         currentAvatar = peeked;
         currentComponent = vanillaRendering;
         currentPart = scriptPart;
-        // If this is false, Minecraft will skip all parts of rendering. However, Figura may want to run things anyway,
-        // so we force it to true. We also store what the value was previously, so we can restore it at the end of the mixin.
-        vanillaVisible = visible;
-        visible = true;
+        return true;
     }
 
-    @Inject(
-            method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V",
-            at = @At("RETURN")
-    )
-    public void postRender(PoseStack poseStack, VertexConsumer vertexConsumer, int light, int overlay, int color, CallbackInfo ci) {
-        // Reset variables after rendering
-        if (currentAvatar != null) {
-            currentAvatar = null;
-            currentComponent = null;
-            currentPart = null;
-            visible = vanillaVisible; // Restore the visible variable
-        }
+    @Unique private static void resetFiguraInvolvement() {
+        currentAvatar = null;
+        currentComponent = null;
+        currentPart = null;
     }
 
-    // Rendering is skipped if there are no cubes and no children, but Figura may wish to run things anyway.
-    // Therefore, we force the render method to continue.
-    @Redirect(
-            method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V",
-            at = @At(value = "INVOKE", target = "Ljava/util/List;isEmpty()Z")
-    )
-    public boolean maybePretendCubesNotEmpty(List instance) {
-        if (currentPart != null) { return false; }
-        return instance.isEmpty();
-    }
-
-    @Inject(method = "translateAndRotate", at = @At("HEAD"), cancellable = true)
-    public void maybeOverrideTransforms(PoseStack poseStack, CallbackInfo ci) {
-        // If we're not doing anything Figura-related, return immediately.
-        if (currentPart == null) return;
-        // Otherwise, perform Figura tasks, then cancel.
-        copyOutValues();
-        if (runCallbacks()) return;
-        applyTransforms(poseStack);
-        ci.cancel();
-    }
-
-    // Copy values out of the part and store them in the current part.
-    // Cancel out the initial pose's origin and rotation as well
-    @Unique private void copyOutValues() {
-        // Certain values need to be negated if we're dealing with a living entity
-        if (currentComponent.entityRenderer instanceof LivingEntityRenderer<?,?,?>) {
-            currentPart.storedVanillaOrigin.x = -(this.x - initialPose.x());
-            currentPart.storedVanillaOrigin.y = -(this.y - initialPose.y());
-            currentPart.storedVanillaRotation.x = -(this.xRot - initialPose.xRot());
-            currentPart.storedVanillaRotation.y = -(this.yRot - initialPose.yRot());
-        } else {
-            currentPart.storedVanillaOrigin.x = this.x - initialPose.x();
-            currentPart.storedVanillaOrigin.y = this.y - initialPose.y();
-            currentPart.storedVanillaRotation.x = this.xRot - initialPose.xRot();
-            currentPart.storedVanillaRotation.y = this.yRot - initialPose.yRot();
-        }
-        currentPart.storedVanillaOrigin.z = this.z - initialPose.z();
-        currentPart.storedVanillaRotation.z = this.zRot - initialPose.zRot();
-        currentPart.storedVanillaScale.set(this.xScale, this.yScale, this.zScale);
-    }
-
-    // Return true if error occurred
-    @Unique private boolean runCallbacks() {
+    @Unique private void runCallbacks(List<ScriptCallback> callbacks) {
         try {
-            for (ScriptCallback callback : currentPart.vanillaRenderCallbacks)
+            for (ScriptCallback callback : callbacks)
                 callback.call();
         } catch (ScriptError ex) {
             Component partName;
@@ -132,16 +124,14 @@ public class ModelPartRenderMixin {
             if (str == null) partName = Component.translatable("figura.error.runtime.unnamed_vanilla_part");
             else partName = Component.literal(str);
             currentAvatar.error(new AvatarError("figura.error.runtime.vanilla_part_callback", ex, true, partName));
-            return true;
         }
-        return false;
     }
 
-    // Scratch quaternion
-    @Unique private static final Quaternionf tempQuat = new Quaternionf();
+    // Scratch math objects
+    @Unique private static final Quaternionf TEMPQUAT = new Quaternionf();
+    @Unique private static final Vector3f TEMPVEC = new Vector3f();
 
     // Apply transforms to the pose stack, much the same way vanilla would.
-    // TODO: Accept arbitrary matrices in figuraTransform instead of just origin/rot/scale/pos
     @Unique private void applyTransforms(PoseStack poseStack) {
         // Detect if we need to invert X/Y pos/rot because of living-entity-ness:
         float inv = currentComponent.entityRenderer instanceof LivingEntityRenderer<?,?,?> ? -1f : 1f;
@@ -152,32 +142,47 @@ public class ModelPartRenderMixin {
         // Depending on whether the entity is cancelling the vanilla transform.
 
         // Origin:
-        Vector3fc origin = currentPart.figuraTransform.getOrigin();
-        if (currentPart.cancelVanillaOrigin) poseStack.translate(origin.x() * inv / 16, origin.y() * inv / 16, origin.z() / 16);
-        else poseStack.translate((this.x + origin.x() * inv) / 16, (this.y + origin.y() * inv) / 16, (this.z + origin.z()) / 16);
+        TEMPVEC.set(currentPart.figuraTransform.getOrigin()); // Figura-applied amount
+        currentPart.storedVanillaOrigin.set(TEMPVEC);
+        TEMPVEC.mul(inv, inv, 1); // Apply inversions
+        if (currentPart.cancelVanillaOrigin) {
+            TEMPVEC.add(initialPose.x(), initialPose.y(), initialPose.z());
+        } else {
+            TEMPVEC.add(x, y, z);
+            currentPart.storedVanillaOrigin.add(inv * (x - initialPose.x()), inv * (y - initialPose.y()), z - initialPose.z());
+        }
+        TEMPVEC.mul(1.0f / 16);
+        poseStack.translate(TEMPVEC.x, TEMPVEC.y, TEMPVEC.z);
 
         // Rotation:
-        Vector3fc rotation = currentPart.figuraTransform.getEulerRad();
-        if (currentPart.cancelVanillaRotation) poseStack.mulPose(tempQuat.rotationZYX(rotation.z(), rotation.y() * inv, rotation.x() * inv));
-        else poseStack.mulPose(tempQuat.rotationZYX(this.zRot + rotation.z(), this.yRot + rotation.y() * inv, this.xRot + rotation.x() * inv));
+        TEMPVEC.set(currentPart.figuraTransform.getEulerRad()); // Figura-applied amount
+        currentPart.storedVanillaRotation.set(TEMPVEC);
+        TEMPVEC.mul(inv, inv, 1); // Apply inversions
+        if (currentPart.cancelVanillaRotation) {
+            TEMPVEC.add(initialPose.xRot(), initialPose.yRot(), initialPose.zRot());
+        } else {
+            TEMPVEC.add(xRot, yRot, zRot);
+            currentPart.storedVanillaRotation.add(inv * (xRot - initialPose.xRot()), inv * (yRot - initialPose.yRot()), zRot - initialPose.zRot());
+        }
+        TEMPQUAT.rotationZYX(TEMPVEC.z, TEMPVEC.y, TEMPVEC.x);
+        poseStack.mulPose(TEMPQUAT);
 
         // Scale:
-        Vector3fc scale = currentPart.figuraTransform.getScale();
-        if (currentPart.cancelVanillaScale) poseStack.scale(scale.x(), scale.y(), scale.z());
-        else poseStack.scale(this.xScale * scale.x(), this.yScale * scale.y(), this.zScale * scale.z());
+        TEMPVEC.set(currentPart.figuraTransform.getScale()); // Figura-applied amount
+        currentPart.storedVanillaScale.set(TEMPVEC);
+        if (currentPart.cancelVanillaScale) {
+            TEMPVEC.mul(initialPose.xScale(), initialPose.yScale(), initialPose.zScale());
+        } else {
+            TEMPVEC.mul(xScale, yScale, zScale);
+            currentPart.storedVanillaScale.mul(xScale, yScale, zScale);
+        }
+        poseStack.scale(TEMPVEC.x, TEMPVEC.y, TEMPVEC.z);
 
-        // Position has no vanilla analogue to cancel, so only apply Figura version:
-        Vector3fc position = currentPart.figuraTransform.getPosition();
-        poseStack.translate(position.x() * inv, position.y() * inv, position.z());
-    }
-
-    // If the avatar says so, don't draw the vanilla part.
-    @Inject(method = "compile", at = @At("HEAD"), cancellable = true)
-    private void maybeCancelVanillaRendering(PoseStack.Pose pose, VertexConsumer vertexConsumer, int i, int j, int k, CallbackInfo ci) {
-        if (currentPart == null) return; // If Figura is not involved here, let the normal method do its thing.
-        if (!vanillaVisible) return; // If vanilla is hiding this model part, cancel.
-        if (currentComponent.hideAllModelParts) { ci.cancel(); return; } // If we're hiding all model parts, cancel.
-        if (!currentPart.figuraTransform.getVisible()) { ci.cancel(); return; } // If we're hiding this specific model part, cancel.
+        // Position (only comes from Figura):
+        TEMPVEC.set(currentPart.figuraTransform.getPosition());
+        currentPart.storedVanillaPosition.set(TEMPVEC);
+        TEMPVEC.mul(inv, inv, 1);
+        poseStack.translate(TEMPVEC.x / 16f, TEMPVEC.y / 16f, TEMPVEC.z / 16f);
     }
 
 }

@@ -7,7 +7,6 @@ import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
@@ -24,9 +23,9 @@ public class LuaCallback extends MarkedObjectBase implements ScriptCallback {
     private final CallbackType.Func type;
     public final LuaState state;
     private final FiguraMetatables metatables;
-    private final LuaFunction wrapped;
+    private final LuaValue wrapped;
 
-    public LuaCallback(CallbackType.Func type, LuaState state, FiguraMetatables metatables, LuaFunction wrapped) {
+    public LuaCallback(CallbackType.Func type, LuaState state, FiguraMetatables metatables, LuaValue wrapped) {
         this.type = type;
         this.state = state;
         this.metatables = metatables;
@@ -176,12 +175,12 @@ public class LuaCallback extends MarkedObjectBase implements ScriptCallback {
                 throw new ScriptError(Component.literal("Expected tuple table"));
             }
             case CallbackType.Func funcType -> {
-                if (value instanceof LuaFunction func) {
-                    yield new LuaCallback(funcType, state, metatables, func);
-                } else if (value instanceof LuaUserdata u && u.instance instanceof ScriptCallback callback) {
+                if (value instanceof LuaUserdata u && u.instance instanceof ScriptCallback callback) {
                     yield callback;
+                } else if (value instanceof LuaFunction || !value.metatag(state, Constants.CALL).isNil()) {
+                    yield new LuaCallback(funcType, state, metatables, value);
                 }
-                throw new ScriptError(Component.literal("Expected func"));
+                throw new ScriptError(Component.literal("Expected callable"));
             }
             case CallbackType.Nullable(CallbackType inner) -> {
                 if (value.isNil()) yield null;

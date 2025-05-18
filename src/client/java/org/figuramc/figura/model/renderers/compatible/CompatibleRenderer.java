@@ -72,9 +72,6 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
         // Push matrix stack, apply transforms
         matrixStack.push();
         part.transform.affect(matrixStack);
-        // TODO Animations
-//        for (Animator animator : animators)
-//            animator.affect(matrixStack);
 
         for (ScriptCallback callback : part.midRenderCallbacks) callback.call(tickDelta);
 

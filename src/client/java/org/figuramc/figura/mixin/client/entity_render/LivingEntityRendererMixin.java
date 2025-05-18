@@ -23,7 +23,7 @@ import java.util.UUID;
 public class LivingEntityRendererMixin {
 
     /**
-     * Inject before rendering the model.
+     * Inject after rendering the vanilla model, to render our own model.
      * This will have all the necessary transforms of the model applied,
      * but it will also have some ones we don't want:
      * - Flipping the x and y axes. This is not necessary in our renderer,
@@ -32,6 +32,13 @@ public class LivingEntityRendererMixin {
      *   We choose to place (0,0,0) at the feet of the entity, rather than
      *   the neck of the entity like Minecraft does.
      * Both of these will need to be reverted.
+     *
+     * The reason we inject after rendering the model is so that mimic
+     * parts can be up-to-date. If we render the Figura model before the
+     * vanilla model, then mimic parts will be one frame behind.
+     *
+     * If you need code that runs before the Vanilla model is drawn, try
+     * using render callbacks on vanilla parts, particularly Model roots!
      */
     @SuppressWarnings("UnreachableCode")
     @Inject(

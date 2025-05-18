@@ -1,225 +1,183 @@
 package org.figuramc.figura.model.part;
 
-import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.util.Mth;
+import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
-import net.minecraft.util.Mth;
+import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/**
- * Data representing the customizations of a FiguraModelPart.
- * Extracted into its own class for organization.
- */
+// Simple transform, more aligned to Minecraft/Blockbench
 public class PartTransform extends MarkedObjectBase {
 
-    private final Vector3f origin = new Vector3f(); // Origin is the pivot point and also a translation. Same as blockbench
+    private final Vector3f origin = new Vector3f();
+    private final Vector3f rotation = new Vector3f(); // ZYX euler angles in radians
+    private final Vector3f scale = new Vector3f(1.0f);
     private final Vector3f position = new Vector3f();
 
-    // Quaternion and rotation are kept in sync constantly.
-    // Whenever one is updated, the other is as well.
-    // This is to make the code more similar to THREE.js which is used by Blockbench.
-    private final Quaternionf quaternion = new Quaternionf();
-    private final Vector3f rotation = new Vector3f(); // ZYX euler angles in radians
-    private byte rotQuatState = NO_UPDATE_NEEDED;
-    private static final byte NO_UPDATE_NEEDED = 0;
-    private static final byte QUAT_NEEDS_UPDATE = 1;
-    private static final byte ROT_NEEDS_UPDATE = 2;
-
-    private final Vector3f scale = new Vector3f(1, 1, 1);
-
-    private final Matrix4f positionMatrix = new Matrix4f();
-    private final Matrix3f normalMatrix = new Matrix3f();
-
     private boolean visible = true;
+    private final Vector4f color = new Vector4f(1.0f);
 
-    private final Vector4f color = new Vector4f(1, 1, 1, 1); // Packed color + alpha
+    public @Nullable VanillaRendering.VanillaPart mimicPart; // Mimic this vanilla part!
+    // List of animations
 
-    private boolean needsMatrixUpdate = false; // Whether the position and normal matrices need to be recalculated.
-    private boolean isDirty = false; // Whether the transform was changed at all since last time, including via setMatrix (which wouldn't cause a matrix update). Needed for GPU upload.
-    private boolean isFullyDefault = true; // Whether this was ever modified away from the default transform. If it never was, we can skip the entire transform process.
+    // Outputs and caching flags
+    private final Vector3f totalOrigin = new Vector3f();
+    private final Vector3f totalRotation = new Vector3f();
+    private final Vector3f totalScale = new Vector3f(1.0f);
+    private final Vector3f totalPosition = new Vector3f();
+    private final Matrix4f totalMatrix = new Matrix4f();
+    private final Matrix3f totalNormalMatrix = new Matrix3f();
 
-    // Modifiers applied to this transform (mostly animators and mimics)
-    public final List<Modifier> modifiers = new ArrayList<>(0);
+    // Usually, when marking any of origin/rotation/scale as dirty, we also mark the matrix as dirty.
+    // However, if the matrix is manually forced, we do not mark the matrix as dirty.
+    // In that case, changes made to the origin/rotation/scale are no longer considered.
+    private byte flags = 0;
+    private static final byte ORIGIN_DIRTY = 0x01; // totalOrigin is dirty and needs recalculation
+    private static final byte ROTATION_DIRTY = 0x02; // totalRotation is dirty and needs recalculation
+    private static final byte SCALE_DIRTY = 0x04; // totalScale is dirty and needs recalculation
+    private static final byte POSITION_DIRTY = 0x08; // totalScale is dirty and needs recalculation
+    private static final byte MATRIX_DIRTY = 0x10; // matrix is dirty and needs recalculation
 
-    // Getters, setters, and modifiers.
-    public void setOrigin(Vector3fc origin) { this.origin.set(origin); markDirty(); }
-    public void setOrigin(float x, float y, float z) { this.origin.set(x, y, z); markDirty(); }
-    public Vector3fc getOrigin() { return origin; }
-    public void addOrigin(Vector3fc offset) { this.origin.add(offset); markDirty(); }
-    public void addOrigin(float x, float y, float z) { this.origin.add(x, y, z); markDirty(); }
+    // Flag get/set
+    private boolean hasFlags(int flags) { return (this.flags & flags) == flags; }
+    private void setFlags(int flags) { this.flags |= (byte) flags; }
+    private void removeFlags(int flags) { this.flags &= (byte) ~flags; }
+    private boolean originDirty() { return mimicPart != null || hasFlags(ORIGIN_DIRTY); }
+    private boolean rotationDirty() { return mimicPart != null || hasFlags(ROTATION_DIRTY); }
+    private boolean scaleDirty() { return mimicPart != null || hasFlags(SCALE_DIRTY); }
+    private boolean positionDirty() { return mimicPart != null || hasFlags(POSITION_DIRTY); }
+    private boolean matrixDirty() { return mimicPart != null || hasFlags(MATRIX_DIRTY); }
 
-    public void setPosition(Vector3fc pos) { this.position.set(pos); markDirty(); }
-    public void setPosition(float x, float y, float z) { this.position.set(x, y, z); markDirty(); }
-    public Vector3fc getPosition() { return position; }
-    public void addPosition(Vector3fc offset) { this.position.add(offset); markDirty(); }
-    public void addPosition(float x, float y, float z) { this.position.add(x, y, z); markDirty(); }
-
-    public void setScale(Vector3fc scale) { this.scale.set(scale); markDirty(); }
-    public void setScale(float x, float y, float z) { this.scale.set(x, y, z); markDirty(); }
-    public Vector3fc getScale() { return scale; }
-    public void mulScale(Vector3fc multiplier) { this.scale.mul(multiplier); markDirty(); }
-    public void mulScale(float x, float y, float z) { this.scale.mul(x, y, z); markDirty(); }
-
-    public void setColor(Vector4fc color) { this.color.set(color); markDirtyNoMatrix(); }
-    public void setColor(float r, float g, float b, float a) { this.color.set(r, g, b, a); markDirtyNoMatrix(); }
-    public Vector4fc getColor() { return this.color; }
-
-    public void setEulerRad(Vector3fc euler) { this.rotation.set(euler); this.rotQuatState = QUAT_NEEDS_UPDATE; this.quaternion.rotationZYX(euler.z(), euler.y(), euler.x()); markDirty(); }
-    public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); this.rotQuatState = QUAT_NEEDS_UPDATE; markDirty(); }
-    public void setEulerDeg(Vector3fc euler) { setEulerRad(euler.x() * Mth.DEG_TO_RAD, euler.y() * Mth.DEG_TO_RAD, euler.z() * Mth.DEG_TO_RAD); }
-    public void setEulerDeg(float x, float y, float z) { setEulerRad(x * Mth.DEG_TO_RAD, y * Mth.DEG_TO_RAD, z * Mth.DEG_TO_RAD); }
-    public void setQuaternion(Quaternionfc quat) { this.quaternion.set(quat).getEulerAnglesZYX(rotation); this.rotQuatState = ROT_NEEDS_UPDATE; markDirty(); }
-    public void setQuaternion(float x, float y, float z, float w) { this.quaternion.set(x, y, z, w).getEulerAnglesZYX(rotation); this.rotQuatState = ROT_NEEDS_UPDATE; markDirty(); }
-    public Vector3fc getEulerRad() { updateRot(); return rotation; }
-    public Vector3fc getEulerDeg() { updateRot(); return new Vector3f(rotation).mul(Mth.RAD_TO_DEG); }
-    public Quaternionfc getQuaternion() { updateQuat(); return quaternion; }
-
-    public void addEulerRad(Vector3fc offset) { updateRot(); rotation.add(offset); this.rotQuatState = QUAT_NEEDS_UPDATE; }
-    public void addEulerRad(float x, float y, float z) { updateRot(); rotation.add(x, y, z); this.rotQuatState = QUAT_NEEDS_UPDATE; }
-    public void addEulerDeg(Vector3fc offset) { updateRot(); rotation.add(offset.x() * Mth.DEG_TO_RAD, offset.y() * Mth.DEG_TO_RAD, offset.z() * Mth.DEG_TO_RAD); this.rotQuatState = QUAT_NEEDS_UPDATE; }
-    public void addEulerDeg(float x, float y, float z) { updateRot(); rotation.add(x * Mth.DEG_TO_RAD, y * Mth.DEG_TO_RAD, z * Mth.DEG_TO_RAD); this.rotQuatState = QUAT_NEEDS_UPDATE; }
-    public void mulQuat(Quaternionfc modifier) { updateQuat(); quaternion.mul(modifier); this.rotQuatState = ROT_NEEDS_UPDATE; }
-    public void premulQuat(Quaternionfc modifier) { updateQuat(); quaternion.premul(modifier); this.rotQuatState = ROT_NEEDS_UPDATE; }
-
-    // Helpers to ensure rot/quat is up to date
-    private void updateRot() { if (this.rotQuatState == ROT_NEEDS_UPDATE) { this.quaternion.getEulerAnglesZYX(rotation); this.rotQuatState = NO_UPDATE_NEEDED; } }
-    private void updateQuat() { if (this.rotQuatState == QUAT_NEEDS_UPDATE) { this.quaternion.rotationZYX(rotation.z, rotation.y, rotation.x); this.rotQuatState = NO_UPDATE_NEEDED; } }
-
-    public void setVisible(boolean visible) { this.visible = visible; this.isDirty = true; }
-    public boolean getVisible() { return this.visible; }
-    public void andVisible(boolean multiplier) { this.visible &= multiplier; this.isDirty = true; }
-
-    // Set position matrix and recompute normal matrix from it. Sets needsMatrixUpdate to false.
-    public void setMatrix(Matrix4f positionMatrix) { this.positionMatrix.set(positionMatrix); this.positionMatrix.normal(normalMatrix); markDirtyOverrideMatrix(); }
-
-    public void reset() {
-        origin.zero();
-        position.zero();
-        rotation.zero();
-        quaternion.identity();
-        scale.set(1, 1, 1);
-        positionMatrix.identity();
-        normalMatrix.identity();
-        visible = true;
-        needsMatrixUpdate = false;
-        isFullyDefault = true; // Is now identity
-        isDirty = true; // It changed
+    // Property set/get
+    public void setOrigin(Vector3fc origin) {
+        this.origin.set(origin);
+        setFlags(ORIGIN_DIRTY | MATRIX_DIRTY);
+    }
+    public void setOrigin(float x, float y, float z) {
+        this.origin.set(x, y, z);
+        setFlags(ORIGIN_DIRTY | MATRIX_DIRTY);
+    }
+    public void setEulerRad(Vector3fc rotation) {
+        this.rotation.set(rotation);
+        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
+    }
+    public void setEulerRad(float x, float y, float z) {
+        this.rotation.set(x, y, z);
+        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
+    }
+    public void setEulerDeg(Vector3fc rotation) {
+        this.rotation.set(rotation).mul(Mth.DEG_TO_RAD);
+        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
+    }
+    public void setEulerDeg(float x, float y, float z) {
+        this.rotation.set(x, y, z).mul(Mth.DEG_TO_RAD);
+        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
+    }
+    public void setScale(Vector3fc scale) {
+        this.scale.set(scale);
+        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
+    }
+    public void setScale(float x, float y, float z) {
+        this.scale.set(x, y, z);
+        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
+    }
+    public void setScale(float s) {
+        this.scale.set(s);
+        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
+    }
+    public void setPosition(Vector3fc position) {
+        this.position.set(position);
+        setFlags(POSITION_DIRTY | MATRIX_DIRTY);
+    }
+    public void setPosition(float x, float y, float z) {
+        this.position.set(x, y, z);
+        setFlags(POSITION_DIRTY | MATRIX_DIRTY);
+    }
+    public void forceMatrix(Matrix4fc matrix) {
+        this.totalMatrix.set(matrix);
+        this.totalMatrix.normal(totalNormalMatrix);
+        removeFlags(MATRIX_DIRTY);
+    }
+    public void unforceMatrix() {
+        setFlags(MATRIX_DIRTY);
+    }
+    public void setColor(Vector4fc color) {
+        this.color.set(color);
+    }
+    public void setColor(float r, float g, float b, float a) {
+        this.color.set(r, g, b, a);
+    }
+    public void setVisible(boolean vis) {
+        this.visible = vis;
     }
 
-    public final void markDirty() {
-        this.needsMatrixUpdate = true;
-        this.isDirty = true;
-        this.isFullyDefault = false;
+    public Vector3fc getOrigin() {
+        if (originDirty()) {
+            totalOrigin.set(origin);
+            if (mimicPart != null) totalOrigin.add(mimicPart.storedVanillaOrigin);
+            // TODO Apply animations
+            removeFlags(ORIGIN_DIRTY);
+        }
+        return totalOrigin;
+    }
+    public Vector3fc getEulerRad() {
+        if (rotationDirty()) {
+            totalRotation.set(rotation);
+            if (mimicPart != null) totalRotation.add(mimicPart.storedVanillaRotation);
+            // TODO Apply animations
+            removeFlags(ROTATION_DIRTY);
+        }
+        return totalRotation;
+    }
+    public Vector3fc getScale() {
+        if (scaleDirty()) {
+            totalScale.set(scale);
+            if (mimicPart != null) totalScale.mul(mimicPart.storedVanillaScale);
+            // TODO Apply animations
+            removeFlags(SCALE_DIRTY);
+        }
+        return totalScale;
+    }
+    public Vector3fc getPosition() {
+        if (positionDirty()) {
+            totalPosition.set(position);
+            if (mimicPart != null) totalPosition.add(mimicPart.storedVanillaPosition);
+            // TODO Apply animations
+            removeFlags(POSITION_DIRTY);
+        }
+        return totalPosition;
+    }
+    public Vector4fc getColor() {
+        return color;
+    }
+    public boolean getVisible() {
+        return visible;
     }
 
-    public final void markDirtyNoMatrix() {
-        this.isDirty = true;
-        this.isFullyDefault = false;
-    }
-
-    public final void markDirtyOverrideMatrix() {
-        this.needsMatrixUpdate = false;
-        this.isDirty = true;
-        this.isFullyDefault = false;
-    }
-
-    public boolean fetchDirty() {
-        boolean wasDirty = isDirty;
-        isDirty = false;
-        return wasDirty;
-    }
-
-    private void recalculateIfNeeded() {
-        if (needsMatrixUpdate) {
-            updateQuat(); // Ensure quat is ready before use
-            // Compute position matrix
-            positionMatrix
-                    .translation(origin.x / 16, origin.y / 16, origin.z / 16)
-                    .rotate(quaternion)
+    // Affect the transform stack with this
+    public void affect(FiguraTransformStack stack) {
+        if (matrixDirty()) {
+            Vector3fc origin = getOrigin();
+            Vector3fc rotation = getEulerRad();
+            Vector3fc scale = getScale();
+            Vector3fc position = getPosition();
+            totalMatrix
+                    .translation(origin.x() / 16f, origin.y() / 16f, origin.z() / 16f)
+                    .rotateZYX(rotation.z(), rotation.y(), rotation.x())
                     .scale(scale)
-                    .translate(position.x / 16, position.y / 16, position.z / 16);
-            // Compute normal matrix
-            positionMatrix.normal(normalMatrix);
-            // No longer needs update (for now)
-            needsMatrixUpdate = false;
+                    .translate(position.x() / 16f, position.y() / 16f, position.z() / 16f);
+            totalMatrix.normal(totalNormalMatrix);
+            removeFlags(MATRIX_DIRTY);
         }
-    }
-
-    // TODO: look into performance of this strategy and see if we can do better
-    private static final PartTransform SAVE_STATE = new PartTransform();
-
-    // Affect a transform stack with this transform.
-    public void affect(FiguraTransformStack matrixStack) {
-        synchronized (SAVE_STATE) { // Should only ever be called on the render thread, but just to be safe we'll synchronize
-            // If we have modifiers, apply them
-            if (!modifiers.isEmpty()) {
-                // Save state before the modifiers are applied
-                SAVE_STATE.cloneTransforms(this);
-                // Apply modifiers
-                for (Modifier modifier : modifiers)
-                    modifier.modify(this);
-            } else if (isFullyDefault) return; // No modifiers and fully default, return
-            recalculateIfNeeded();
-            // Apply the matrices and other things
-            matrixStack.multiply(positionMatrix, normalMatrix);
-            matrixStack.color(this.color);
-            // If we had modifiers, undo the savestate
-            if (!modifiers.isEmpty()) this.cloneTransforms(SAVE_STATE);
-        }
-    }
-
-    // Affect a vanilla pose stack with this transform.
-    public void affect(PoseStack vanillaPoseStack) {
-        synchronized (SAVE_STATE) { // Should only ever be called on the render thread, but just to be safe we'll synchronize
-            // If we have modifiers, apply them
-            if (!modifiers.isEmpty()) {
-                // Save state before the modifiers are applied
-                SAVE_STATE.cloneTransforms(this);
-                // Apply modifiers
-                for (Modifier modifier : modifiers)
-                    modifier.modify(this);
-            } else if (isFullyDefault) return; // No modifiers and fully default, return
-            recalculateIfNeeded();
-            // Apply the matrices
-            vanillaPoseStack.last().pose().mul(positionMatrix);
-            vanillaPoseStack.last().normal().mul(normalMatrix);
-            // If we had modifiers, undo the savestate
-            if (!modifiers.isEmpty()) this.cloneTransforms(SAVE_STATE);
-        }
-    }
-
-    // Clone transforms and save them for later, used with save-stating for modifiers
-    private void cloneTransforms(PartTransform other) {
-        this.origin.set(other.origin);
-        this.position.set(other.position);
-        this.rotation.set(other.rotation);
-        this.scale.set(other.scale);
-        this.positionMatrix.set(other.positionMatrix);
-        this.normalMatrix.set(other.normalMatrix);
-        this.visible = other.visible;
-        this.needsMatrixUpdate = other.needsMatrixUpdate;
-        this.isFullyDefault = other.isFullyDefault;
-        this.isDirty = other.isDirty;
+        stack.multiply(totalMatrix, totalNormalMatrix);
+        stack.color(color);
     }
 
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
-        for (Modifier modifier : modifiers)
-            counter.trace(modifier, depth);
-        return 200 + modifiers.size() * POINTER_SIZE;
+        counter.trace(mimicPart, depth);
+        return 300; // idk
     }
-
-    // A modifier for a transform. Each transform keeps a list of these.
-    // Modifiers should call things like "addOrigin" or "mulScale" to modify values.
-    public interface Modifier extends MemoryCountable {
-        void modify(PartTransform transform);
-    }
-
-
-
 }

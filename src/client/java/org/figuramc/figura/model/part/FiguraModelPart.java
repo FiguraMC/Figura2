@@ -1,5 +1,6 @@
 package org.figuramc.figura.model.part;
 
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.ARGB;
@@ -13,7 +14,6 @@ import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.ListUtils;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
@@ -48,7 +48,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
 
     // Rendering
     public final float[] vertices; // The vertices making up the cubes and meshes of the model part
-    private @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally. Private because of contract with non-root render state.
+    private @Nullable FiguraRenderType renderType; // The rendering policy of this part. Null to inherit unconditionally.
     public int renderTypePriority; // If the render type priority is higher than the parent's, renderType can replace the current render types.
 
     // Callbacks which are run during various stages of the rendering process.
@@ -81,7 +81,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             transform.setEulerDeg(materials.rotation());
         }
 
-        // TODO: Add animators as modifiers, before the mimic modifier
+        // TODO: Add animators to this part
 
         // Set up mimicry
         if (vanilla != null && materials.mimic() != null) {
@@ -96,7 +96,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
                     if (part != null) {
                         VanillaRendering.VanillaPart scriptPart = vanilla.partMap.get(part);
                         if (scriptPart != null) {
-                            transform.modifiers.add(scriptPart);
+                            transform.mimicPart = scriptPart;
                         }
                     }
                 }
@@ -216,8 +216,8 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         vertices = vertexData.toArray(new float[0]);
 
         // Set up transform to be item-ish
-        transform.setScale(1f/16, 1f/16, 1f/16);
-        transform.setPosition(0f, 0f, 7.5f * 16f);
+        transform.setScale(1f/16);
+        transform.setOrigin(0f, 0f, 7.5f);
     }
 
 
