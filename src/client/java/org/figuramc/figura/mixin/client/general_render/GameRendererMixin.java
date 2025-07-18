@@ -4,6 +4,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import org.figuramc.figura.avatars.components.Scripts;
 import org.figuramc.figura.manage.AvatarManager;
+import org.figuramc.figura.script_hooks.Event;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,8 +19,8 @@ public class GameRendererMixin {
         float tickDelta = deltaTracker.getGameTimeDeltaPartialTick(true);
         AvatarManager.forEachAvatar(avatar -> {
             Scripts scripts;
-            if ((scripts = avatar.getComponent(Scripts.ID)) != null)
-                scripts.renderEvent(tickDelta);
+            if ((scripts = avatar.getComponent(Scripts.TYPE)) != null)
+                scripts.runEvent(Event.CLIENT_FRAME, tickDelta);
         });
     }
 

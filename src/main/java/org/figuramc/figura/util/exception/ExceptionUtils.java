@@ -1,8 +1,8 @@
 package org.figuramc.figura.util.exception;
 
-import org.figuramc.figura.util.exception.functional.ThrowingFunction;
-import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
-import org.figuramc.figura.util.exception.functional.ThrowingSupplier;
+import org.figuramc.figura.util.functional.ThrowingFunction;
+import org.figuramc.figura.util.functional.ThrowingRunnable;
+import org.figuramc.figura.util.functional.ThrowingSupplier;
 
 import java.util.function.Function;
 import java.util.function.Supplier;

@@ -18,10 +18,10 @@ import java.util.Objects;
 /**
  * A component that handles rendering custom items instead of vanilla ones.
  */
-public class CustomItems implements AvatarComponent {
+public class CustomItems implements AvatarComponent<CustomItems> {
 
-    public static final int ID = AvatarComponent.createId(Textures.class);
-    public int getId() { return ID; }
+    public static final Type<CustomItems> TYPE = new Type<>(Textures.TYPE);
+    public Type<CustomItems> getType() { return TYPE; }
 
     /**
      * The custom items which were determined by file names in the "items/" folder!
@@ -45,7 +45,7 @@ public class CustomItems implements AvatarComponent {
             // Convert the materials to a CustomItemModelPart
             Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), mod.index, texturesComponent, vanillaRendering)) : null;
             // Convert the texture index to a RootModelPart
-            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(pattern, texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()))) : null;
+            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()))) : null;
             // Return the entry
             return new PartEntry(matcher, mainPart, flatPart);
         })).filter(Objects::nonNull).sorted().toList();

@@ -1,0 +1,8 @@
+{
+  "language": "lua",
+  "api": {
+    "$any_event": {
+      "params": ["string", {"type": "list", "inner": "any"}]
+    }
+  }
+}

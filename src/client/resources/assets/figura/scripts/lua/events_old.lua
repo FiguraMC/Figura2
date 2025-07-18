@@ -1,36 +1,41 @@
--- Special info for this file!
--- Vararg arguments are a list of strings indicating default events to exist, like tick/render.
--- Returns a table mapping default event name -> Event.
--- This table will be reused by user code, so rawget from it before then.
 
---- Number is the # of invocations it's wait()ing
---- Function is the function it was constructed with
---- Thread is the current coroutine running the function
---- @alias QueueElem [number, function?, thread]
-
--- Global Metatable / Class for Event data type
---- @class Event
---- @field queue QueueElem[]
---- @operator call(...):nil
-Event = {}
-Event.__index = Event
-
--- Local variable for event deletion, prevents reassignment
-local DELETE = {}
-Event.DELETE = DELETE -- Make it accessible
+-- Declare locals
 
 -- Events stored by name
---- Backing table tracking all events by name
---- @type table<string, Event>
 local byName = {}
 
--- Create methods for Event objects:
+-- Locals for performance (hopefully)
+local setmetatable = setmetatable
+local rawequal = rawequal
+local create = coroutine.create
+local resume = coroutine.resume
+local status = coroutine.status
+local yield = coroutine.yield
+local floor = math.floor
+local push, pop
 
--- Static methods
+-- Declare globals
 
---- @return Event
+-- Global Metatable / Class for Event data type
+Event = {}
+Event.__index = Event
+Event.byName = byName -- Make byName accessible for people who want to see all events or something
+
+-- Global events table for "function events.tick() end" syntax
+events = setmetatable({}, {
+    __index = byName,
+    __newindex = function(_, name, func)
+        if not byName[name] then error("No event called '"..name.."'") end
+        byName[name]:register(func)
+    end
+})
+
+-- Global wait function (alias for coroutine.yield)
+wait = yield
+
+-- Implement Event class
 function Event.new(name)
-    local res = setmetatable({queue = {}}, Event)
+    local res = setmetatable({{}, {}}, Event)
     if name then
         if byName[name] then error("Event named '"..name.."' already exists") end
         byName[name] = res
@@ -38,92 +43,105 @@ function Event.new(name)
     return res
 end
 
---- Run the function, which may contain wait() in it.
---- Waiting times are counted in ticks through events.tick.
---- Code before the first wait() is run immediately.
---- If your code doesn't wait, no point in using this.
---- @param func function
-function Event.runOnce(func)
-    local coro = coroutine.create(func)
-    local success, res = coroutine.resume(coro)
-    if not success then error(res, 0) end
-    -- If it's not dead, add it to the event
-    if coroutine.status(coro) ~= "dead" then
-        -- TODO should I have this check? It slows things down in correct code.
-        assert(type(res) == 'number', "Yielding in an event should pass a number")
-        table.insert(events.tick.queue, {res, nil, coro})
+-- Register the function into this event, so it runs every time the event is triggered.
+-- If the function returns Event.DELETE, then it will be deleted.
+local DELETE = {}
+Event.DELETE = DELETE
+function Event:register(func)
+    push(self, 0, create(function(...)
+        if rawequal(func(...), DELETE) then return end
+        while true do
+            if rawequal(func(yield(1)), DELETE) then break end
+        end
+    end))
+end
+
+-- Run the given function in the event only one time, not repeating like register() does
+function Event:once(func)
+    push(self, 0, create(func))
+end
+
+function Event:__call(...)
+    -- Poll functions from the heap
+    local p = self[1]
+    local p1 = p[1]
+    while p1 and p1 < 1 do
+        local coro = pop(self)
+        local success, res = resume(coro, ...)
+        if not success then error(res, 0) end
+        if status(coro) ~= "dead" then
+            -- Re-insert the coroutine with the result as the priority
+            -- TODO maybe typecheck here that res is a number?
+            push(self, res, coro)
+        end
+        p1 = p[1]
+    end
+    -- Decrement wait time of all functions
+    for i=1,#p do p[i] = p[i] - 1 end
+end
+
+
+-- Binary heap operations
+push = function(heap, priority, element)
+    local p = heap[1] -- Priorities
+    local e = heap[2] -- Elements
+    local i = #p + 1 -- Index
+    p[i] = priority
+    e[i] = element
+    local pi = floor(i/2) -- Parent index
+    local pp = p[pi] -- Parent priority
+    while i ~= 1 and pp > priority do
+        p[i], p[pi] = pp, p[i]
+        e[i], e[pi] = e[pi], e[i]
+        i = pi
+        pi = floor(i/2)
+        pp = p[pi]
     end
 end
-
--- Regular methods
-
--- Register the given function into this event.
---- @param func function
-function Event:register(func)
-  table.insert(self.queue, {0, func, coroutine.create(func)})
+pop = function(heap)
+    local p = heap[1]
+    local e = heap[2]
+    local res = e[1] -- Result
+    local c = #p -- Number of nodes
+    p[1] = p[c]; p[c] = nil -- Swap last element into index 1
+    e[1] = e[c]; e[c] = nil
+    -- Setup variables
+    local i = 1 -- Current index
+    local c1i = 2 -- Child 1 index
+    local c2i = 3 -- Child 2 index
+    local ip -- Current index priority
+    local c1p = p[2] -- Child 1 priority
+    local c2p -- Child 2 priority
+    -- Start looping
+    while c1p do -- While we have at least 1 child
+        ip = p[i]
+        c2p = p[c2i]
+        if c1p < ip then -- If the first child is smaller than this, we'll swap
+            -- If the second child is smaller than the first child, swap with second child instead
+            if c2p and c2p < c1p then
+                p[i], p[c2i] = c2p, ip
+                e[i], e[c2i] = e[c2i], e[i]
+                i = c2i
+            else
+                p[i], p[c1i] = c1p, ip
+                e[i], e[c1i] = e[c1i], e[i]
+                i = c1i
+            end
+        elseif c2p and c2p < ip then -- If we have a second child, and second child is smaller than this, then swap with it
+            p[i], p[c2i] = c2p, ip
+            e[i], e[c2i] = e[c2i], e[i]
+            i = c2i
+        else break end -- Otherwise, neither child is smaller than this, so break
+        -- Update variables
+        c1i = i*2
+        c2i = c1i + 1
+        c1p = p[c1i];
+    end
+    -- Return result
+    return res
 end
 
--- Invoke the event, calling all registered functions with the passed arguments.
---- @param ...any
-function Event:__call(...)
-  local i = 1
-  local t = self.queue[i]
-  while t do
-    -- If we're not waiting on the function, run it.
-    -- Otherwise, decrement the wait time.
-    if t[1] <= 1 then -- wait(1) in a loop means we should run it every tick
-        -- Resume the coroutine
-        local success, res = coroutine.resume(t[3], ...)
-        -- Propagate the error, if any
-        if not success then error(res, 0) end
-        -- If we returned, delete or refresh
-        if coroutine.status(t[3]) == "dead" then
-          -- If there's no func, or if it returned DELETE, then delete.
-          if not t[2] or rawequal(res, DELETE) then
-            table.remove(self.queue, i)
-            i = i - 1
-          else t[3] = coroutine.create(t[2]) end
-        else
-            -- Coroutine isn't dead, it's just yielded, so set the wait time.
-            -- TODO should I have this check? It slows things down in correct code
-            assert(type(res) == "number", "Yielding an event should pass a number")
-            t[1] = res
-        end
-    else t[1] = t[1] - 1 end
-    -- Update loop variables
-    i = i + 1
-    t = self.queue[i]
-  end
-end
-
---- Set up the global "events" API table.
-events = {}
-
--- Create built-in events through vararg:
-for _,name in ipairs({...}) do
-    Event.new(name)
-end
-
---- Special case functions
---- @return Event
-setmetatable(events, {
-  -- events.something will return the Event object
-  __index = byName,
-  -- function events.something() will register a new function to the event
-  --- @param name string
-  --- @param func function
-  __newindex = function(_, name, func)
-    if not byName[name] then error("No event called \""..name.."\"") end
-    byName[name]:register(func)
-  end
-})
-
---- Call this from within a registered function.
---- Will "wait", from this function's POV, for n event calls.
---- Always pauses for at least 1 call, even if n <= 0.
---- Should only be called inside of an event-registered function.
---- @param n number
-function wait(n) coroutine.yield(n) end
-
--- Return the table of events by name to the java code
+-- Set up builtin figura events, passed in through the varargs
+for _,name in ipairs({...}) do Event.new(name) end
+-- And return the by-name table
 return byName

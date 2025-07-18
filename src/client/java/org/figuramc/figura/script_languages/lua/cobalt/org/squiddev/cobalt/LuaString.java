@@ -654,6 +654,11 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	}
 
 	@Override
+	public String checkString(LuaState state, String message) {
+		return toString();
+	}
+
+	@Override
 	public LuaString checkLuaString(LuaState state) {
 		return this;
 	}

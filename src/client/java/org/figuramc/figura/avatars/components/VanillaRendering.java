@@ -4,25 +4,27 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.model.part.PartTransform;
-import org.figuramc.figura.model.part.Transformable;
+import org.figuramc.figura.model.part.PartLike;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.vanillamodel.ModelNames;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * Component that manages the vanilla entity's rendering for this avatar.
  * Requires an EntityUser component.
  */
-public class VanillaRendering implements AvatarComponent {
+public class VanillaRendering implements AvatarComponent<VanillaRendering> {
 
-    public static final int ID = AvatarComponent.createId(EntityUser.class);
-    public int getId() { return ID; }
+    public static final Type<VanillaRendering> TYPE = new Type<>(EntityUser.TYPE);
+    public Type<VanillaRendering> getType() { return TYPE; }
 
     // The entity renderer for this entity
     public final EntityRenderer<?, ?> entityRenderer;
@@ -41,7 +43,7 @@ public class VanillaRendering implements AvatarComponent {
     }
 
     // Object accessible by scripts, interface to model part reading/writing.
-    public static class VanillaPart extends MarkedObjectBase implements Transformable {
+    public class VanillaPart extends MarkedObjectBase implements PartLike<VanillaPart> {
 
         // ModelPart to which this is linked
         public final ModelPart part;
@@ -63,10 +65,22 @@ public class VanillaRendering implements AvatarComponent {
         // Callbacks which run when the minecraft part is rendered
         public final ArrayList<ScriptCallback> vanillaRenderCallbacks = new ArrayList<>(0);
 
+        // Getter for component
+        public VanillaRendering getComponent() {
+            return VanillaRendering.this;
+        }
+
         // Implement transformable
         @Override
         public PartTransform getTransform() {
             return figuraTransform;
+        }
+
+        @Override
+        public @Nullable VanillaPart getChildByName(String name) {
+            ModelPart vanillaChild = part.children.get(name);
+            if (vanillaChild == null) return null;
+            return VanillaRendering.this.partMap.get(vanillaChild);
         }
 
         // Since ScriptVanillaPart objects just point to Minecraft's ModelPart,

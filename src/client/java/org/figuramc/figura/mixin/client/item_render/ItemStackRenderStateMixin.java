@@ -67,7 +67,7 @@ public class ItemStackRenderStateMixin implements ItemStackRenderStateAccess {
     private boolean tryFiguraOverride(Avatar<?> avatar, ItemStack itemStack, ItemDisplayContext itemDisplayContext, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, int overlay) {
         // Look for an overriding model part
         CustomItems itemsComponent;
-        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.ID)) == null) return false;
+        if (avatar == null || (itemsComponent = avatar.getComponent(CustomItems.TYPE)) == null) return false;
         Renderable<? extends FiguraModelPart> renderablePart = itemsComponent.getModelPart(itemStack, itemDisplayContext);
         if (renderablePart == null) return false;
         FiguraModelPart modelPart = renderablePart.part;

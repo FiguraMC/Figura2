@@ -1,4 +1,4 @@
-package org.figuramc.figura.util.exception.functional;
+package org.figuramc.figura.util.functional;
 
 @FunctionalInterface
 public interface ThrowingFunction<T, R, E extends Throwable> {

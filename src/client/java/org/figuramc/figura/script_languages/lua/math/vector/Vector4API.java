@@ -350,7 +350,7 @@ public class Vector4API {
         }));
 
         // Custom indexing for swizzle
-        FiguraMetatables.setupInheritance(state, metatable, null, LibFunction.create((s, v, k) -> {
+        FiguraMetatables.setupIndexing(state, metatable, null, LibFunction.create((s, v, k) -> {
             Vector4d self = v.checkUserdata(s, Vector4d.class);
             // Numeric key, index it like an array
             if (k.type() == TNUMBER) {

@@ -30,6 +30,12 @@ public class MemoryCounter {
         else count += traceable.count(this, depth - 1);
     }
 
+    // Trace string (we can't make it implement MemoryCountable)
+    public void traceString(@Nullable String string) {
+        if (string == null) return;
+        count += string.length();
+    }
+
     // Trace various unmarked objects
     public void traceUnmarked(byte[] arr) {
         if (tracedUnmarked.add(arr))

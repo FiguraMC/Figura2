@@ -34,9 +34,9 @@ import java.util.*;
  */
 public record ModuleMaterials(
         MetadataMaterials metadata,
-        List<ScriptMaterials> scripts,
-        List<TextureMaterials> textures,
-        List<ModelPartMaterials> worldRoots,
+        TreeMap<String, byte[]> scripts,
+        List<TextureMaterials> textures, // Use a list because of texture indices for referral, and also not all textures have names!
+        TreeMap<String, ModelPartMaterials> worldRoots,
         @Nullable ModelPartMaterials entityRoot,
         @Nullable ModelPartMaterials hudRoot,
         TreeMap<String, CustomItem> customItemRoots // Tree map for sorted order
@@ -50,35 +50,63 @@ public record ModuleMaterials(
             // For now, dependencies are just strings. TODO improve/make more unique for backend package manager stuff
             // We must maintain the ordering given in the json.
             LinkedHashMap<String, String> dependencies,
-            // Exposed API elements:
+            // Whether to automatically require the module's dependencies before initialization. True by default.
+            boolean autoRequireDependencies,
+            // Exposed API function types
             // We simply maintain the ordering given in the json.
             LinkedHashMap<String, CallbackType.Func> api
     ) {}
 
-    // SCRIPTS
-    public record ScriptMaterials(String name, byte[] data) {}
-
     // TEXTURES
     public sealed interface TextureMaterials {
-        @Nullable String name();
-        record OwnedTexture(String name, @Nullable @NoSerialize Path path, byte[] data, boolean noAtlas) implements TextureMaterials {}
+        @Nullable String name(); // Only use if this is a standalone texture!
+        record OwnedTexture(@Nullable String name, @Nullable @NoSerialize Path path, byte[] data, boolean noAtlas) implements TextureMaterials {}
         record VanillaTexture(String resourceLocation) implements TextureMaterials { @Override public String name() { return null; }}
     }
 
     // MODEL PARTS
-    public record ModelPartMaterials(
-            // Structuring
-            String name, Vector3f origin, Vector3f rotation, ArrayList<ModelPartMaterials> children,
-            // Vanilla part to mimic if any, in the form "ModelName/PartName" ("ENTITY/head")
-            @Nullable String mimic,
-            // Rendering data
-            int textureIndex, List<CubeData> cubes, List<MeshData> meshes
-    ) {
-        // Shorthand for creating a wrapper around some children with a name
-        public static ModelPartMaterials wrapper(String name, ArrayList<ModelPartMaterials> children) {
-            return new ModelPartMaterials(name, new Vector3f(), new Vector3f(), children, null, -1, List.of(), List.of());
+    public static class ModelPartMaterials {
+        // Structuring
+        public final Vector3f origin, rotation;
+        public final LinkedHashMap<String, ModelPartMaterials> children;
+        // Vanilla part to mimic if any, in the form "ModelName/PartName" ("ENTITY/head")
+        public final @Nullable String mimic;
+        // Rendering data
+        public final int textureIndex;
+        public final List<CubeData> cubes;
+        public final List<MeshData> meshes;
+        // Create with all fields
+        public ModelPartMaterials(Vector3f origin, Vector3f rotation, LinkedHashMap<String, ModelPartMaterials> children, @Nullable String mimic, int textureIndex, List<CubeData> cubes, List<MeshData> meshes) {
+            this.origin = origin;
+            this.rotation = rotation;
+            this.children = children;
+            this.mimic = mimic;
+            this.textureIndex = textureIndex;
+            this.cubes = cubes;
+            this.meshes = meshes;
+        }
+        // Constructor to create a simple wrapper around children
+        public ModelPartMaterials(LinkedHashMap<String, ModelPartMaterials> children) {
+            this(new Vector3f(), new Vector3f(), children, null, -1, List.of(), List.of());
         }
     }
+    // Correlates to a figmodel
+    public static class FigmodelMaterials extends ModelPartMaterials {
+        public final LinkedHashMap<String, Integer> textures; // Map names -> texture indices
+        // Could potentially introduce a new structure for pre-bound anims using group indices? This could reduce file size slightly from not having to store the slash-separated paths.
+        public final LinkedHashMap<String, AnimationMaterials> animations; // Animations
+
+        public FigmodelMaterials(
+                LinkedHashMap<String, ModelPartMaterials> children,
+                LinkedHashMap<String, Integer> textures,
+                LinkedHashMap<String, AnimationMaterials> animations
+        ) {
+            super(children);
+            this.textures = textures;
+            this.animations = animations;
+        }
+    }
+
     public record CubeData(Vector3f origin, Vector3f rotation, Vector3f from, Vector3f to, Vector3f inflate, @Nullable CubeFace[] faces) {}
     // Vector stores (uv_min.x, uv_min.y, uv_max.x, uv_max.y). UV values are 0-1 (generally speaking; uv values may technically leave the texture). Rot is 0-3.
     public record CubeFace(Vector4f uv, int rot) {}
@@ -91,6 +119,24 @@ public record ModuleMaterials(
     public record CustomItemModel(ModelPartMaterials model, EnumMap<ItemDisplayContext, ItemPartTransform> transforms) {}
     public record ItemPartTransform(Vector3f translation, Vector3f rotation, Vector3f scale) {}
 
+    // ANIMATIONS
+    public record AnimationMaterials(float length, @Nullable Float snapping, float strength, LoopModeMaterials loopMode, TreeMap<String, TransformKeyframesMaterials> transformKeyframes, List<ScriptKeyframeMaterials> scriptKeyframes) {}
+    public record TransformKeyframesMaterials(List<TransformKeyframeMaterials> origin, List<TransformKeyframeMaterials> rotation, List<TransformKeyframeMaterials> scale) {}
+    public record TransformKeyframeMaterials(float time, String x, String y, String z, InterpolationMaterials interpolation) {} // If snapping exists, time is an integer multiple of 1/snapping
+    public record ScriptKeyframeMaterials(float time, String code) {} // If snapping exists, time is an integer multiple of 1/snapping
+
+    // Loop mode enum
+    public enum LoopModeMaterials {
+        ONCE, HOLD, LOOP
+    }
+
+    // Interpolation ADT
+    public sealed interface InterpolationMaterials {
+        final class Linear implements InterpolationMaterials { private Linear() {} public static final Linear INSTANCE = new Linear(); }
+        final class CatmullRom implements InterpolationMaterials { private CatmullRom() {} public static final CatmullRom INSTANCE = new CatmullRom(); }
+        final class Step implements InterpolationMaterials { private Step() {} public static final Step INSTANCE = new Step(); }
+        record Bezier(Vector3f leftTime, Vector3f leftValue, Vector3f rightTime, Vector3f rightValue) implements InterpolationMaterials {}
+    }
 
     // Doesn't do anything, except work as documentation that a certain field should not be serialized.
     // Essentially, it means that this field only exists for convenience during the importing process

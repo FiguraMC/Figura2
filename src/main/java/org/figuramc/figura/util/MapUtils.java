@@ -1,9 +1,7 @@
 package org.figuramc.figura.util;
 
-import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
-import org.figuramc.figura.util.exception.functional.ThrowingFunction;
-import org.jetbrains.annotations.Nullable;
-import oshi.util.tuples.Pair;
+import org.figuramc.figura.util.functional.ThrowingBiFunction;
+import org.figuramc.figura.util.functional.ThrowingFunction;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -36,12 +34,32 @@ public class MapUtils {
         return result;
     }
 
-    public static <K, V> LinkedHashMap<K, List<V>> merge(List<Map<K, V>> maps) {
+    public static <K, V, T, E extends Throwable> List<T> mapEntries(Map<K, V> map, ThrowingBiFunction<K, V, T, E> func) throws E {
+        List<T> result = new ArrayList<>(map.size());
+        for (Map.Entry<K, V> entry : map.entrySet())
+            result.add(func.apply(entry.getKey(), entry.getValue()));
+        return result;
+    }
+
+
+    public static <K, V> LinkedHashMap<K, List<V>> merge(Iterable<Map<K, V>> maps) {
         LinkedHashMap<K, List<V>> result = new LinkedHashMap<>();
         for (Map<K, V> map : maps)
             for (Map.Entry<K, V> entry : map.entrySet())
                 result.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).add(entry.getValue());
         return result;
     }
+    public static <K, V> LinkedHashMap<K, V> mergeAssertUnique(Iterable<Map<K, V>> maps) {
+        LinkedHashMap<K, V> result = new LinkedHashMap<>();
+        for (Map<K, V> map : maps) {
+            for (Map.Entry<K, V> entry : map.entrySet()) {
+                if (result.containsKey(entry.getKey()))
+                    throw new IllegalArgumentException("mergeAssertUnique expects unique keys when merging maps");
+                result.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return result;
+    }
+
 
 }

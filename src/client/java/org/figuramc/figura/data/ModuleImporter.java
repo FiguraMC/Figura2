@@ -1,15 +1,13 @@
 package org.figuramc.figura.data;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.JsonUtils;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.MapUtils;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -26,17 +24,21 @@ public class ModuleImporter {
         // Find script importer and use it
         ScriptImporter scriptImporter = metadata.language() != null ? ScriptImporter.IMPORTERS.get(metadata.language()) : null;
         Path scriptsRoot = root.resolve("scripts");
-        List<ModuleMaterials.ScriptMaterials> scripts;
+        TreeMap<String, byte[]> scripts;
         if (scriptImporter == null) {
             // If no language is set but the module is trying to use scripts anyway, error nicely.
             if (Files.exists(scriptsRoot)) throw new ModuleImportingException("figura.error.importing.scripts.no_language_set");
-            scripts = List.of();
+            scripts = new TreeMap<>();
         } else scripts = scriptImporter.findScripts(root);
 
         // Textures
         Path texturesRoot = root.resolve("textures");
-        var textures = IOUtils.recursiveProcess(texturesRoot,
-                path -> path.toString().endsWith(".png") ? new ArrayList<>(List.of(readTexture(path, texturesRoot))) : null, (_p, s) -> ListUtils.flatten(s));
+        var textures = IOUtils.recursiveProcess(
+                texturesRoot,
+                path -> new ArrayList<>(List.of(readTexture(path, texturesRoot))),
+                (_p, s) -> ListUtils.flatten(s.values()),
+                "png", false
+        );
 
         // Read custom items first, because they can potentially add new textures which are then used later
         var items = readCustomItems(root, textures);
@@ -45,7 +47,7 @@ public class ModuleImporter {
         @Nullable ModuleMaterials.ModelPartMaterials hud = readRecursiveModel(root, "hud", textures);
 
         @Nullable ModuleMaterials.ModelPartMaterials worldOver = readRecursiveModel(root, "world", textures);
-        List<ModuleMaterials.ModelPartMaterials> world = worldOver != null ? worldOver.children() : List.of();
+        TreeMap<String, ModuleMaterials.ModelPartMaterials> world = worldOver != null ? new TreeMap<>(worldOver.children) : new TreeMap<>();
 
         return new ModuleMaterials(metadata, scripts, textures, world, entity, hud, items);
     }
@@ -55,11 +57,13 @@ public class ModuleImporter {
         if (!Files.exists(metadataPath)) throw new ModuleImportingException("figura.error.importing.no_avatar_json");
         String str = Files.readString(metadataPath);
         // If empty, return default materials.
-        if (str.isBlank()) return new ModuleMaterials.MetadataMaterials(null, new LinkedHashMap<>(), new LinkedHashMap<>());
+        if (str.isBlank()) return new ModuleMaterials.MetadataMaterials(null, new LinkedHashMap<>(), true, new LinkedHashMap<>());
         // Otherwise, parse as json and read materials.
         JsonObject obj = JsonParser.parseString(str).getAsJsonObject();
         // Parse language:
         @Nullable String language = JsonUtils.getStringOrDefault(obj, "language", null);
+        // Auto require dependencies
+        boolean autoRequireDependencies = JsonUtils.getBooleanOrDefault(obj, "autoRequireDependencies", true);
         // Parse dependencies:
         LinkedHashMap<String, String> dependencies;
         {
@@ -88,29 +92,55 @@ public class ModuleImporter {
                 for (var entry : e.getAsJsonObject().entrySet()) {
                     if (entry.getValue().isJsonObject()) {
                         // Parse params and return type
-                        CallbackType[] params = JsonUtils.getListOrEmpty(entry.getValue().getAsJsonObject(), "params", param -> {
-                            if (!param.isJsonPrimitive() || !param.getAsJsonPrimitive().isString()) throw new ModuleImportingException("figura.error.importing.metadata.api_format");
-                            String t = param.getAsString();
-                            return switch (t) {
-                                case "bool" -> CallbackType.Bool.INSTANCE;
-                                case "f64" -> CallbackType.F64.INSTANCE;
-                                default -> throw new ModuleImportingException("Unexpected type \"" + t + "\" (TODO translate and fix)");
-                            };
-                        }).toArray(new CallbackType[0]);
-                        String returnTypeString = JsonUtils.getStringOrDefault(entry.getValue().getAsJsonObject(), "return", "unit");
-                        CallbackType returnType = switch (returnTypeString) {
-                            case "unit" -> CallbackType.Unit.INSTANCE;
-                            case "bool" -> CallbackType.Bool.INSTANCE;
-                            case "f64" -> CallbackType.F64.INSTANCE;
-                            default -> throw new ModuleImportingException("Unexpected type \"" + returnTypeString + "\" (TODO translate and fix)");
-                        };
+                        CallbackType[] params = JsonUtils.getListOrEmpty(entry.getValue().getAsJsonObject(), "params", ModuleImporter::parseType, () -> new ModuleImportingException("figura.error.importing.metadata.api_format")).toArray(CallbackType[]::new);
+                        JsonElement returnTypeJson = JsonUtils.getElementOrDefault(entry.getValue().getAsJsonObject(), "return", new JsonPrimitive("unit"));
+                        CallbackType returnType = parseType(returnTypeJson);
                         // Add to map
                         api.put(entry.getKey(), new CallbackType.Func(returnType, params));
                     } else throw new ModuleImportingException("figura.error.importing.metadata.api_format");
                 }
             } else throw new ModuleImportingException("figura.error.importing.metadata.api_format");
         }
-        return new ModuleMaterials.MetadataMaterials(language, dependencies, api);
+        return new ModuleMaterials.MetadataMaterials(language, dependencies, autoRequireDependencies, api);
+    }
+
+    private static CallbackType parseType(JsonElement json) throws ModuleImportingException {
+        return switch (json) {
+            case JsonPrimitive string when string.isString() -> switch (string.getAsString()) {
+                case "unit" -> CallbackType.Unit.INSTANCE;
+                case "bool" -> CallbackType.Bool.INSTANCE;
+                case "f32" -> CallbackType.F32.INSTANCE;
+                case "f64" -> CallbackType.F64.INSTANCE;
+                case "any" -> CallbackType.Any.INSTANCE;
+                case "string" -> CallbackType.Str.INSTANCE;
+                default -> throw new ModuleImportingException("Unexpected type \"" + string.getAsString() + "\" (TODO translate and fix)");
+            };
+            case JsonArray array -> new CallbackType.Tuple(ListUtils.map(array, ModuleImporter::parseType).toArray(CallbackType[]::new));
+            case JsonObject object -> switch (JsonUtils.getStringOrDefault(object, "type", "<no type given>")) {
+                case "list" -> new CallbackType.List(parseType(expect(object, "inner")));
+                case "map" ->
+                        new CallbackType.Map(parseType(expect(object, "key")), parseType(expect(object, "value")));
+                case "nullable" -> new CallbackType.Nullable(parseType(expect(object, "inner")));
+                case "function" -> {
+                    JsonElement retJson = object.get("return");
+                    if (retJson == null) retJson = new JsonPrimitive("unit"); // Unit by default
+                    CallbackType returnType = parseType(retJson);
+                    JsonElement paramsJson = expect(object, "params");
+                    if (!(paramsJson instanceof JsonArray arr))
+                        throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+                    CallbackType[] params = ListUtils.map(arr, ModuleImporter::parseType).toArray(CallbackType[]::new);
+                    yield new CallbackType.Func(returnType, params);
+                }
+                default -> throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+            };
+            case null, default -> throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+        };
+    }
+
+    private static @NotNull JsonElement expect(JsonObject obj, String key) throws ModuleImportingException {
+        JsonElement e = obj.get(key);
+        if (e == null) throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+        return e;
     }
 
     private static ModuleMaterials.TextureMaterials readTexture(Path path, Path texturesRoot) throws IOException {
@@ -127,7 +157,8 @@ public class ModuleImporter {
         if (!Files.exists(modelPath)) return null;
         return IOUtils.recursiveProcess(modelPath,
                 figmodel -> readFigModel(root, figmodel, textures),
-                (folder, models) -> ModuleMaterials.ModelPartMaterials.wrapper(folder.toFile().getName(), models)
+                (folder, models) -> new ModuleMaterials.ModelPartMaterials(models),
+                "figmodel", true
         );
     }
 

@@ -1,36 +1,41 @@
 package org.figuramc.figura.avatars.components;
 
-import com.demonwav.mcdev.annotations.Translatable;
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.script_hooks.Event;
+import org.figuramc.figura.script_hooks.EventListener;
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.LuaRuntime;
-import org.figuramc.figura.util.exception.functional.ThrowingRunnable;
+import org.figuramc.figura.util.enumlike.IdMap;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
 // The Scripts component should generally be at or near the END of the list of components.
 // Other components probably should not rely on Scripts, and instead Scripts should rely on them.
-public class Scripts implements AvatarComponent {
+public class Scripts implements AvatarComponent<Scripts> {
 
-    // It's important that all possible dependents be mentioned here!
-    public static final int ID = AvatarComponent.createId(EntityRoot.class, EntityUser.class, VanillaRendering.class);
-    public int getId() { return ID; }
+    // It's important that all possible dependencies be mentioned here!
+    public static final Type<Scripts> TYPE = new Type<>(EntityRoot.TYPE, EntityUser.TYPE, VanillaRendering.TYPE);
+    public Type<Scripts> getType() { return TYPE; }
+
+    // Listeners for built-in events, indexed using the event's ID.
+    public IdMap<Event, EventListener> eventListeners;
 
     // The Script Runtimes which are in use by this avatar.
     private List<ScriptRuntime> scriptRuntimes;
+    private AvatarModules modules;
 
     // The avatar, set during initialize()
     private Avatar<?> self;
 
-    // Optional dependent components
+    // Optional dependency components
     public @Nullable EntityRoot entityRoot;
     public @Nullable EntityUser entityUser;
     public @Nullable VanillaRendering vanillaRendering;
@@ -44,46 +49,44 @@ public class Scripts implements AvatarComponent {
     @Override
     public void initialize(AvatarModules modules, Avatar<?> self) throws AvatarLoadingException {
         this.self = self;
-        this.scriptRuntimes = setupRuntimes(modules);
+        this.modules = modules;
+        this.eventListeners = new IdMap<>(Event.class, e -> new EventListener(e.type.paramTypes()));
+        this.scriptRuntimes = new ArrayList<>(setupRuntimes(modules).values());
     }
 
-    public @Nullable AllocationTracker getAllocationTracker() { return self.getAllocationTracker(); }
-
-    // Helper to try running code, catch any error, and error out the Avatar if so
-    private boolean tryOrError(ThrowingRunnable<ScriptError> runnable, @Translatable String stage) {
-        try {
-            runnable.run();
-            // If successful, return false
-            return false;
-        } catch (ScriptError ex) {
-            self.error(new AvatarError("figura.error.runtime.script.script_error", ex, true, Component.translatable(stage)));
-        } catch (Throwable ex) {
-            self.error(new AvatarError("figura.error.runtime.script.unexpected_error", ex, false, Component.translatable(stage)));
-        }
-        return true;
+    public @Nullable AllocationTracker getAllocationTracker() {
+        return self.getAllocationTracker();
     }
 
     // Runs once on init
     @Override
-    public boolean mainThreadInitialize() {
-        return tryOrError(() -> {
-            for (var runtime : scriptRuntimes) runtime.init();
-        }, "figura.error.runtime.script.stage.init");
+    public void mainThreadInitialize() {
+        try {
+            modules.mainModule().initScript();
+        } catch (ScriptError ex) {
+            self.error(new AvatarError("figura.error.runtime.script.script_error", ex, true, Component.translatable("figura.error.runtime.script.stage.init")));
+        } catch (Throwable ex) {
+            self.error(new AvatarError("figura.error.runtime.script.unexpected_error", ex, false, Component.translatable("figura.error.runtime.script.stage.init")));
+        }
+    }
+
+    public void runEvent(Event event, Object... args) {
+        try {
+            // If there's nothing registered to this event, quit.
+            if (event.id >= eventListeners.size()) return;
+            // Fetch the event listener and invoke it.
+            eventListeners.get(event).invoke(args);
+        } catch (ScriptError ex) {
+            self.error(new AvatarError("figura.error.runtime.script.script_error", ex, true, Component.translatable("figura.error.runtime.script.stage.event", event.name)));
+        } catch (Throwable ex) {
+            self.error(new AvatarError("figura.error.runtime.script.unexpected_error", ex, false, Component.translatable("figura.error.runtime.script.stage.event", event.name)));
+        }
     }
 
     // Runs every tick
     @Override
-    public boolean tick() {
-        return tryOrError(() -> {
-            for (var runtime : scriptRuntimes) runtime.tick();
-        }, "figura.error.runtime.script.stage.tick");
-    }
-
-    // Runs every frame
-    public void renderEvent(float tickDelta) {
-        tryOrError(() -> {
-            for (var runtime : scriptRuntimes) runtime.render(tickDelta);
-        }, "figura.error.runtime.script.stage.render");
+    public void tick() {
+        runEvent(Event.CLIENT_TICK);
     }
 
     @Override
@@ -102,16 +105,17 @@ public class Scripts implements AvatarComponent {
     }
 
     // Determine which runtimes these modules use, and create them accordingly
-    private List<ScriptRuntime> setupRuntimes(AvatarModules modules) throws AvatarLoadingException {
-        List<ScriptRuntime> runtimes = new ArrayList<>();
-        Set<String> done = new HashSet<>();
+    private Map<String, ScriptRuntime> setupRuntimes(AvatarModules modules) throws AvatarLoadingException {
+        Map<String, ScriptRuntime> runtimes = new TreeMap<>();
         for (AvatarModules.Module module : modules.modules) {
             String lang = module.materials.metadata().language();
             if (lang == null) continue;
-            if (!done.add(lang)) continue;
-            RuntimeCreator creator = RUNTIME_CREATORS.get(lang);
-            if (creator == null) throw new AvatarLoadingException("figura.error.loading.script.unknown_language", lang);
-            runtimes.add(creator.createRuntime(this, modules));
+            if (!runtimes.containsKey(lang)) {
+                RuntimeCreator creator = RUNTIME_CREATORS.get(lang);
+                if (creator == null) throw new AvatarLoadingException("figura.error.loading.script.unknown_language", lang);
+                runtimes.put(lang, creator.createRuntime(this, modules));
+            }
+            module.runtime = runtimes.get(lang);
         }
         return runtimes;
     }

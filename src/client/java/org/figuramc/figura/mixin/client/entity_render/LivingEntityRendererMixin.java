@@ -50,7 +50,7 @@ public class LivingEntityRendererMixin {
         LivingEntity livingEntity = (LivingEntity) ((EntityRenderStateAccess) renderState).figura$getEntity();
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(livingEntity.getUUID());
         if (avatar == null)  { CemManager.tryGetCem(livingEntity); return; }
-        EntityRoot root = avatar.getComponent(EntityRoot.ID);
+        EntityRoot root = avatar.getComponent(EntityRoot.TYPE);
         if (root != null) {
             FiguraTransformStack matrixStack = new FiguraTransformStack(poseStack);
             // Undo the problematic translations above:

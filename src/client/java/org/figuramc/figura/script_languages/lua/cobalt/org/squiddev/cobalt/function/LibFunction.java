@@ -333,6 +333,8 @@ public sealed abstract class LibFunction extends LuaFunction
 	}
 	// endregion
 
+	// TODO look into overriding this? Lib functions sometimes capture variables which must be traced...
+	//  but this is probably infrequent enough to special-case it?
 	@Override
 	protected long traceNoMark(MemoryCounter counter, int depth) {
 		return OBJECT_SIZE;

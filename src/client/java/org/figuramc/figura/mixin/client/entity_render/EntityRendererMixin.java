@@ -36,7 +36,7 @@ public class EntityRendererMixin {
         Entity entity = ((EntityRenderStateAccess) renderState).figura$getEntity();
         Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
         if (avatar == null) { CemManager.tryGetCem(entity); return; }
-        EntityRoot root = avatar.getComponent(EntityRoot.ID);
+        EntityRoot root = avatar.getComponent(EntityRoot.TYPE);
         if (root != null) {
             float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
             root.render(avatar, multiBufferSource, new FiguraTransformStack(poseStack), tickDelta, light, OverlayTexture.NO_OVERLAY);

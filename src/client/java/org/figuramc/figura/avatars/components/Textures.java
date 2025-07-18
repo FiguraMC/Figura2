@@ -15,10 +15,10 @@ import java.util.List;
 /**
  * A component which holds all the textures for an Avatar.
  */
-public class Textures implements AvatarComponent {
+public class Textures implements AvatarComponent<Textures> {
 
-    public static final int ID = AvatarComponent.createId();
-    public int getId() { return ID; }
+    public static final Type<Textures> TYPE = new Type<>();
+    public Type<Textures> getType() { return TYPE; }
 
     // The atlas texture. Textures which don't opt out of being atlased go in here to keep things more efficient.
     public final @Nullable FiguraTextureAtlas atlas;

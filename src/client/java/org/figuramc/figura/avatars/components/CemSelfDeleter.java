@@ -9,13 +9,13 @@ import java.util.UUID;
  * Deletes the avatar when its entity is unloaded.
  * This prevents memory leaks for CEM avatars when their corresponding entity dies or is otherwise removed.
  */
-public class CemSelfDeleter implements AvatarComponent {
+public class CemSelfDeleter implements AvatarComponent<CemSelfDeleter> {
 
     private final UUID key;
     private final EntityUser entityUser;
 
-    public static final int ID = AvatarComponent.createId(EntityUser.class);
-    public int getId() { return ID; }
+    public static final Type<CemSelfDeleter> TYPE = new Type<>(EntityUser.TYPE);
+    public Type<CemSelfDeleter> getType() { return TYPE; }
 
     public CemSelfDeleter(UUID key, EntityUser entityUser) {
         this.key = key;
@@ -23,12 +23,9 @@ public class CemSelfDeleter implements AvatarComponent {
     }
 
     @Override
-    public boolean tick() {
+    public void tick() {
         // If entity is gone, unload this avatar.
-        if (entityUser.getEntity() == null) {
+        if (entityUser.getEntity() == null)
             AvatarManager.ENTITY_AVATARS.unload(this.key);
-            return true;
-        }
-        return false;
     }
 }

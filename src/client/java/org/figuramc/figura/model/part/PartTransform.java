@@ -1,12 +1,16 @@
 package org.figuramc.figura.model.part;
 
 import net.minecraft.util.Mth;
+import org.figuramc.figura.animation.Animator;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // Simple transform, more aligned to Minecraft/Blockbench
 public class PartTransform extends MarkedObjectBase {
@@ -19,8 +23,8 @@ public class PartTransform extends MarkedObjectBase {
     private boolean visible = true;
     private final Vector4f color = new Vector4f(1.0f);
 
-    public @Nullable VanillaRendering.VanillaPart mimicPart; // Mimic this vanilla part!
-    // List of animations
+    private @Nullable VanillaRendering.VanillaPart mimicPart; // Mimic this vanilla part!
+    private @Nullable List<Animator> animators = null;
 
     // Outputs and caching flags
     private final Vector3f totalOrigin = new Vector3f();
@@ -34,16 +38,16 @@ public class PartTransform extends MarkedObjectBase {
     // However, if the matrix is manually forced, we do not mark the matrix as dirty.
     // In that case, changes made to the origin/rotation/scale are no longer considered.
     private byte flags = 0;
-    private static final byte ORIGIN_DIRTY = 0x01; // totalOrigin is dirty and needs recalculation
-    private static final byte ROTATION_DIRTY = 0x02; // totalRotation is dirty and needs recalculation
-    private static final byte SCALE_DIRTY = 0x04; // totalScale is dirty and needs recalculation
-    private static final byte POSITION_DIRTY = 0x08; // totalScale is dirty and needs recalculation
-    private static final byte MATRIX_DIRTY = 0x10; // matrix is dirty and needs recalculation
+    public static final byte ORIGIN_DIRTY = 0x01; // totalOrigin is dirty and needs recalculation
+    public static final byte ROTATION_DIRTY = 0x02; // totalRotation is dirty and needs recalculation
+    public static final byte SCALE_DIRTY = 0x04; // totalScale is dirty and needs recalculation
+    public static final byte POSITION_DIRTY = 0x08; // totalScale is dirty and needs recalculation
+    public static final byte MATRIX_DIRTY = 0x10; // matrix is dirty and needs recalculation
 
     // Flag get/set
-    private boolean hasFlags(int flags) { return (this.flags & flags) == flags; }
-    private void setFlags(int flags) { this.flags |= (byte) flags; }
-    private void removeFlags(int flags) { this.flags &= (byte) ~flags; }
+    public boolean hasFlags(int flags) { return (this.flags & flags) == flags; }
+    public void setFlags(int flags) { this.flags |= (byte) flags; }
+    public void removeFlags(int flags) { this.flags &= (byte) ~flags; }
     private boolean originDirty() { return mimicPart != null || hasFlags(ORIGIN_DIRTY); }
     private boolean rotationDirty() { return mimicPart != null || hasFlags(ROTATION_DIRTY); }
     private boolean scaleDirty() { return mimicPart != null || hasFlags(SCALE_DIRTY); }
@@ -51,73 +55,47 @@ public class PartTransform extends MarkedObjectBase {
     private boolean matrixDirty() { return mimicPart != null || hasFlags(MATRIX_DIRTY); }
 
     // Property set/get
-    public void setOrigin(Vector3fc origin) {
-        this.origin.set(origin);
-        setFlags(ORIGIN_DIRTY | MATRIX_DIRTY);
-    }
-    public void setOrigin(float x, float y, float z) {
-        this.origin.set(x, y, z);
-        setFlags(ORIGIN_DIRTY | MATRIX_DIRTY);
-    }
-    public void setEulerRad(Vector3fc rotation) {
-        this.rotation.set(rotation);
-        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
-    }
-    public void setEulerRad(float x, float y, float z) {
-        this.rotation.set(x, y, z);
-        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
-    }
-    public void setEulerDeg(Vector3fc rotation) {
-        this.rotation.set(rotation).mul(Mth.DEG_TO_RAD);
-        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
-    }
-    public void setEulerDeg(float x, float y, float z) {
-        this.rotation.set(x, y, z).mul(Mth.DEG_TO_RAD);
-        setFlags(ROTATION_DIRTY | MATRIX_DIRTY);
-    }
-    public void setScale(Vector3fc scale) {
-        this.scale.set(scale);
-        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
-    }
-    public void setScale(float x, float y, float z) {
-        this.scale.set(x, y, z);
-        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
-    }
-    public void setScale(float s) {
-        this.scale.set(s);
-        setFlags(SCALE_DIRTY | MATRIX_DIRTY);
-    }
-    public void setPosition(Vector3fc position) {
-        this.position.set(position);
-        setFlags(POSITION_DIRTY | MATRIX_DIRTY);
-    }
-    public void setPosition(float x, float y, float z) {
-        this.position.set(x, y, z);
-        setFlags(POSITION_DIRTY | MATRIX_DIRTY);
-    }
-    public void forceMatrix(Matrix4fc matrix) {
-        this.totalMatrix.set(matrix);
-        this.totalMatrix.normal(totalNormalMatrix);
-        removeFlags(MATRIX_DIRTY);
-    }
-    public void unforceMatrix() {
-        setFlags(MATRIX_DIRTY);
-    }
-    public void setColor(Vector4fc color) {
-        this.color.set(color);
-    }
-    public void setColor(float r, float g, float b, float a) {
-        this.color.set(r, g, b, a);
-    }
-    public void setVisible(boolean vis) {
-        this.visible = vis;
+    public void setOrigin(Vector3fc origin) { this.origin.set(origin); setFlags(ORIGIN_DIRTY | MATRIX_DIRTY); }
+    public void setOrigin(float x, float y, float z) { this.origin.set(x, y, z); setFlags(ORIGIN_DIRTY | MATRIX_DIRTY); }
+
+    public void setEulerRad(Vector3fc rotation) { this.rotation.set(rotation); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
+    public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
+    public void setEulerDeg(Vector3fc rotation) { this.rotation.set(rotation).mul(Mth.DEG_TO_RAD); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
+    public void setEulerDeg(float x, float y, float z) { this.rotation.set(x, y, z).mul(Mth.DEG_TO_RAD); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
+
+    public void setScale(Vector3fc scale) { this.scale.set(scale); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
+    public void setScale(float x, float y, float z) { this.scale.set(x, y, z); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
+    public void setScale(float s) { this.scale.set(s); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
+
+    public void setPosition(Vector3fc position) { this.position.set(position); setFlags(POSITION_DIRTY | MATRIX_DIRTY); }
+    public void setPosition(float x, float y, float z) { this.position.set(x, y, z); setFlags(POSITION_DIRTY | MATRIX_DIRTY); }
+
+    public void forceMatrix(Matrix4fc matrix) { this.totalMatrix.set(matrix); this.totalMatrix.normal(totalNormalMatrix); removeFlags(MATRIX_DIRTY); }
+    public void unforceMatrix() { setFlags(MATRIX_DIRTY); }
+
+    public void setColor(Vector4fc color) { this.color.set(color); }
+    public void setColor(float r, float g, float b, float a) { this.color.set(r, g, b, a); }
+
+    public void setVisible(boolean vis) { this.visible = vis; }
+
+    public void setMimicPart(@Nullable VanillaRendering.VanillaPart mimicPart) { this.mimicPart = mimicPart; }
+
+    public void addAnimator(Animator animator) {
+        if (animators == null)
+            animators = new ArrayList<>(1);
+        animators.add(animator);
+        animator.addTransform(this);
     }
 
     public Vector3fc getOrigin() {
         if (originDirty()) {
             totalOrigin.set(origin);
-            if (mimicPart != null) totalOrigin.add(mimicPart.storedVanillaOrigin);
-            // TODO Apply animations
+            if (mimicPart != null)
+                totalOrigin.add(mimicPart.storedVanillaOrigin);
+            if (animators != null)
+                for (Animator animator : animators)
+                    if (animator.hasOrigin())
+                        totalOrigin.add(animator.getOrigin());
             removeFlags(ORIGIN_DIRTY);
         }
         return totalOrigin;
@@ -125,8 +103,12 @@ public class PartTransform extends MarkedObjectBase {
     public Vector3fc getEulerRad() {
         if (rotationDirty()) {
             totalRotation.set(rotation);
-            if (mimicPart != null) totalRotation.add(mimicPart.storedVanillaRotation);
-            // TODO Apply animations
+            if (mimicPart != null)
+                totalRotation.add(mimicPart.storedVanillaRotation);
+            if (animators != null)
+                for (Animator animator : animators)
+                    if (animator.hasRotation())
+                        totalRotation.add(animator.getEulerRad());
             removeFlags(ROTATION_DIRTY);
         }
         return totalRotation;
@@ -134,8 +116,12 @@ public class PartTransform extends MarkedObjectBase {
     public Vector3fc getScale() {
         if (scaleDirty()) {
             totalScale.set(scale);
-            if (mimicPart != null) totalScale.mul(mimicPart.storedVanillaScale);
-            // TODO Apply animations
+            if (mimicPart != null)
+                totalScale.mul(mimicPart.storedVanillaScale);
+            if (animators != null)
+                for (Animator animator : animators)
+                    if (animator.hasScale())
+                        totalScale.mul(animator.getScale());
             removeFlags(SCALE_DIRTY);
         }
         return totalScale;
@@ -177,7 +163,13 @@ public class PartTransform extends MarkedObjectBase {
 
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
+        long res = 300; // idk
         counter.trace(mimicPart, depth);
-        return 300; // idk
+        if (animators != null) {
+            res += animators.size() * POINTER_SIZE;
+            for (Animator animator : animators)
+                counter.trace(animator, depth);
+        }
+        return res;
     }
 }

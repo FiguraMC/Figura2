@@ -1,4 +1,4 @@
-package org.figuramc.figura.util.exception.functional;
+package org.figuramc.figura.util.functional;
 
 @FunctionalInterface
 public interface BiThrowingBiFunction<T1, T2, R, E1 extends Throwable, E2 extends Throwable> {

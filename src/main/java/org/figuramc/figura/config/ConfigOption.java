@@ -3,7 +3,7 @@ package org.figuramc.figura.config;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.figuramc.figura.FiguraMod;
-import org.figuramc.figura.util.exception.functional.ThrowingFunction;
+import org.figuramc.figura.util.functional.ThrowingFunction;
 
 import java.util.function.Function;
 

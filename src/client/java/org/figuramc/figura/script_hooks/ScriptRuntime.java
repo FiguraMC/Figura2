@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_hooks;
 
+import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 
 /**
@@ -24,8 +25,9 @@ public interface ScriptRuntime extends MemoryCountable {
      */
     void destroy();
 
-    void init() throws ScriptError; // Runs once on Avatar creation
-    void tick() throws ScriptError; // Runs every tick (regardless of whether user is loaded or not)
-    void render(float tickDelta) throws ScriptError; // Runs every frame (regardless of whether the user is visible or not)
+    /**
+     * Initialize the given module (which uses this runtime)
+     */
+    void initModule(AvatarModules.Module module) throws ScriptError;
 
 }

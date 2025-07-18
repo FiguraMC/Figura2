@@ -14,10 +14,10 @@ import java.util.UUID;
  * If another component wants to depend on this one's entity change flag, it should use Avatar.assertDependency() during
  * initialize().
  */
-public class EntityUser implements AvatarComponent {
+public class EntityUser implements AvatarComponent<EntityUser> {
 
-    public static final int ID = AvatarComponent.createId();
-    public int getId() { return ID; }
+    public static final Type<EntityUser> TYPE = new Type<>();
+    public Type<EntityUser> getType() { return TYPE; }
 
     private final UUID uuid; // Constant, set at initialization
     private boolean justChanged; // Tracks whether the entity was just updated. Works as a flag for other components.
@@ -28,18 +28,17 @@ public class EntityUser implements AvatarComponent {
     }
 
     @Override
-    public boolean mainThreadInitialize() {
+    public void mainThreadInitialize() {
         // Fetch the initial entity
         entity = ClientUtils.getEntityByUUID(uuid);
         if (entity != null) justChanged = true;
-        return false;
     }
 
     // Each tick, maybe update entity
     // If it changed, mark as changed for 1 tick
     @Override
     @SuppressWarnings("resource") // No, I don't want to use try with resources on entity.level()...
-    public boolean tick() {
+    public void tick() {
         justChanged = false; // Set to false at the beginning
         if (entity == null || entity.isRemoved() || entity.level() != Minecraft.getInstance().level) { // If we don't have the entity...
             // Then search for it!
@@ -49,7 +48,6 @@ public class EntityUser implements AvatarComponent {
             if (entity != prevEntity)
                 justChanged = true;
         }
-        return false;
     }
 
     public boolean changed() {

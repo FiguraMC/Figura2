@@ -27,13 +27,13 @@ package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.util.exception.functional.ThrowingBiConsumer;
-import org.figuramc.figura.util.exception.functional.ThrowingBiFunction;
+import org.figuramc.figura.util.functional.ThrowingBiConsumer;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
@@ -352,6 +352,24 @@ public final class LuaTable extends MarkedLuaValue {
 			if ((k = n.first()).isNil()) break;
 			consumer.accept(k, n.arg(2));
 		}
+	}
+
+	// Call the consumer on array values in the table, starting at index 1 until reaching nil
+	public <E extends Throwable> void forEachList(ThrowingBiConsumer<Integer, LuaValue, E> consumer) throws E {
+		int i = 1;
+		LuaValue v = rawget(i);
+		while (!v.isNil()) {
+			consumer.accept(i, v);
+			i++;
+			v = rawget(i);
+		}
+	}
+
+	// Convert list-like integer elements to list
+	public List<LuaValue> asList() {
+		List<LuaValue> res = new ArrayList<>();
+		forEachList((i, v) -> res.add(v));
+		return res;
 	}
 
 	private static int hashpow2(int hashCode, int mask) {

@@ -1,4 +1,7 @@
 
+-- Store this stuff in the ACTUAL global scope.
+local _ENV = getmetatable(_ENV).__index
+
 -- Declare locals
 
 -- Events stored by name
@@ -141,7 +144,10 @@ pop = function(heap)
     return res
 end
 
--- Set up builtin figura events, passed in through the varargs
-for _,name in ipairs({...}) do Event.new(name) end
--- And return the by-name table
-return byName
+-- Register to the "any_event" event, which is special.
+return {
+    ["$any_event"] = function(name, args)
+        local e = events[name]
+        if e then e(table.unpack(args)) end
+    end
+}

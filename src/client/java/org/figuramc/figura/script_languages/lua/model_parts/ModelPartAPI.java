@@ -2,8 +2,8 @@ package org.figuramc.figura.script_languages.lua.model_parts;
 
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.model.part.CustomItemModelPart;
+import org.figuramc.figura.model.part.FigmodelModelPart;
 import org.figuramc.figura.model.part.FiguraModelPart;
-import org.figuramc.figura.model.part.WorldRootedModelPart;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
@@ -20,7 +20,7 @@ public class ModelPartAPI {
     // Wrap an object into a userdata given the metatables
     public static LuaUserdata wrap(FiguraModelPart obj, FiguraMetatables metatables) {
         return switch (obj) {
-            case WorldRootedModelPart world -> userdataOf(world, metatables.worldRootModelPart);
+            case FigmodelModelPart figmodel -> userdataOf(figmodel, metatables.figmodelModelPart);
             case CustomItemModelPart item -> userdataOf(item, metatables.customItemModelPart);
             default -> userdataOf(obj, metatables.modelPart);
         };
@@ -81,44 +81,32 @@ public class ModelPartAPI {
         }));
         // Other operations
 
-        // Get name of the part
-        metatable.rawset("name", LibFunction.create((s, p) -> {
-            FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
-            return valueOf(part.name, s.allocationTracker);
-        }));
-
         // Get child with the given string name
         metatable.rawset("child", LibFunction.create((s, p, n) -> {
             FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
-            LuaString name = n.checkLuaString(s);
-            for (FiguraModelPart child : part.children) {
-                if (name.equals(child.name))
-                    return wrap(child, metatables);
-            }
-            return NIL;
+            String name = n.checkString(s);
+            FiguraModelPart child = part.children.get(name);
+            if (child == null) return NIL;
+            return wrap(child, metatables);
         }));
-        // Get table of all children
+        // Get table of children by name
         metatable.rawset("children", LibFunction.create((s, p) -> {
             FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
-            int c = part.children.size();
-            LuaTable result = new LuaTable(c, 1, s.allocationTracker);
-            for (int i = 0; i < c; i++) {
-                result.rawset(i+1, wrap(part.children.get(i), metatables));
-            }
+            LuaTable result = new LuaTable(0, part.children.size(), s.allocationTracker);
+            for (var childEntry : part.children.entrySet())
+                result.rawset(childEntry.getKey(), wrap(childEntry.getValue(), metatables));
             return result;
         }));
 
         metatable.rawset(NAME, valueOf("ModelPart", t));
 
-        FiguraMetatables.setupInheritance(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
+        FiguraMetatables.setupIndexing(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
             // Fetch the child
             FiguraModelPart part = p.checkUserdata(s, FiguraModelPart.class);
-            LuaString name = k.checkLuaString(s);
-            for (FiguraModelPart child : part.children) {
-                if (name.equals(child.name))
-                    return wrap(child, metatables);
-            }
-            return NIL;
+            String name = k.checkString(s);
+            FiguraModelPart child = part.children.get(name);
+            if (child == null) return NIL;
+            return wrap(child, metatables);
         }));
         
         return metatable;

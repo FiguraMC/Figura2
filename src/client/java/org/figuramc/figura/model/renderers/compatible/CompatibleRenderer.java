@@ -76,7 +76,7 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
         for (ScriptCallback callback : part.midRenderCallbacks) callback.call(tickDelta);
 
         // Render children recursively
-        for (FiguraModelPart child : part.children)
+        for (FiguraModelPart child : part.children.values())
             recursiveRender(child, bufferSource, currentRenderTypes, renderTypePriority, matrixStack, tickDelta, light, overlay);
 
         // If this has vertices, send them in

@@ -12,10 +12,10 @@ import org.joml.Vector3d;
 public class VanillaPartAPI {
 
     public static LuaValue wrap(VanillaRendering.VanillaPart part, FiguraMetatables metatables) {
-        return new LuaUserdata(part, metatables.vanillaModelPart);
+        return new LuaUserdata(part, metatables.vanillaPart);
     }
 
-    public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables, VanillaRendering component) throws LuaError {
+    public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables) throws LuaError {
 
         LuaTable metatable = ValueFactory.tableOf(state.allocationTracker);
 
@@ -53,36 +53,28 @@ public class VanillaPartAPI {
         metatable.rawset("storedRot", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaRotation), metatables)));
         metatable.rawset("storedScale", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaScale), metatables)));
 
-        // :name() - give the name of this part
-        metatable.rawset("name", LibFunction.create((s, p) -> {
-            ModelPart part = p.checkUserdata(s, VanillaRendering.VanillaPart.class).part;
-            String name = ((ModelPartTrackingAccess) (Object) part).figura$getName();
-            return ValueFactory.valueOf(name, s.allocationTracker);
-        }));
-
-        // :children() - get a list of the children of this part
+        // :children() - get a table of the children of this part by name
         metatable.rawset("children", LibFunction.create((s, p) -> {
             VanillaRendering.VanillaPart part = p.checkUserdata(s, VanillaRendering.VanillaPart.class);
             LuaTable t = ValueFactory.tableOf(s.allocationTracker);
-            int i = 1;
-            for (ModelPart child : part.part.children.values()) {
-                VanillaRendering.VanillaPart scriptChild = component.partMap.get(child);
+            for (var childEntry : part.part.children.entrySet()) {
+                VanillaRendering.VanillaPart scriptChild = part.getComponent().partMap.get(childEntry.getValue());
                 if (scriptChild == null) continue;
-                t.rawset(i++, VanillaPartAPI.wrap(scriptChild, metatables));
+                t.rawset(childEntry.getKey(), wrap(scriptChild, metatables));
             }
             return t;
         }));
 
         // Metamethod __name for error messages
-        metatable.rawset(Constants.NAME, ValueFactory.valueOf("VanillaModelPart", state.allocationTracker));
+        metatable.rawset(Constants.NAME, ValueFactory.valueOf("VanillaPart", state.allocationTracker));
 
-        FiguraMetatables.setupInheritance(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
+        FiguraMetatables.setupIndexing(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
             // Fetch the child
             VanillaRendering.VanillaPart scriptPart = p.checkUserdata(s, VanillaRendering.VanillaPart.class);
             String name = k.checkString(s);
             ModelPart child = scriptPart.part.children.get(name);
             if (child == null) return Constants.NIL;
-            VanillaRendering.VanillaPart scriptChild = component.partMap.get(child);
+            VanillaRendering.VanillaPart scriptChild = scriptPart.getComponent().partMap.get(child);
             if (scriptChild == null) return Constants.NIL;
             return VanillaPartAPI.wrap(scriptChild, metatables);
         }));

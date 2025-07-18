@@ -13,16 +13,13 @@ import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.util.ListUtils;
+import org.figuramc.figura.util.MapUtils;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
 import java.lang.Math;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Corresponds to a Group in Blockbench.
@@ -34,17 +31,19 @@ import java.util.Objects;
  * - This can be more efficient rendering-wise, because most of the time individual cubes are not articulated, allowing
  *   for less unneeded computation. When they do need to be articulated, one can simply add a group for said cube.
  */
-public class FiguraModelPart extends MarkedObjectBase implements Transformable {
+public class FiguraModelPart extends MarkedObjectBase implements PartLike<FiguraModelPart> {
 
     // General info
-    public final String name;
-    private @Nullable FiguraModelPart parent; // Storing the parent is dubious... might be some edge cases that could warrant removal?
+    // Storing the parent is dubious... might be some edge cases that could warrant removal?
+    // With shallow copies, a part might not have a singular parent, it could have multiple!
+    private @Nullable FiguraModelPart parent;
 
     // Structure / modifications
     public final PartTransform transform = new PartTransform(); // The transform of this model part
 
 //    private  animators; // The animators which affect this model part
-    public final ArrayList<FiguraModelPart> children; // The children of this model part in the hierarchy tree
+    public final LinkedHashMap<String, FiguraModelPart> children; // The children of this model part in the hierarchy tree. Ordered, so we don't use a regular hashmap.
+    private long childrenNamesSize; // Updated with the cumulative size of the names of children, for memory counting.
 
     // Rendering
     public final float[] vertices; // The vertices making up the cubes and meshes of the model part
@@ -58,11 +57,11 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             postRenderCallbacks = new ArrayList<>(0);
 
     // Construct a simple empty wrapper part around the given children
-    public FiguraModelPart(String name, @Nullable FiguraModelPart parent, List<FiguraModelPart> children) {
-        this.name = name;
+    public FiguraModelPart(@Nullable FiguraModelPart parent, Map<String, FiguraModelPart> children) {
         this.parent = parent;
-        this.children = new ArrayList<>(children);
-        for (FiguraModelPart child : children) {
+        this.children = new LinkedHashMap<>(children);
+        this.childrenNamesSize = children.keySet().stream().mapToInt(String::length).sum() * CHAR_SIZE;
+        for (FiguraModelPart child : children.values()) {
             if (child.parent != null)
                 throw new IllegalStateException("When constructing a wrapper part, the childrens' parent must be null!");
             child.parent = this;
@@ -71,32 +70,31 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
     }
 
     // Vanilla parameter is used for mimics
-    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanilla) {
+    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) {
         // Copy basic values out of the materials
-        name = materials.name();
         this.parent = parent;
         // If both zero, skip setting it
-        if (!materials.origin().equals(0,0,0) || !materials.rotation().equals(0,0,0)) {
-            transform.setOrigin(materials.origin());
-            transform.setEulerDeg(materials.rotation());
+        if (!materials.origin.equals(0,0,0) || !materials.rotation.equals(0,0,0)) {
+            transform.setOrigin(materials.origin);
+            transform.setEulerDeg(materials.rotation);
         }
 
         // TODO: Add animators to this part
 
         // Set up mimicry
-        if (vanilla != null && materials.mimic() != null) {
-            int slash = materials.mimic().indexOf('/');
+        if (vanillaComponent != null && materials.mimic != null) {
+            int slash = materials.mimic.indexOf('/');
             if (slash != -1) {
-                String modelName = materials.mimic().substring(0, slash);
-                String partName = materials.mimic().substring(slash + 1);
-                Map<String, Model> models = ModelNames.getModelsByName(vanilla.entityRenderer);
+                String modelName = materials.mimic.substring(0, slash);
+                String partName = materials.mimic.substring(slash + 1);
+                Map<String, Model> models = ModelNames.getModelsByName(vanillaComponent.entityRenderer);
                 Model model = models.get(modelName);
                 if (model != null) {
                     ModelPart part = model.getAnyDescendantWithName(partName).orElse(null);
                     if (part != null) {
-                        VanillaRendering.VanillaPart scriptPart = vanilla.partMap.get(part);
+                        VanillaRendering.VanillaPart scriptPart = vanillaComponent.partMap.get(part);
                         if (scriptPart != null) {
-                            transform.mimicPart = scriptPart;
+                            transform.setMimicPart(scriptPart);
                         }
                     }
                 }
@@ -104,65 +102,92 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         }
 
         // Get children
-        children = ListUtils.map(materials.children(), mat -> new FiguraModelPart(mat, this, moduleIndex, texturesComponent, vanilla));
+        children = MapUtils.mapValues(materials.children, mat -> switch (mat) {
+            case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(figmodelMaterials, this, moduleIndex, texturesComponent, vanillaComponent);
+            default -> new FiguraModelPart(mat, this, moduleIndex, texturesComponent, vanillaComponent);
+        }, LinkedHashMap::new);
+        childrenNamesSize = children.keySet().stream().mapToInt(String::length).sum() * CHAR_SIZE;
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
-        renderTypes:
-        do {
-            if (materials.textureIndex() != -1) {
-                // If tex index is not -1, then generate a render type from the texture:
-                AvatarTexture tex = texturesComponent.getTexture(moduleIndex, materials.textureIndex());
-                renderType = new FiguraRenderType.Basic(tex.getLocation(), null);
-                // Also, set the UV modifier from the texture (for atlases)
-                uvModifier.set(tex.getUvValues());
-            } else if (!children.isEmpty()) {
-                // Otherwise, attempt to merge from children:
-                FiguraRenderType first = children.getFirst().renderType;
-                for (int i = 1; i < children.size(); i++)
-                    if (!Objects.equals(children.get(i).renderType, first))
-                        break renderTypes; // Get out of the entire loop, no merge can happen
-                for (FiguraModelPart child : children)
+        if (materials.textureIndex != -1) {
+            // If tex index is not -1, then generate a render type from the texture:
+            AvatarTexture tex = texturesComponent.getTexture(moduleIndex, materials.textureIndex);
+            renderType = new FiguraRenderType.Basic(tex.getLocation(), null);
+            // Also, set the UV modifier from the texture (for atlases)
+            uvModifier.set(tex.getUvValues());
+        } else if (!children.isEmpty()) {
+            // Otherwise, attempt to merge from children:
+            boolean sameRenderType = children.values().stream().map(FiguraModelPart::getRenderType).distinct().limit(2).count() <= 1;
+            if (sameRenderType) {
+                // If all children have the same render type, merge upwards,
+                // setting their render types to null and this render type to that one.
+                for (FiguraModelPart child : children.values())
                     child.renderType = null;
-                this.renderType = first;
+                this.renderType = children.firstEntry().getValue().getRenderType();
             }
-        } while (false);
+        }
 
         // Get vertices
         FloatArrayList vertexData = new FloatArrayList();
-        for (ModuleMaterials.CubeData cubeData : materials.cubes()) addVertices(vertexData, cubeData, uvModifier);
-        for (ModuleMaterials.MeshData meshData : materials.meshes()) addVertices(vertexData, meshData, uvModifier);
+        for (ModuleMaterials.CubeData cubeData : materials.cubes) addVertices(vertexData, cubeData, uvModifier);
+        for (ModuleMaterials.MeshData meshData : materials.meshes) addVertices(vertexData, meshData, uvModifier);
         vertices = vertexData.toArray(new float[0]);
     }
 
     // Construct by extruding a texture
-    public FiguraModelPart(String name, AvatarTexture texture) {
-        this.name = name;
+    public FiguraModelPart(AvatarTexture texture) {
         this.parent = null;
         this.renderType = new FiguraRenderType.Basic(texture.getLocation(), null);
         Vector4f uvModifier = texture.getUvValues();
-        this.children = new ArrayList<>();
+        this.children = new LinkedHashMap<>();
+        childrenNamesSize = 0;
         FloatArrayList vertexData = new FloatArrayList();
         // Iterate in each direction!
-        byte[] opacityStates = new byte[Math.max(texture.getWidth(), texture.getHeight()) + 2];
+        byte[] opacityStates = new byte[Math.max(texture.getWidth(), texture.getHeight()) + 2]; // +2 because of 1 pixel padding on each side
         int w = texture.getWidth();
         int h = texture.getHeight();
 
+        // Iterations run with -1 and <= in order to algorithmically "pad" the image with +1 pixel on each side of emptiness, making the algorithm a bit simpler.
+
         // Horizontal sweep with vertical scanline
         for (int x = -1; x <= w; x++) {
+            // "Building state" indicates our current progress in creating a quad as we scan downwards.
+            // As we scan down the second column, imagine a group of pixels like this:
+            // ■ ■
+            // ■|
+            // ■|
+            //  |■
+            // ■|
+            // ■ ■
+            // We're going to need to emit those four "|" characters as quads.
+            // Quads 1, 2, and 4 will be facing right, and quad 3 will be facing left.
+            // Also, as an optimization, we will merge 1 and 2, so actually only 3 quads will be created.
+            // Let's track building state, row by row:
+            // Row 1: opacityState == 2, and prevOpacityState == 2, so newBuildingState is 0. Since buildingState starts as 0, no quad is created.
+            // Row 2: opacityState == 0, and prevOpacityState == 2, so newBuildingState is -1. This means that we're going to start a quad facing right.
+            // Row 3: opacityState == 0, and prevOpacityState == 2, so newBuildingState is -1. This is the same as before, so we do nothing, and continue the existing quad.
+            // Row 4: opacityState == 2, and prevOpacityState == 0, so newBuildingState is  1. Since this is different, we will end our existing quad facing right, and begin a new quad facing left.
+            // Row 5: opacityState == 0, and prevOpacityState == 2, so newBuildingState is -1. Since this is different, we will end our existing quad facing left, and begin a new quad facing right.
+            // Row 6: opacityState == 2, and prevOpacityState == 2, so newBuildingState is 0. Since this is different, we will end our existing quad facing right.
+            // We've now begun and ended the three quads for this column, and prepared the "opacityStates" for the next column, so we repeat!
             float buildingState = 0;
             for (int y = -1; y <= h; y++) {
-                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : (byte) ((ARGB.alpha(texture.getPixel(x, y)) + 253) / 254);
+                byte opacityState = (x < 0 || y < 0 || x >= w || y >= h) ? 0 : getOpacityState(texture, x, y);
                 if (x >= 0) {
-                    byte prevOpacityState = opacityStates[y+1];
+                    byte prevOpacityState = opacityStates[y+1]; // This is the opacity state of the pixel to the left!
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
                     if (buildingState != newBuildingState) {
-                        // We're either starting a quad or ending one...
-                        if (newBuildingState == 0) {
+                        // We're either starting a quad, ending one, or both.
+                        // If we go from anything to 0, we're ending a quad.
+                        // If we go from 0 to anything, we're starting a quad.
+                        // If we go from 1 to -1 or vice versa, we're ending a quad and starting a quad at once.
+                        if (buildingState != 0) {
                             // We're ending a quad
                             noSkinVert(vertexData, x, h - y, (buildingState - 1) / -2, (x + 0f) / w, (y + 0f) / h, -1f * buildingState, 0f, 0f, null, null, uvModifier);
                             noSkinVert(vertexData, x, h - y, (buildingState + 1) / 2, (x + buildingState) / w, (y + 0f) / h, -1f * buildingState, 0f, 0f, null, null, uvModifier);
-                        } else {
+                        }
+                        if (newBuildingState != 0) {
                             // We're starting a quad
                             noSkinVert(vertexData, x, h - y, (newBuildingState + 1) / 2, (x + newBuildingState) / w, (y + 0f) / h, -1f * newBuildingState, 0f, 0f, null, null, uvModifier);
                             noSkinVert(vertexData, x, h - y, (newBuildingState - 1) / -2, (x + 0f) / w, (y + 0f) / h, -1f * newBuildingState, 0f, 0f, null, null, uvModifier);
@@ -175,7 +200,8 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
             if (buildingState != 0) throw new IllegalStateException("Failed to extrude texture? Internal bug in Figura, please report!");
         }
 
-        // Vertical sweep with horizontal scanline
+        // Vertical sweep with horizontal scanline.
+        // This is largely the same as the above loop, just flip the axes.
         for (int y = -1; y <= h; y++) {
             float buildingState = 0;
             for (int x = -1; x <= w; x++) {
@@ -184,12 +210,13 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
                     byte prevOpacityState = opacityStates[x+1];
                     float newBuildingState = Math.signum(opacityState - prevOpacityState);
                     if (buildingState != newBuildingState) {
-                        // We're either starting a quad or ending one...
-                        if (newBuildingState == 0) {
+                        // We're either starting a quad, ending one, or both.
+                        if (buildingState != 0) {
                             // We're ending a quad
                             noSkinVert(vertexData, x, h - y, (buildingState + 1) / 2, (x + 0f) / w, (y + buildingState) / h, 0f, -1f * buildingState, 0f, null, null, uvModifier);
                             noSkinVert(vertexData, x, h - y, (buildingState - 1) / -2, (x + 0f) / w, (y + 0f) / h, 0f, -1f * buildingState, 0f, null, null, uvModifier);
-                        } else {
+                        }
+                        if (newBuildingState != 0) {
                             // We're starting a quad
                             noSkinVert(vertexData, x, h - y, (newBuildingState - 1) / -2, (x + 0f) / w, (y + 0f) / h, 0f, -1f * newBuildingState, 0f, null, null, uvModifier);
                             noSkinVert(vertexData, x, h - y, (newBuildingState + 1) / 2, (x + 0f) / w, (y + newBuildingState) / h, 0f, -1f * newBuildingState, 0f, null, null, uvModifier);
@@ -203,6 +230,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         }
 
         // Put on the front and back panels
+        // TODO: if this has issues with transparency or something, replace it with multiple quads that only cover the actual filled pixels
         noSkinVert(vertexData, 0f, 0f, 1f, 0f, 1f, 0f, 0f, 1f, null, null, uvModifier);
         noSkinVert(vertexData, w, 0f, 1f, 1f, 1f, 0f, 0f, 1f, null, null, uvModifier);
         noSkinVert(vertexData, w, h, 1f, 1f, 0f, 0f, 0f, 1f, null, null, uvModifier);
@@ -220,6 +248,14 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         transform.setOrigin(0f, 0f, 7.5f);
     }
 
+    // Return the "opacity state" for the pixel at (x, y)
+    // For a fully transparent pixel with alpha 0, opacityState = 0.
+    // For a partially transparent pixel with alpha 1 to 254, opacityState = 1.
+    // For a fully opaque pixel with alpha 255, opacityState = 2.
+    // Assumes x,y is in bounds for the image!
+    private static byte getOpacityState(AvatarTexture texture, int x, int y) {
+        return (byte) ((ARGB.alpha(texture.getPixel(x, y)) + 253) / 254);
+    }
 
     private static void addVertices(FloatArrayList vertexData, ModuleMaterials.CubeData cubeData, Vector4f uvModifier) {
         Vector3f f = cubeData.from().sub(cubeData.inflate(), new Vector3f());
@@ -402,13 +438,18 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
         return transform;
     }
 
+    @Override
+    public @Nullable FiguraModelPart getChildByName(String name) {
+        return children.get(name);
+    }
+
     // // // // // // MEMORY LIMITING // // // // // //
 
     @Override
     protected long traceNoMark(MemoryCounter counter, int depth) {
         // Trace other reachable objects
         counter.trace(transform, depth);
-        for (FiguraModelPart child : children)
+        for (FiguraModelPart child : children.values())
             counter.trace(child, depth);
         counter.trace(parent, depth);
         for (ScriptCallback callback : preRenderCallbacks) counter.trace(callback, depth);
@@ -420,7 +461,7 @@ public class FiguraModelPart extends MarkedObjectBase implements Transformable {
 
         // Random guess around 60 bytes for the constant sized stuff, don't feel like counting all that
         return 60
-                + CHAR_SIZE * name.length()
+                + childrenNamesSize
                 + FLOAT_SIZE * vertices.length
                 + POINTER_SIZE * (preRenderCallbacks.size() + midRenderCallbacks.size() + postRenderCallbacks.size());
     }

@@ -1,11 +1,13 @@
 package org.figuramc.figura.data;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.JsonUtils;
 import org.figuramc.figura.util.ListUtils;
+import org.figuramc.figura.util.MapUtils;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -21,15 +23,22 @@ import java.util.*;
  */
 public class FigModelImporter {
 
-    public static ModuleMaterials.ModelPartMaterials parseFigModel(String fileName, String prefix, JsonObject figmodel, ArrayList<ModuleMaterials.TextureMaterials> textures) throws ModuleImportingException {
+    public static ModuleMaterials.FigmodelMaterials parseFigModel(String fileName, String prefix, JsonObject figmodel, ArrayList<ModuleMaterials.TextureMaterials> textures) throws ModuleImportingException {
         try {
-            // Process textures and generate a mapping
-            ModelLocalTexture[] textureMapping = processTextures(figmodel.getAsJsonArray("textures"), prefix + "/" + fileName, textures);
-            // Process root model parts, wrap together into one part, and return
-            ArrayList<ModuleMaterials.ModelPartMaterials> roots = ListUtils.map(figmodel.getAsJsonArray("roots"), root -> processGroup(root.getAsJsonObject(), textureMapping));
-            return ModuleMaterials.ModelPartMaterials.wrapper(fileName, roots);
+            // Process textures and generate a model-local mapping
+            ModelLocalTexture[] textureMapping = processTextures(JsonUtils.getObjectOrEmpty(figmodel, "textures", () -> new RuntimeException("textures must be object")), textures);
+            // Process animations
+            LinkedHashMap<String, ModuleMaterials.AnimationMaterials> anims = processAnimations(JsonUtils.getObjectOrEmpty(figmodel, "animations", () -> new RuntimeException("animations must be object")));
+            // Process root model parts
+            LinkedHashMap<String, ModuleMaterials.ModelPartMaterials> roots = MapUtils.mapValues(figmodel.getAsJsonObject("roots").asMap(), root -> processGroup(root.getAsJsonObject(), textureMapping), LinkedHashMap::new);
+
+            return new ModuleMaterials.FigmodelMaterials(
+                    roots,
+                    ListUtils.associateByTo(List.of(textureMapping), ModelLocalTexture::name, ModelLocalTexture::globalTextureIndex), // Associate name -> global texture index
+                    anims
+            );
         } catch (Throwable t) {
-            throw new ModuleImportingException("figura.error.importing.invalid_figmodel", prefix + "/" + fileName);
+            throw new ModuleImportingException("figura.error.importing.invalid_figmodel", t, false, prefix + "/" + fileName);
         }
     }
 
@@ -60,9 +69,9 @@ public class FigModelImporter {
                     if (data.has(contextEntry.getKey())) {
                         JsonObject transformJson = data.getAsJsonObject(contextEntry.getKey());
                         ModuleMaterials.ItemPartTransform transform = new ModuleMaterials.ItemPartTransform(
-                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("translation")),
-                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("rotation")),
-                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("scale"))
+                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("translation"), Vector3f::new),
+                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("rotation"), Vector3f::new),
+                                JsonUtils.parseVec3f(transformJson.getAsJsonArray("scale"), () -> new Vector3f(1))
                         );
                         transforms.put(contextEntry.getValue(), transform);
                     }
@@ -77,18 +86,24 @@ public class FigModelImporter {
     }
 
     // Return info about textures specific to this model
-    private static ModelLocalTexture[] processTextures(JsonArray modelTextures, String filePath, List<ModuleMaterials.TextureMaterials> allTextures) {
+    private static ModelLocalTexture[] processTextures(JsonObject modelTextures, List<ModuleMaterials.TextureMaterials> allTextures) {
         ModelLocalTexture[] mapping = new ModelLocalTexture[modelTextures.size()];
-        for (int i = 0; i < modelTextures.size(); i++) {
-            JsonObject texture = modelTextures.get(i).getAsJsonObject();
+        int i = -1;
+        for (Map.Entry<String, JsonElement> entry : modelTextures.asMap().entrySet()) {
+            i++;
+            String name = IOUtils.stripExtension(entry.getKey(), "png");
+            boolean noAtlas = name.endsWith(".noatlas");
+            name = IOUtils.stripExtension(name, "noatlas");
+
+            JsonObject texture = entry.getValue().getAsJsonObject();
             // Fetch the UV size.
-            Vector2f uvSize = JsonUtils.parseVec2f(texture.getAsJsonArray("uv_size"));
+            Vector2f uvSize = JsonUtils.parseVec2f(texture.getAsJsonArray("uv_size"), () -> {throw new RuntimeException("uv_size must be specified");} );
 
             // First, check if it's a vanilla texture:
             @Nullable String vanillaTextureOverride = JsonUtils.getStringOrDefault(texture, "vanilla_texture_override", null);
             if (vanillaTextureOverride != null && !vanillaTextureOverride.isBlank()) {
                 allTextures.add(new ModuleMaterials.TextureMaterials.VanillaTexture(vanillaTextureOverride));
-                mapping[i] = new ModelLocalTexture(allTextures.size() - 1, uvSize);
+                mapping[i] = new ModelLocalTexture(name, allTextures.size() - 1, uvSize);
                 continue;
             }
 
@@ -100,35 +115,35 @@ public class FigModelImporter {
                 int idx = ListUtils.findIndex(allTextures, tex -> tex instanceof ModuleMaterials.TextureMaterials.OwnedTexture owned && path.equals(owned.path()));
                 // If it is, defer to that texture.
                 if (idx != -1) {
-                    mapping[i] = new ModelLocalTexture(idx, uvSize);
+                    mapping[i] = new ModelLocalTexture(name, idx, uvSize);
                     continue;
                 }
             }
 
             // Finally, it was neither, so create a new owned texture.
-            String textureName = filePath + IOUtils.stripExtension(texture.get("name").getAsString(), "png");
-            boolean noAtlas = false;
-            if (textureName.endsWith(".noatlas")) {
-                textureName = textureName.substring(0, textureName.length() - ".noatlas".length());
-                noAtlas = true;
-            }
             byte[] data = Base64.getDecoder().decode(texture.get("png_bytes_base64").getAsString());
-            ModuleMaterials.TextureMaterials newTexture = new ModuleMaterials.TextureMaterials.OwnedTexture(textureName, null, data, noAtlas);
+            ModuleMaterials.TextureMaterials newTexture = new ModuleMaterials.TextureMaterials.OwnedTexture(null, null, data, noAtlas);
 
             // Add to list and update mapping.
             allTextures.add(newTexture);
-            mapping[i] = new ModelLocalTexture(allTextures.size() - 1, uvSize);
+            mapping[i] = new ModelLocalTexture(name, allTextures.size() - 1, uvSize);
         }
         return mapping;
     }
 
+    private static LinkedHashMap<String, ModuleMaterials.AnimationMaterials> processAnimations(JsonObject animations) {
+        return MapUtils.mapValues(animations.asMap(), animElem -> AnimationImporter.parseAnimation(animElem.getAsJsonObject()), LinkedHashMap::new);
+    }
+
     private static ModuleMaterials.ModelPartMaterials processGroup(JsonObject group, ModelLocalTexture[] textureMapping) {
         // Structure
-        String name = group.get("name").getAsString();
-        Vector3f origin = JsonUtils.parseVec3f(group.getAsJsonArray("origin"));
-        Vector3f rotation = JsonUtils.parseVec3f(group.getAsJsonArray("rotation"));
-        ArrayList<ModuleMaterials.ModelPartMaterials> children = ListUtils.map(group.getAsJsonArray("children"),
-                child -> processGroup(child.getAsJsonObject(), textureMapping));
+        Vector3f origin = JsonUtils.parseVec3f(group.getAsJsonArray("origin"), Vector3f::new);
+        Vector3f rotation = JsonUtils.parseVec3f(group.getAsJsonArray("rotation"), Vector3f::new);
+        LinkedHashMap<String, ModuleMaterials.ModelPartMaterials> children = MapUtils.mapValues(
+                JsonUtils.getObjectOrEmpty(group, "children", () -> new RuntimeException("Group children must be object")).asMap(),
+                child -> processGroup(child.getAsJsonObject(), textureMapping),
+                LinkedHashMap::new
+        );
 
         // Mimic
         String mimicPart = JsonUtils.getStringOrDefault(group, "mimic_part", null);
@@ -142,22 +157,22 @@ public class FigModelImporter {
                 mesh -> processMesh(mesh.getAsJsonObject(), textureMapping[textureIndex].uvSize()));
 
         // Return
-        return new ModuleMaterials.ModelPartMaterials(name, origin, rotation, children, mimicPart, mappedTextureIndex, cubes, meshes);
+        return new ModuleMaterials.ModelPartMaterials(origin, rotation, children, mimicPart, mappedTextureIndex, cubes, meshes);
     }
 
     private static ModuleMaterials.CubeData processCube(JsonObject cube, Vector2f uvSize) {
-        Vector3f origin = JsonUtils.parseVec3f(cube.getAsJsonArray("origin"));
-        Vector3f rotation = JsonUtils.parseVec3f(cube.getAsJsonArray("rotation"));
-        Vector3f from = JsonUtils.parseVec3f(cube.getAsJsonArray("from"));
-        Vector3f to = JsonUtils.parseVec3f(cube.getAsJsonArray("to"));
-        Vector3f inflate = JsonUtils.parseVec3f(cube.getAsJsonArray("inflate"));
+        Vector3f origin = JsonUtils.parseVec3f(cube.getAsJsonArray("origin"), Vector3f::new);
+        Vector3f rotation = JsonUtils.parseVec3f(cube.getAsJsonArray("rotation"), Vector3f::new);
+        Vector3f from = JsonUtils.parseVec3f(cube.getAsJsonArray("from"), () -> {throw new RuntimeException("Cube 'from' must be specified");});
+        Vector3f to = JsonUtils.parseVec3f(cube.getAsJsonArray("to"), () -> {throw new RuntimeException("Cube 'to' must be specified");});
+        Vector3f inflate = JsonUtils.parseVec3f(cube.getAsJsonArray("inflate"), Vector3f::new);
         JsonArray facesArray = cube.getAsJsonArray("faces");
         if (facesArray.size() != 6) throw new IllegalArgumentException("Unexpected # of cube faces - expected 6, got " + facesArray.size());
         @Nullable ModuleMaterials.CubeFace[] faces = facesArray.asList().stream().map(faceElem -> {
             if (faceElem.isJsonNull()) return null;
             JsonObject face = faceElem.getAsJsonObject();
-            Vector2f uv_min = JsonUtils.parseVec2f(face.getAsJsonArray("uv_min")).div(uvSize);
-            Vector2f uv_max = JsonUtils.parseVec2f(face.getAsJsonArray("uv_max")).div(uvSize);
+            Vector2f uv_min = JsonUtils.parseVec2f(face.getAsJsonArray("uv_min"), () -> {throw new RuntimeException("Cube face 'uv_min' must be specified");}).div(uvSize);
+            Vector2f uv_max = JsonUtils.parseVec2f(face.getAsJsonArray("uv_max"), () -> {throw new RuntimeException("Cube face 'uv_max' must be specified");}).div(uvSize);
             int face_rotation = JsonUtils.getIntOrDefault(face, "rotation", 0);
             if (face_rotation % 90 != 0 || face_rotation < 0 || face_rotation > 270)
                 throw new IllegalArgumentException("Unexpected face rotation - expected 0, 90, 180, or 270, got " + face_rotation);
@@ -167,12 +182,12 @@ public class FigModelImporter {
     }
 
     private static ModuleMaterials.MeshData processMesh(JsonObject mesh, Vector2f uvSize) {
-        Vector3f origin = JsonUtils.parseVec3f(mesh.getAsJsonArray("origin"));
-        Vector3f rotation = JsonUtils.parseVec3f(mesh.getAsJsonArray("rotation"));
+        Vector3f origin = JsonUtils.parseVec3f(mesh.getAsJsonArray("origin"), Vector3f::new);
+        Vector3f rotation = JsonUtils.parseVec3f(mesh.getAsJsonArray("rotation"), Vector3f::new);
         JsonArray verticesArray = mesh.getAsJsonArray("vertices");
-        List<ModuleMaterials.VertexData> vertices = ListUtils.map(verticesArray.asList(), v -> {
+        List<ModuleMaterials.VertexData> vertices = ListUtils.map(verticesArray, v -> {
             JsonObject vertex = v.getAsJsonObject();
-            Vector3f pos = JsonUtils.parseVec3f(vertex.getAsJsonArray("pos"));
+            Vector3f pos = JsonUtils.parseVec3f(vertex.getAsJsonArray("pos"), () -> {throw new RuntimeException("Mesh vertex 'pos' must be specified");});
             // TODO re-add skinning data
             return new ModuleMaterials.VertexData(pos, null);
         });
@@ -189,7 +204,7 @@ public class FigModelImporter {
             for (int i = 0; i < faceVertices.size(); i++) {
                 JsonObject faceVertex = faceVertices.get(i).getAsJsonObject();
                 indicesVec.setComponent(i, faceVertex.get("index").getAsInt());
-                uvs.add(JsonUtils.parseVec2f(faceVertex.getAsJsonArray("uv")).div(uvSize));
+                uvs.add(JsonUtils.parseVec2f(faceVertex.getAsJsonArray("uv"), () -> {throw new RuntimeException("Mesh face vertex 'uv' must be specified");}).div(uvSize));
             }
             indices.add(indicesVec);
         });
@@ -199,6 +214,6 @@ public class FigModelImporter {
 
     // A model-local texture is mapped to a global texture, and also has a UV size to modify UV values by.
     // UV size is per-model; the same texture may be included in multiple models, with multiple different UV sizes.
-    private record ModelLocalTexture(int globalTextureIndex, Vector2f uvSize) {}
+    private record ModelLocalTexture(String name, int globalTextureIndex, Vector2f uvSize) {}
 
 }

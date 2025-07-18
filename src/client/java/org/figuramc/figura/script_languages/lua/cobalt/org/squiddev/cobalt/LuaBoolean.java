@@ -61,7 +61,7 @@ public final class LuaBoolean extends LuaValue {
 	/**
 	 * The value of the boolean
 	 */
-	private final boolean value;
+	public final boolean value;
 
 	private LuaBoolean(boolean b) {
 		super(TBOOLEAN);

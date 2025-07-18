@@ -4,6 +4,8 @@ import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import net.minecraft.resources.ResourceLocation;
+import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.joml.Vector4f;
 
 import java.util.concurrent.CompletableFuture;
@@ -12,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
  * A generic avatar texture as seen from a script.
  * Subclassed by "Standalone", "Atlased", and "Vanilla" variations.
  */
-public abstract class AvatarTexture {
+public abstract class AvatarTexture extends MarkedObjectBase {
 
     // Create a texture and upload it.
     public static AvatarTexture from(Textures textureComponent, ModuleMaterials.TextureMaterials materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarLoadingException {
@@ -48,4 +50,8 @@ public abstract class AvatarTexture {
     public abstract int getHeight();
     public abstract int getPixel(int x, int y); // Use the Minecraft ARGB class with the returned int
 
+    @Override
+    protected long traceNoMark(MemoryCounter counter, int depth) {
+        throw new UnsupportedOperationException("TODO");
+    }
 }

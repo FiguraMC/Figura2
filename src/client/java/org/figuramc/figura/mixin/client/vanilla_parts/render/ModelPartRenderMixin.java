@@ -98,7 +98,7 @@ public abstract class ModelPartRenderMixin {
         if (currentPart != null) return true;
         Avatar<?> peeked = FiguraModClient.AVATAR_RENDERING_STACK.peek();
         if (peeked == null) return false;
-        VanillaRendering vanillaRendering = peeked.getComponent(VanillaRendering.ID);
+        VanillaRendering vanillaRendering = peeked.getComponent(VanillaRendering.TYPE);
         if (vanillaRendering == null) return false;
         VanillaRendering.VanillaPart scriptPart = vanillaRendering.partMap.get((ModelPart) (Object) this);
         if (scriptPart == null) return false;

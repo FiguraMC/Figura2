@@ -9,28 +9,34 @@ import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.Renderable;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.figuramc.figura.util.ListUtils;
+import org.figuramc.figura.util.MapUtils;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 
-public class EntityRoot implements AvatarComponent {
+public class EntityRoot implements AvatarComponent<EntityRoot> {
 
-    public static final int ID = AvatarComponent.createId(Textures.class);
-    public int getId() { return ID; }
+    public static final Type<EntityRoot> TYPE = new Type<>(Textures.TYPE);
+    public Type<EntityRoot> getType() { return TYPE; }
 
     private final Renderable<FiguraModelPart> root;
 
     // Vanilla rendering parameter if possible, this will allow mimics to work
     public EntityRoot(AvatarModules modules, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
         // Wrap the entity roots of each module into a new wrapper part
-        List<FiguraModelPart> roots = ListUtils.mapNonNull(modules.modules, mod -> {
-            if (mod.materials.entityRoot() == null) return null;
+        int name = 0;
+        LinkedHashMap<String, FiguraModelPart> roots = new LinkedHashMap<>();
+        for (AvatarModules.Module mod : modules.modules) {
+            if (mod.materials.entityRoot() == null) continue;
             FiguraModelPart part = new FiguraModelPart(mod.materials.entityRoot(), null, mod.index, texturesComponent, vanillaRendering);
             // Also store the parts in the module objects to be later accessed
             mod.entityRoot = part;
-            return part;
-        });
-        this.root = new Renderable<>(new FiguraModelPart("entity_root", null, roots));
+            roots.put(Integer.toString(name++), part);
+        }
+
+        // Return a wrapper around each of them
+        this.root = new Renderable<>(new FiguraModelPart(null, roots));
     }
 
     // Render the entity root.

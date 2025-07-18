@@ -1,7 +1,7 @@
 package org.figuramc.figura.script_languages.lua.model_parts;
 
 import net.minecraft.util.Mth;
-import org.figuramc.figura.model.part.Transformable;
+import org.figuramc.figura.model.part.PartLike;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
@@ -16,14 +16,14 @@ import org.joml.Vector4d;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.tableOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 
-public class TransformableAPI {
+public class PartLikeAPI {
 
     public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables) throws LuaError {
         AllocationTracker t = state.allocationTracker;
         LuaTable metatable = tableOf(t);
 
         metatable.rawset("origin", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector3API.wrap(new Vector3d(part.getTransform().getOrigin()), metatables); }
                 case 2 -> {
@@ -39,7 +39,7 @@ public class TransformableAPI {
             return args.first();
         }));
         metatable.rawset("pos", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector3API.wrap(new Vector3d(part.getTransform().getPosition()), metatables); }
                 case 2 -> {
@@ -55,7 +55,7 @@ public class TransformableAPI {
             return args.first();
         }));
         metatable.rawset("rot", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector3API.wrap(new Vector3d(part.getTransform().getEulerRad()).mul(Mth.RAD_TO_DEG), metatables); }
                 case 2 -> {
@@ -71,7 +71,7 @@ public class TransformableAPI {
             return args.first();
         }));
         metatable.rawset("rad", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector3API.wrap(new Vector3d(part.getTransform().getEulerRad()), metatables); }
                 case 2 -> {
@@ -91,7 +91,7 @@ public class TransformableAPI {
 //            Transformable part = args.first().checkUserdata(s, Transformable.class);
 //        }));
         metatable.rawset("scale", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector3API.wrap(new Vector3d(part.getTransform().getScale()), metatables); }
                 case 2 -> {
@@ -108,7 +108,7 @@ public class TransformableAPI {
         }));
         // color() accepts 0 args, 1 vector4 arg, or 4 numeric args.
         metatable.rawset("color", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return Vector4API.wrap(new Vector4d(part.getTransform().getColor()), metatables); }
                 case 2 -> {
@@ -126,7 +126,7 @@ public class TransformableAPI {
             return args.first();
         }));
         metatable.rawset("vis", LibFunction.createV((s, args) -> {
-            Transformable part = args.first().checkUserdata(s, Transformable.class);
+            PartLike<?> part = args.first().checkUserdata(s, PartLike.class);
             switch (args.count()) {
                 case 1 -> { return valueOf(part.getTransform().getVisible()); }
                 case 2 -> part.getTransform().setVisible(args.arg(2).checkBoolean(s));
@@ -135,7 +135,7 @@ public class TransformableAPI {
             return args.first();
         }));
 
-        FiguraMetatables.setupInheritance(state, metatable, null, null);
+        FiguraMetatables.setupIndexing(state, metatable, null, null);
 
         return metatable;
     }

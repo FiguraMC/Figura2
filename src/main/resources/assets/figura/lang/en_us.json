@@ -39,11 +39,9 @@
   "figura.error.runtime.model_part.unexpected": "Unexpected issue during model part rendering. Please report to the devs so we can add a better message!",
 
   "figura.error.runtime.script.stage.init": "initialization",
-  "figura.error.runtime.script.stage.tick": "tick event",
-  "figura.error.runtime.script.stage.render": "render event",
-
+  "figura.error.runtime.script.stage.event": "\"%s\" event",
   "figura.error.runtime.script.script_error": "Script error during %s",
-  "figura.error.runtime.script.unexpected_error": "Unexpected error suring script %s. Check your log to find the stacktrace, and please report this to the devs so we can add a better error message!",
+  "figura.error.runtime.script.unexpected_error": "Unexpected error during script %s. Check your log to find the stacktrace, and please report this to the devs so we can add a better error message!",
 
   "figura.error.internal.unexpected": "Unexpected internal error in Figura. Check your log to find the error stacktrace, and please report this to the devs so we can add a better error message!",
 

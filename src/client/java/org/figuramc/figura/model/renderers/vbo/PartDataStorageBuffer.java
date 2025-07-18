@@ -1,6 +1,6 @@
 package org.figuramc.figura.model.renderers.vbo;
 
-import org.figuramc.figura.util.exception.functional.ThrowingConsumer;
+import org.figuramc.figura.util.functional.ThrowingConsumer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL46;
 

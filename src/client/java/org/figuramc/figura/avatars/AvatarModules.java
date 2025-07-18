@@ -5,6 +5,9 @@ import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.model.part.FiguraModelPart;
+import org.figuramc.figura.script_hooks.Event;
+import org.figuramc.figura.script_hooks.ScriptError;
+import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
@@ -13,9 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 // Tracks all modules in an avatar, including the main module and its dependencies
 public class AvatarModules {
@@ -30,6 +31,7 @@ public class AvatarModules {
     }
 
     // Return the index of the module added
+    // TODO detect and error on cyclic dependencies!!!
     private int addModule(ModuleMaterials materials, Map<String, Integer> alreadyImported) throws ModuleImportingException, IOException {
         Path commonModules = FiguraDir.COMMON_MODULES.get();
         Map<String, Integer> dependencyIndices = new HashMap<>();
@@ -64,6 +66,8 @@ public class AvatarModules {
         public final int index; // Index of this module in the
         public ModuleMaterials materials;
         public final Map<String, Integer> dependencyIndices; // Indices of dependent modules in the list, by name
+        public @Nullable ScriptRuntime runtime; // The runtime used by this module, if any
+        private boolean initialized = false; // Whether it's been initialized yet
 
         public @Nullable FiguraModelPart entityRoot; // This module's entity root
         public final Map<String, ScriptCallback> callbacks = new HashMap<>(); // Exposed callbacks
@@ -74,9 +78,28 @@ public class AvatarModules {
             this.dependencyIndices = dependencyIndices;
         }
 
-        public Map<String, Module> dependencies() {
+        // Get dependencies as a map...
+        public Map<String, AvatarModules.Module> dependencies() {
             return MapUtils.mapValues(dependencyIndices, AvatarModules.this.modules::get);
         }
+
+        // Initialize this module, should run on the main thread.
+        // By default, modules will init() their dependencies before themselves.
+        // (TODO Should we have some kind of cycle detection? Yes, but it doesn't have to be here at runtime, it can be at import time!)
+        public void initScript() throws ScriptError, Throwable {
+            if (initialized) return;
+            initialized = true;
+            // If we auto-require dependencies, do so now:
+            if (materials.metadata().autoRequireDependencies()) {
+                for (var index : dependencyIndices.values()) {
+                    AvatarModules.this.modules.get(index).initScript();
+                }
+            }
+            // Then initialize this module.
+            if (runtime != null) runtime.initModule(this);
+        }
+
+
 
         @Override
         protected long traceNoMark(MemoryCounter counter, int depth) {

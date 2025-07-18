@@ -1,5 +1,6 @@
 package org.figuramc.figura.util;
 
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashSet;
@@ -33,5 +34,17 @@ public class ReflectionUtils {
         }
         return result;
     }
+
+    // Frequently you want to ensure a class is initialized, so its static fields are filled in, and so on.
+    // Sometimes this is done with a dummy method, but this is a more clear way of saying what you mean to do.
+    public static void ensureInitialized(Class<?>... classes) {
+        try {
+            for (Class<?> c : classes)
+                MethodHandles.lookup().ensureInitialized(c);
+        } catch (IllegalAccessException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
 
 }

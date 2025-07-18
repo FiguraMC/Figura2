@@ -1,15 +1,14 @@
 package org.figuramc.figura.util;
 
-import org.figuramc.figura.util.exception.functional.BiThrowingFunction;
-import org.figuramc.figura.util.exception.functional.ThrowingFunction;
+import org.figuramc.figura.util.functional.BiThrowingFunction;
+import org.figuramc.figura.util.functional.ThrowingBiConsumer;
+import org.figuramc.figura.util.functional.ThrowingConsumer;
+import org.figuramc.figura.util.functional.ThrowingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import oshi.util.tuples.Pair;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 @SuppressWarnings({"DuplicatedCode"})
 public class ListUtils {
@@ -24,6 +23,16 @@ public class ListUtils {
         ArrayList<R> result = new ArrayList<>();
         for (T t : list) result.add(func.apply(t));
         return result;
+    }
+
+    // Zip lists and for-each them
+    // If one list is shorter than the other, only goes to the length of the shorter list
+    public static <A, B, E extends Throwable> void zipForEach(Iterable<A> list1, Iterable<B> list2, ThrowingBiConsumer<A, B, E> func) throws E {
+        Iterator<A> iter1 = list1.iterator();
+        Iterator<B> iter2 = list2.iterator();
+        while (iter1.hasNext() && iter2.hasNext()) {
+            func.accept(iter1.next(), iter2.next());
+        }
     }
 
     public static <T, R, E1 extends Throwable, E2 extends Throwable> ArrayList<R> mapBiThrowing(Iterable<T> list, BiThrowingFunction<T, R, E1, E2> func) throws E1, E2 {
@@ -59,6 +68,39 @@ public class ListUtils {
                 result.add(t);
         result.trimToSize();
         return result;
+    }
+
+    // Filter the list, in-place, efficiently.
+    // If the predicate throws, that element and any subsequent elements will not be removed.
+    // The predicate is allowed to mutably append to the end of the list.
+    public static <T, E extends Throwable> void filterMut(List<T> list, ThrowingFunction<T, Boolean, E> predicate) throws E {
+        if (list instanceof RandomAccess) {
+            // TODO this can maybe be further optimized using arrays and System arraycopy
+            int i = 0, j = 0;
+            try {
+                while (i < list.size()) {
+                    T value = list.get(i);
+                    boolean keep = predicate.apply(value);
+                    if (keep) {
+                        if (i != j) list.set(j, value);
+                        j++;
+                    }
+                    i++;
+                }
+                while (j++ < i) list.removeLast();
+            } catch (Throwable error) {
+                // If anything went wrong, we need to clean up the list state...
+                while (i < list.size()) list.set(j++, list.get(i++));
+                while (j++ < i) list.removeLast();
+                throw (E) error;
+            }
+        } else {
+            // If there's no random access, use naive solution
+            Iterator<T> iter = list.iterator();
+            while (iter.hasNext())
+                if (!predicate.apply(iter.next()))
+                    iter.remove();
+        }
     }
 
     public static <T> ArrayList<T> flatten(Iterable<? extends Iterable<T>> lists) {
@@ -182,6 +224,7 @@ public class ListUtils {
         return result;
     }
 
+
     public static <T, E extends Throwable> int indexOf(Iterable<T> iterable, T value) {
         int index = 0;
         for (T item : iterable) {
@@ -196,6 +239,24 @@ public class ListUtils {
         int index = 0;
         for (T item : list) {
             if (predicate.apply(item))
+                return index;
+            index++;
+        }
+        return -1;
+    }
+
+    public static <T, K, E extends Throwable> @Nullable T findByKey(Iterable<T> list, K key, ThrowingFunction<T, K, E> keyFetcher) throws E {
+        for (T item : list)
+            if (Objects.equals(key, keyFetcher.apply(item)))
+                return item;
+        return null;
+    }
+
+
+    public static <T, K, E extends Throwable> int findIndexByKey(Iterable<T> list, K key, ThrowingFunction<T, K, E> keyFetcher) throws E {
+        int index = 0;
+        for (T item : list) {
+            if (Objects.equals(key, keyFetcher.apply(item)))
                 return index;
             index++;
         }

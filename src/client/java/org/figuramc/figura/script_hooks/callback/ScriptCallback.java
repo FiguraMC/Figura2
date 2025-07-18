@@ -2,6 +2,8 @@ package org.figuramc.figura.script_hooks.callback;
 
 import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.util.functional.ThrowingFunction;
 
 /**
  * A callback within a ScriptRuntime that can be sent outside of that runtime.

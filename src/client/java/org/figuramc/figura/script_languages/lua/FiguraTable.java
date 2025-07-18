@@ -135,6 +135,8 @@ public class FiguraTable {
                     j++;
                 }
             }
+            // Nil out the rest of the list
+            while (j < i) list.rawset(j++, NIL);
             return list;
         }));
         // filterI(), but modifies the table in place instead of creating a new one.
@@ -154,6 +156,8 @@ public class FiguraTable {
                     j++;
                 }
             }
+            // Nil out the rest of the list
+            while (j < i) list.rawset(j++, NIL);
             return list;
         }));
 

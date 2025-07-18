@@ -9,6 +9,7 @@ import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.FiguraTransformStack;
+import org.figuramc.figura.util.enumlike.IdMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,8 +18,8 @@ import java.util.*;
 public class Avatar<K> {
 
     public final K user; // The key which accesses this Avatar in its corresponding AvatarSubManager<K>
-    private final @Nullable AvatarComponent[] components; // Components, where ID -> component if present, null if not
-    private final @NotNull AvatarComponent[] presentComponents; // Only the non-null components, used for iteration
+    private final IdMap<AvatarComponent.Type, AvatarComponent<?>> components; // Components, where ID -> component if present, null if not. Requires some unchecked sillies because of generics.
+    private final @NotNull AvatarComponent<?>[] presentComponents; // Only the non-null components, used for iteration
 
     private @Nullable AvatarError error;
 
@@ -26,34 +27,30 @@ public class Avatar<K> {
     // making it faster in cases where full permission is granted.
     private @Nullable AllocationTracker allocationTracker;
 
-    public Avatar(K user, AvatarModules modules, Collection<AvatarComponent> componentSet) throws AvatarLoadingException {
+    public Avatar(K user, AvatarModules modules, Collection<AvatarComponent<?>> componentSet) throws AvatarLoadingException {
         // Init fields
         this.user = user;
-        // Init components array using IDs system.
-        // This ensures that dependencies end up in the array earlier than that which depends on them.
-        int maxComponent = componentSet.stream().mapToInt(AvatarComponent::getId).max().orElse(-1);
-        this.components = new AvatarComponent[maxComponent + 1];
-        for (AvatarComponent component : componentSet)
-            this.components[component.getId()] = component;
+        // Add components to ID map
+        this.components = new IdMap<>(AvatarComponent.Type.class);
+        componentSet.forEach(component -> components.put(component.getType(), component));
         // Create presentComponents array by removing null elements for faster iteration.
-        this.presentComponents = Arrays.stream(this.components).filter(Objects::nonNull).toArray(AvatarComponent[]::new);
+        this.presentComponents = this.components.values().stream().filter(Objects::nonNull).toArray(AvatarComponent[]::new);
         // Initialize each component in order
-        for (AvatarComponent component : presentComponents) {
+        for (AvatarComponent<?> component : presentComponents) {
             component.initialize(modules, this);
         }
     }
 
 
-    // Access this using the static field <subclass of AvatarComponent>.ID.
+    // Access this using the static field <subclass of AvatarComponent>.TYPE.
     // This field should exist if they followed the implementation instructions in AvatarComponent correctly.
     @SuppressWarnings("unchecked")
-    public <T extends AvatarComponent> @Nullable T getComponent(int id) {
+    public <T extends AvatarComponent<T>> @Nullable T getComponent(AvatarComponent.Type<T> type) {
         // Errored avatars act like they have no components.
         // All mixins and such will look for a component on a given avatar and try to use it;
         // but they will be unable to get this component if the avatar is errored.
         if (isErrored()) return null;
-        if (id >= components.length) return null;
-        return (T) components[id];
+        return (T) components.get(type);
     }
 
     // Track a given object as a memory root.
@@ -69,7 +66,7 @@ public class Avatar<K> {
         // Mark as errored
         this.error = reason;
         // Notify components:
-        for (AvatarComponent component : presentComponents)
+        for (AvatarComponent<?> component : presentComponents)
             component.onError(reason);
         // Report the error to user
         ErrorReporting.avatarRuntimeError(reason);
@@ -83,7 +80,7 @@ public class Avatar<K> {
 
     // Run on cleanup. Should be used to prevent memory leaks.
     public void destroy() {
-        for (AvatarComponent component : presentComponents)
+        for (AvatarComponent<?> component : presentComponents)
             component.destroy();
     }
 
@@ -92,15 +89,19 @@ public class Avatar<K> {
         if (!RenderSystem.isOnRenderThread())
             throw new IllegalStateException("Function should only be called on render thread! Bug in Figura!");
         // Run the components' main thread init functions.
-        for (AvatarComponent component : presentComponents)
-            if (component.mainThreadInitialize()) break;
+        for (AvatarComponent<?> component : presentComponents) {
+            component.mainThreadInitialize();
+            if (isErrored()) break;
+        }
     }
 
     // Runs each tick. Just ticks each component in the order they were added to the Avatar.
     public void tick() {
         if (isErrored()) return; // Don't tick if errored
-        for (AvatarComponent component : presentComponents)
-            if (component.tick()) break;
+        for (AvatarComponent<?> component : presentComponents) {
+            component.tick();
+            if (isErrored()) break;
+        }
     }
 
     // Various helper methods

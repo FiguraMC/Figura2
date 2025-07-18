@@ -35,8 +35,8 @@ public class CallbackAPI {
             try {
                 // Convert the args into generic format:
                 Object[] genericArgs = new Object[args.count() - 1];
-                for (int i = 1; i < args.count(); i++)
-                    genericArgs[i] = LuaCallback.fromLua(s, metatables, args.arg(i+1), callback.type().paramTypes()[i]);
+                for (int i = 0; i < args.count(); i++)
+                    genericArgs[i] = LuaCallback.fromLua(s, metatables, args.arg(i+2), callback.type().paramTypes()[i]);
                 // Invoke the callback
                 Object result = callback.call(genericArgs);
                 // Convert result back to Lua
@@ -49,7 +49,7 @@ public class CallbackAPI {
 
         metatable.rawset(NAME, valueOf("Callback", t));
 
-        FiguraMetatables.setupInheritance(state, metatable, null, null);
+        FiguraMetatables.setupIndexing(state, metatable, null, null);
 
         return metatable;
     }

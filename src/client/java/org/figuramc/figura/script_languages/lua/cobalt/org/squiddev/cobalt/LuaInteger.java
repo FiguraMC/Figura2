@@ -147,6 +147,11 @@ public final class LuaInteger extends LuaNumber {
 	}
 
 	@Override
+	public String checkString(LuaState state, String message) {
+		return String.valueOf(v);
+	}
+
+	@Override
 	public long count(MemoryCounter counter, int depth) {
 		return OBJECT_SIZE + 4; // 4 bytes of int we'll say
 	}

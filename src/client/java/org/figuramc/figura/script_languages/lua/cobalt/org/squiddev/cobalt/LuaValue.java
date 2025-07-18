@@ -649,6 +649,9 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	public String checkString(LuaState state) throws LuaError {
 		throw ErrorFactory.argError(state, this, "string");
 	}
+	public String checkString(LuaState state, String message) throws LuaError {
+		throw new LuaError(message, state.allocationTracker);
+	}
 
 	/**
 	 * Check that this is a lua string, or throw {@link LuaError} if it is not.

@@ -171,6 +171,11 @@ public final class LuaDouble extends LuaNumber {
 	}
 
 	@Override
+	public String checkString(LuaState state, String message) {
+		return toString();
+	}
+
+	@Override
 	public long count(MemoryCounter counter, int depth) {
 		return OBJECT_SIZE + 8; // 8 bytes of double we'll say
 	}

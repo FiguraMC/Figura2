@@ -10,4 +10,5 @@ import org.jetbrains.annotations.NotNull;
  */
 public class ModuleImportingException extends FiguraTranslatableException {
     public ModuleImportingException(@NotNull @Translatable String translationKey, Object... args) { super(translationKey, args); }
+    public ModuleImportingException(@NotNull @Translatable String translationKey, Throwable cause, @NotNull Boolean showCause, Object... args) { super(translationKey, cause, showCause, args); }
 }

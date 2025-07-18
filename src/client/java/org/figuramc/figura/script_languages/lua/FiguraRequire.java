@@ -1,5 +1,7 @@
 package org.figuramc.figura.script_languages.lua;
 
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -8,6 +10,8 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compi
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
+import org.figuramc.figura.util.IOUtils;
+import org.figuramc.figura.util.ListUtils;
 
 import java.io.ByteArrayInputStream;
 import java.util.Map;
@@ -21,19 +25,23 @@ public class FiguraRequire {
     public static final LuaString REQUIRE_KEY = LuaString.valueOf(null, "figura_require");
     public static final LuaString LOADED_KEY = LuaString.valueOf(null, "figura_loaded");
 
-    public static LuaValue createRequire(LuaState state, LuaTable _ENV, int index, Map<String, byte[]> scripts) throws LuaError, AvatarLoadingException {
+    public static LuaValue createRequire(LuaState state, LuaTable _ENV, AvatarModules.Module module, FiguraMetatables metatables) throws LuaError, AvatarLoadingException {
+
+        int index = module.index;
+
         // Define require() for this module using its scripts
         // Use a registry table for memory tracing
         LuaTable functionStorage = new LuaTable(state.allocationTracker);
         state.registry().getSubTable(REQUIRE_KEY).rawset(index + 1, functionStorage);
         state.registry().getSubTable(LOADED_KEY).rawset(index + 1, new LuaTable(state.allocationTracker));
 
-        for (var script : scripts.entrySet()) {
-            String name = script.getKey();
+        // Add all the scripts to the require table, and also add dependency modules, prefixed with "@".
+        for (var script : module.materials.scripts().entrySet()) {
+            String name = IOUtils.stripExtension(script.getKey(), "lua"); // Strip "lua" extension
             byte[] code = script.getValue();
             try {
                 // Compile to a closure, and put it in the require() table.
-                // Use @ because it's a file name.
+                // Use @ because it's a file name, and Cobalt does something with that internally.
                 LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, _ENV);
                 functionStorage.rawset(name, closure);
             } catch (CompileException ex) {
@@ -42,9 +50,29 @@ public class FiguraRequire {
                 throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, true, name, ex.getMessage());
             }
         }
+        for (var entry : module.dependencies().entrySet()) {
+            String name = entry.getKey();
+            AvatarModules.Module dependency = entry.getValue();
+            functionStorage.rawset("@" + name, LibFunction.create(s -> {
+                // Wrap script errors into lua errors and rethrow? (Unlikely to be the best way, but can be improved)
+                try {
+                    // Initialize the dependency. If it was already initialized, which it would be by default, this will do nothing.
+                    dependency.initScript();
+                    // Fetch API functions and return them in a table.
+                    LuaTable tab = new LuaTable(s.allocationTracker);
+                    for (var apiEntry : dependency.callbacks.entrySet()) {
+                        tab.rawset(apiEntry.getKey(), CallbackAPI.wrap(apiEntry.getValue(), metatables));
+                    }
+                    return tab;
+                } catch (Throwable t) {
+                    throw new LuaError(t.getMessage(), s.allocationTracker);
+                }
+            }));
+        }
+
         // Create require function (only captured variable is a single int, so we don't need to worry about tracing this lambda)
         return LibFunction.createS((s, di, args) -> {
-            // First arg is file name (without the .lua)
+            // First arg is file name (without the .lua), or "@" + dependency module name
             LuaString fileName = args.first().checkLuaString(s);
             // Fetch tables
             // String -> boolean. Nil = not loaded, false = currently being loaded (detect loops), true = fully loaded and done

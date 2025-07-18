@@ -112,7 +112,7 @@ public final class LuaThread extends MarkedLuaValue {
 	/**
 	 * The main function for this thread
 	 */
-	private final LuaFunction function;
+	private LuaValue function;
 
 	/**
 	 * The thread which resumed this one, and so should be resumed back into.
@@ -140,7 +140,7 @@ public final class LuaThread extends MarkedLuaValue {
 	 * @param state The current lua state
 	 * @param func  The function to execute
 	 */
-	public LuaThread(LuaState state, LuaFunction func) {
+	public LuaThread(LuaState state, LuaValue func) {
 		super(Constants.TTHREAD);
 		Objects.requireNonNull(state, "state cannot be null");
 		Objects.requireNonNull(func, "func cannot be null");
@@ -279,13 +279,14 @@ public final class LuaThread extends MarkedLuaValue {
 		throw UnwindThrowable.resume(thread, args);
 	}
 
-	public static Varargs runMain(LuaState state, LuaValue function) throws LuaError {
-		return run(state, state.getMainThread(), function, Constants.NONE);
-	}
-
-	public static Varargs runMain(LuaState state, LuaValue function, Varargs args) throws LuaError {
-		return run(state, state.getMainThread(), function, args);
-	}
+	// These are cursed and I don't understand them, run functions on a new thread instead
+//	public static Varargs runMain(LuaState state, LuaValue function) throws LuaError {
+//		return run(state, state.getMainThread(), function, Constants.NONE);
+//	}
+//
+//	public static Varargs runMain(LuaState state, LuaValue function, Varargs args) throws LuaError {
+//		return run(state, state.getMainThread(), function, args);
+//	}
 
 	/**
 	 * Start or resume this thread
