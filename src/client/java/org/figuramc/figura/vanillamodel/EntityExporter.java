@@ -65,15 +65,15 @@ public class EntityExporter {
         LinkedHashMap<Vector2f, JsonObject> generatedTextures = new LinkedHashMap<>(); // Order matters
 
         // Process model part roots
-        JsonArray roots = new JsonArray();
+        JsonObject roots = new JsonObject();
         Map<String, MutableInt> dedupNameMap = new HashMap<>();
         ModelNames.getModelsByName(renderer).forEach((name, model) -> {
-            roots.add(processModelPart(name, null, model.root(), isLivingEntity, generatedTextures, dedupNameMap));
+            roots.add(name, processModelPart(name, null, model.root(), true, isLivingEntity, generatedTextures, dedupNameMap));
         });
 
         // Place textures in json
-        JsonArray textures = new JsonArray();
-        for (var tex : generatedTextures.values()) textures.add(tex);
+        JsonObject textures = new JsonObject();
+        generatedTextures.forEach((k, v) -> textures.add((int) k.x + "x" + (int) k.y, v));
 
         // Create the final json object
         JsonObject figmodel = new JsonObject();
@@ -83,18 +83,7 @@ public class EntityExporter {
     }
 
     // Recursively convert the model part to json group format
-    private static JsonObject processModelPart(String modelName, @Nullable String partName, ModelPart part, boolean isLivingEntity, LinkedHashMap<Vector2f, JsonObject> generatedTextures, Map<String, MutableInt> nameDeduplicator) {
-
-        // De-duplicate the part name
-        String dedupPartName;
-        if (partName == null) {
-            dedupPartName = modelName;
-        } else if (nameDeduplicator.containsKey(partName)) {
-            dedupPartName = partName + nameDeduplicator.get(partName).getAndIncrement();
-        } else {
-            dedupPartName = partName;
-            nameDeduplicator.put(partName, new MutableInt(2)); // Start count at 2 (head, head2, etc.)
-        }
+    private static JsonObject processModelPart(String modelName, @Nullable String partName, ModelPart part, boolean isRoot, boolean isLivingEntity, LinkedHashMap<Vector2f, JsonObject> generatedTextures, Map<String, MutableInt> nameDeduplicator) {
 
         // Fetch transforms
         PartPose initialPose = part.getInitialPose();
@@ -103,7 +92,7 @@ public class EntityExporter {
         // Flip and translate stuff if it's a living entity
         if (isLivingEntity) {
             pos.mul(-1, -1, 1);
-            if (partName == null) pos.add(0, 24, 0);
+            if (isRoot) pos.add(0, 24, 0);
             rot.mul(-1, -1, 1);
         }
 
@@ -124,17 +113,21 @@ public class EntityExporter {
         }
 
         // Process children
-        JsonArray children = new JsonArray();
+        JsonObject children = new JsonObject();
         for (var child : part.children.entrySet()) {
             String childName = child.getKey();
             ModelPart childPart = child.getValue();
-            JsonObject jsonChild = processModelPart(modelName, childName, childPart, isLivingEntity, generatedTextures, nameDeduplicator);
-            children.add(jsonChild);
+            if (nameDeduplicator.containsKey(childName)) {
+                childName = childName + nameDeduplicator.get(childName).getAndIncrement();
+            } else {
+                nameDeduplicator.put(partName, new MutableInt(2));
+            }
+            JsonObject jsonChild = processModelPart(modelName, childName, childPart, false, isLivingEntity, generatedTextures, nameDeduplicator);
+            children.add(childName, jsonChild);
         }
 
         // Create and return the final group
         JsonObject group = new JsonObject();
-        group.addProperty("name", dedupPartName);
         group.add("origin", JsonUtils.toJson(pos));
         group.add("rotation", JsonUtils.toJson(rot));
         group.add("children", children);
@@ -229,7 +222,6 @@ public class EntityExporter {
         String pngBase64 = Base64.getEncoder().encodeToString(baos.toByteArray());
         // Create json texture.
         JsonObject texture = new JsonObject();
-        texture.addProperty("name", size.x + " x " + size.y);
         texture.add("uv_size", JsonUtils.toJson(size));
         texture.addProperty("png_bytes_base64", pngBase64);
         return texture;
