@@ -31,11 +31,11 @@ class StringPacker {
 			if (output == null) {
 				int len = Math.max(32, bytes);
 				output = new byte[len];
-				if (allocTracker != null) allocTracker.allocate(output, len);
+				if (allocTracker != null) allocTracker.track(output);
 			} else if (offset + bytes > output.length) {
 				int len = Math.max(output.length * 2, offset + bytes);
 				output = Arrays.copyOf(output, len);
-				if (allocTracker != null) allocTracker.allocate(output, output.length);
+				if (allocTracker != null) allocTracker.track(output);
 			}
 		}
 

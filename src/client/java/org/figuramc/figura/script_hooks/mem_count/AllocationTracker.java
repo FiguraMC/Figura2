@@ -25,6 +25,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class AllocationTracker {
 
+    // Constants used for size estimation
+    public static final int
+        OBJECT_SIZE = 8, // Object overhead
+        REFERENCE_SIZE = 4, // Assume compacted references
+        LONG_SIZE = 8, INT_SIZE = 4, SHORT_SIZE = 2, CHAR_SIZE = 2, BYTE_SIZE = 1, BOOLEAN_SIZE = 1,
+        DOUBLE_SIZE = 8, FLOAT_SIZE = 4;
+
+
     // The cleaner used for tracking allocation amounts.
     private static final Cleaner ALLOC_CLEANER = Cleaner.create();
 
@@ -52,9 +60,25 @@ public class AllocationTracker {
         this.gracePeriodBegan = -1;
     }
 
+    public void track(byte[] byteArray) throws AvatarOOMException {
+        track(byteArray, OBJECT_SIZE + byteArray.length * BYTE_SIZE);
+    }
+
+    public void track(int[] intArray) throws AvatarOOMException {
+        track(intArray, OBJECT_SIZE + intArray.length * INT_SIZE);
+    }
+
+    public void track(Object[] objectArray) throws AvatarOOMException {
+        track(objectArray, OBJECT_SIZE + objectArray.length * REFERENCE_SIZE);
+    }
+
+    public void track(String string) throws AvatarOOMException {
+        track(string, OBJECT_SIZE + REFERENCE_SIZE + BYTE_SIZE + INT_SIZE + BOOLEAN_SIZE + string.length() * CHAR_SIZE); // Assume 2 bytes per char (non-compressed String)
+    }
+
     // Allocate the given amount for the given Object.
     // Returns a State object, which can optionally be increased/decreased in size.
-    public State allocate(Object obj, int amount) throws AvatarOOMException {
+    public State track(Object obj, int amount) throws AvatarOOMException {
         State state = new State(amount);
         incrementMemory(amount);
         ALLOC_CLEANER.register(obj, state);

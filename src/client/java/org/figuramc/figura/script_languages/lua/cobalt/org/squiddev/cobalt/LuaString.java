@@ -114,7 +114,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	 */
 	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) throws AllocationTracker.AvatarOOMException {
 		byte[] bytes = new byte[string.length()];
-		if (allocTracker != null) allocTracker.allocate(bytes, bytes.length);
+		if (allocTracker != null) allocTracker.track(bytes);
 		encode(string, bytes, 0);
 		return valueOf(null, bytes, 0, bytes.length);
 	}
@@ -151,7 +151,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 		} else {
 			// Short result relative to the source.  Copy only the bytes that are actually to be used.
 			final byte[] b = new byte[len];
-			if (allocTracker != null) allocTracker.allocate(b, len);
+			if (allocTracker != null) allocTracker.track(b);
 			System.arraycopy(bytes, off, b, 0, len);
 			LuaString string = new LuaString(b, 0, len);
 			return len < RECENT_STRINGS_MAX_LENGTH ? Cache.instance.get(string) : string;
@@ -199,7 +199,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 		if (length == 1) return (LuaString) contents[0];
 
 		byte[] out = new byte[strLength];
-		if (allocTracker != null) allocTracker.allocate(out, strLength);
+		if (allocTracker != null) allocTracker.track(out);
 		int position = 0;
 		for (int i = 0; i < length; i++) position = ((LuaString) contents[offset + i]).copyTo(out, position);
 		return valueOfNoCopy(out); // out is already tracked
@@ -495,7 +495,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 			chars[i] = ((char) (bytes[offset + i] & 0xFF));
 		}
 		String s = String.valueOf(chars);
-		if (allocTracker != null) allocTracker.allocate(s, s.length() * Character.BYTES);
+		if (allocTracker != null) allocTracker.track(s);
 		return s;
 	}
 

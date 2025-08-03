@@ -124,7 +124,7 @@ public final class LoadState {
 			case '@' -> { // out = "source", or "...source"
 				if (name.length() - 1 > FILE_LENGTH) {
 					byte[] bytes = new byte[FILE_LENGTH + 3];
-					if (allocTracker != null) allocTracker.allocate(bytes, bytes.length);
+					if (allocTracker != null) allocTracker.track(bytes);
 					REMAINING.copyTo(bytes, 0);
 					name.copyTo(name.length() - FILE_LENGTH, bytes, REMAINING.length(), FILE_LENGTH);
 					return LuaString.valueOfNoCopy(bytes);
@@ -150,7 +150,7 @@ public final class LoadState {
 		}
 
 		byte[] out = new byte[NAME_LENGTH];
-		if (allocTracker != null) allocTracker.allocate(out, NAME_LENGTH);
+		if (allocTracker != null) allocTracker.track(out);
 		STRING.copyTo(out, 0);
 		int offset = STRING.length();
 		offset = name.copyTo(0, out, offset, len);

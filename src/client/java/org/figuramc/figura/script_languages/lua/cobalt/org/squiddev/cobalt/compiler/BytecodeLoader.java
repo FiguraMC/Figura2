@@ -28,7 +28,6 @@ import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
-import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaBytecodeFormat.*;
@@ -173,7 +172,7 @@ final class BytecodeLoader {
 		if (size == 0) return null;
 
 		byte[] bytes = new byte[size];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(bytes, size);
+		if (state.allocationTracker != null) state.allocationTracker.track(bytes);
 		readFully(bytes, 0, size);
 		return LuaString.valueOf(null, bytes, 0, bytes.length - 1);
 	}

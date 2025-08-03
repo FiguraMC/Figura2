@@ -70,7 +70,7 @@ public final class Buffer {
 		bytes = new byte[initialCapacity];
 		length = 0;
 		tracker = allocTracker;
-		if (allocTracker != null) allocTracker.allocate(bytes, initialCapacity);
+		if (allocTracker != null) allocTracker.track(bytes);
 	}
 
 	/**
@@ -225,7 +225,7 @@ public final class Buffer {
 		if (newSize == bytes.length) return;
 
 		byte[] newBytes = new byte[newSize];
-		if (tracker != null) tracker.allocate(newBytes, newSize);
+		if (tracker != null) tracker.track(newBytes);
 		System.arraycopy(bytes, 0, newBytes, 0, length);
 		bytes = newBytes;
 	}

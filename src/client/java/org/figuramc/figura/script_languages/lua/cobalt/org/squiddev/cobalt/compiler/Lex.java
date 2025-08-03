@@ -219,7 +219,7 @@ final class Lex {
 		if (interned == null) {
 			// must copy bytes, since bytes could be from reusable buffer
 			byte[] slice = new byte[len];
-			if (state.allocationTracker != null) state.allocationTracker.allocate(slice, len);
+			if (state.allocationTracker != null) state.allocationTracker.track(slice);
 			System.arraycopy(bytes, offset, slice, 0, len);
 			strings.put(ByteBuffer.wrap(slice), interned = LuaString.valueOfNoCopy(slice));
 		}
@@ -228,7 +228,7 @@ final class Lex {
 
 	LuaString newString(String value) throws AllocationTracker.AvatarOOMException {
 		byte[] contents = new byte[value.length()];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(contents, value.length());
+		if (state.allocationTracker != null) state.allocationTracker.track(contents);
 		LuaString.encode(value, contents, 0);
 		var buffer = ByteBuffer.wrap(contents);
 

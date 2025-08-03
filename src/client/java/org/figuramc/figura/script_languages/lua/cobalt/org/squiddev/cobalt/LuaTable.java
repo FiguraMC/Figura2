@@ -98,13 +98,20 @@ public final class LuaTable extends LuaValue {
 	// Resizings can occur at nearly any time, so the tracker is within.
 	private final @Nullable AllocationTracker allocTracker;
 
+	private static final int SIZE_ESTIMATE =
+			AllocationTracker.OBJECT_SIZE
+			+ AllocationTracker.REFERENCE_SIZE * 8
+			+ AllocationTracker.INT_SIZE * 2
+			+ AllocationTracker.BOOLEAN_SIZE * 2;
+
 	/**
 	 * Construct empty table
 	 */
 	public LuaTable(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		super(TTABLE);
 		this.allocTracker = allocTracker;
-		if (allocTracker != null) allocTracker.allocate(this, 256);
+		if (allocTracker != null)
+			allocTracker.track(this, SIZE_ESTIMATE);
 	}
 
 	/**
@@ -437,7 +444,7 @@ public final class LuaTable extends LuaValue {
 	 */
 	private static Object[] setArrayVector(@Nullable AllocationTracker allocTracker, Object[] oldArray, int n, boolean metaChange, boolean weakValues) throws AllocationTracker.AvatarOOMException {
 		Object[] newArray = new Object[n];
-		if (allocTracker != null) allocTracker.allocate(newArray, n * 4);
+		if (allocTracker != null) allocTracker.track(newArray);
 		int len = Math.min(n, oldArray.length);
 		if (metaChange) {
 			for (int i = 0; i < len; i++) {
@@ -504,11 +511,11 @@ public final class LuaTable extends LuaValue {
 			size = 1 << lsize;
 
 			keys = new Object[size];
-			if (allocTracker != null) allocTracker.allocate(keys, size * 4);
+			if (allocTracker != null) allocTracker.track(keys);
 			values = new Object[size];
-			if (allocTracker != null) allocTracker.allocate(values, size * 4);
+			if (allocTracker != null) allocTracker.track(values);
 			next = new int[size];
-			if (allocTracker != null) allocTracker.allocate(next, size * 4);
+			if (allocTracker != null) allocTracker.track(next);
 
 			// TODO: It would be nice if we didn't need to fill here, as this can be quite slow.
 			Arrays.fill(keys, NIL);

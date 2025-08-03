@@ -96,6 +96,10 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 	final Prototype p;
 	public final Upvalue[] upvalues;
 
+	public static final int SIZE_ESTIMATE =
+			AllocationTracker.OBJECT_SIZE
+			+ AllocationTracker.REFERENCE_SIZE * 2;
+
 	/**
 	 * Supply the initial environment
 	 *
@@ -105,8 +109,10 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 		this.p = p;
 		if (p.upvalues() > 0) {
 			this.upvalues = new Upvalue[p.upvalues()];
-			if (allocTracker != null)
-				allocTracker.allocate(upvalues, p.upvalues() * 4);
+			if (allocTracker != null) {
+				allocTracker.track(upvalues);
+				allocTracker.track(this, SIZE_ESTIMATE);
+			}
 		} else {
 			this.upvalues = NO_UPVALUES;
 		}

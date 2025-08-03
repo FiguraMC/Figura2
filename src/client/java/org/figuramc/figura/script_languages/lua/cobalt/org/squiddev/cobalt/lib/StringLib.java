@@ -98,7 +98,7 @@ public final class StringLib {
 		if (i == len) return string;
 
 		byte[] value = new byte[len];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(value, len);
+		if (state.allocationTracker != null) state.allocationTracker.track(value);
 		string.copyTo(value, 0);
 		for (; i < value.length; i++) {
 			byte c = value[i];
@@ -111,7 +111,7 @@ public final class StringLib {
 		LuaString s = arg.checkLuaString(state);
 		int n = s.length();
 		byte[] b = new byte[n];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(b, n);
+		if (state.allocationTracker != null) state.allocationTracker.track(b);
 		for (int i = 0, j = n - 1; i < n; i++, j--) b[j] = s.byteAt(i);
 		return LuaString.valueOfNoCopy(b);
 	}
@@ -129,7 +129,7 @@ public final class StringLib {
 		if (i == len) return string;
 
 		byte[] value = new byte[string.length()];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(value, value.length);
+		if (state.allocationTracker != null) state.allocationTracker.track(value);
 		string.copyTo(value, 0);
 		for (i = 0; i < value.length; i++) {
 			byte c = value[i];
@@ -226,7 +226,7 @@ public final class StringLib {
 	private static LuaValue char$(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int n = args.count();
 		byte[] bytes = new byte[n];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(bytes, n);
+		if (state.allocationTracker != null) state.allocationTracker.track(bytes);
 		for (int i = 0, a = 1; i < n; i++, a++) {
 			int c = args.arg(a).checkInteger(state);
 			if (c < 0 || c >= 256) {
@@ -261,7 +261,7 @@ public final class StringLib {
 		}
 
 		byte[] b = baos.toByteArray();
-		if (state.allocationTracker != null) state.allocationTracker.allocate(b, b.length);
+		if (state.allocationTracker != null) state.allocationTracker.track(b);
 		return LuaString.valueOfNoCopy(b);
 	}
 
@@ -283,7 +283,7 @@ public final class StringLib {
 		if (newLen > MAX_LEN) throw new LuaError("resulting string too large", state.allocationTracker);
 
 		final byte[] bytes = new byte[(int) newLen];
-		if (state.allocationTracker != null) state.allocationTracker.allocate(bytes, bytes.length);
+		if (state.allocationTracker != null) state.allocationTracker.track(bytes);
 		// n >= 2, so copy in the initial string and separator.
 		s.copyTo(bytes, 0);
 		sep.copyTo(bytes, len);

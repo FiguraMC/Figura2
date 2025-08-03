@@ -79,6 +79,12 @@ public final class Prototype {
 	// State, for mem accounting
 	public final LuaState state;
 
+	private static final int SIZE_ESTIMATE =
+			AllocationTracker.OBJECT_SIZE
+			+ AllocationTracker.REFERENCE_SIZE * 10
+			+ AllocationTracker.INT_SIZE * 4
+			+ AllocationTracker.BOOLEAN_SIZE;
+
 	public Prototype(
 		LuaState state,
 		LuaString source, LuaString shortSource,
@@ -103,15 +109,17 @@ public final class Prototype {
 		this.columnInfo = columnInfo;
 		this.locals = locals;
 
-		int size = 256
-				+ constants.length * 4
-				+ code.length * 4
-				+ lineInfo.length * 4
-				+ columnInfo.length * 4
-				+ locals.length * 24
-				+ upvalues.length * 20;
-		if (state.allocationTracker != null)
-			state.allocationTracker.allocate(this, size);
+		// Track
+		if (state.allocationTracker != null) {
+			state.allocationTracker.track(constants);
+			state.allocationTracker.track(code);
+			state.allocationTracker.track(children);
+			state.allocationTracker.track(lineInfo);
+			state.allocationTracker.track(columnInfo);
+			state.allocationTracker.track(locals, AllocationTracker.OBJECT_SIZE + locals.length * (AllocationTracker.REFERENCE_SIZE + LocalVariable.SIZE_ESTIMATE));
+			state.allocationTracker.track(upvalues, AllocationTracker.OBJECT_SIZE + upvalues.length * (AllocationTracker.REFERENCE_SIZE + UpvalueInfo.SIZE_ESTIMATE));
+			state.allocationTracker.track(this, SIZE_ESTIMATE);
+		}
 	}
 
 	public LuaString shortSource() {
@@ -180,6 +188,12 @@ public final class Prototype {
 	 * @param byteIndex The short index of this upvalue. Use {@link #index()} when an int index is needed.
 	 */
 	public record UpvalueInfo(@Nullable LuaString name, boolean fromLocal, byte byteIndex) {
+		public static final int SIZE_ESTIMATE =
+				AllocationTracker.OBJECT_SIZE
+				+ AllocationTracker.REFERENCE_SIZE
+				+ AllocationTracker.BOOLEAN_SIZE
+				+ AllocationTracker.BYTE_SIZE;
+
 		public int index() {
 			return byteIndex & 0xFF;
 		}

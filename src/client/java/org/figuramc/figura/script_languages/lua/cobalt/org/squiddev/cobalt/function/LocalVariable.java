@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Prototype;
 
@@ -58,6 +59,12 @@ public final class LocalVariable {
 		this.startpc = startpc;
 		this.endpc = endpc;
 	}
+
+	public static final int SIZE_ESTIMATE =
+			AllocationTracker.OBJECT_SIZE +
+			AllocationTracker.REFERENCE_SIZE +
+			AllocationTracker.INT_SIZE * 2;
+
 
 	@Override
 	public String toString() {

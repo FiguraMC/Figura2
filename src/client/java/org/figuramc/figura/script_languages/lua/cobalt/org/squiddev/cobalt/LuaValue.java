@@ -265,7 +265,7 @@ public abstract class LuaValue extends Varargs {
 
 	public String toJavaString(@Nullable AllocationTracker allocationTracker) throws AllocationTracker.AvatarOOMException {
 		String s = toString();
-		if (allocationTracker != null) allocationTracker.allocate(s, s.length() * Character.BYTES);
+		if (allocationTracker != null) allocationTracker.track(s);
 		return s;
 	}
 
