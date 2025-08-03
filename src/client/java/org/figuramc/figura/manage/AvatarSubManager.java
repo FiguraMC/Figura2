@@ -1,8 +1,6 @@
 package org.figuramc.figura.manage;
 
 import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.avatars.AvatarError;
-import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.util.ErrorReporting;
 import org.jetbrains.annotations.Nullable;
 

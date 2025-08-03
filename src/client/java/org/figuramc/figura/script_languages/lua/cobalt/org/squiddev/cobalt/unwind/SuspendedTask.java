@@ -1,6 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.unwind;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Varargs;
@@ -21,5 +21,5 @@ public interface SuspendedTask<T> {
 	 * @throws UnwindThrowable If we yielded again after resuming this task. In this case, this object should be reused
 	 *                         again to continue execution when this coroutine resumes.
 	 */
-	T resume(Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	T resume(Varargs args) throws LuaError, AvatarError, UnwindThrowable;
 }

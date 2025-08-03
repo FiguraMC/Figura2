@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.RegisteredFunction;
@@ -38,7 +38,7 @@ public final class Bit32Lib {
 	private Bit32Lib() {
 	}
 
-	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws LuaError, AvatarError {
 		LibFunction.setGlobalLibrary(state, "bit32", RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.ofV("band", Bit32Lib::band),
 			RegisteredFunction.of("bnot", Bit32Lib::bnot),
@@ -55,7 +55,7 @@ public final class Bit32Lib {
 		}));
 	}
 
-	private static LuaValue band(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue band(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int result = -1;
 		for (int i = 1; i <= args.count(); i++) {
 			result &= args.arg(i).checkInteger(state);
@@ -63,11 +63,11 @@ public final class Bit32Lib {
 		return bitsToValue(result);
 	}
 
-	private static LuaValue bnot(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue bnot(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		return bitsToValue(~arg.checkInteger(state));
 	}
 
-	private static LuaValue bor(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue bor(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int result = 0;
 		for (int i = 1; i <= args.count(); i++) {
 			result |= args.arg(i).checkInteger(state);
@@ -75,7 +75,7 @@ public final class Bit32Lib {
 		return bitsToValue(result);
 	}
 
-	private static LuaValue btest(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue btest(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int bits = -1;
 		for (int i = 1; i <= args.count(); i++) {
 			bits &= args.arg(i).checkInteger(state);
@@ -83,7 +83,7 @@ public final class Bit32Lib {
 		return LuaBoolean.valueOf(bits != 0);
 	}
 
-	private static LuaValue bxor(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue bxor(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int result = 0;
 		for (int i = 1; i <= args.count(); i++) {
 			result ^= args.arg(i).checkInteger(state);
@@ -91,7 +91,7 @@ public final class Bit32Lib {
 		return bitsToValue(result);
 	}
 
-	private static LuaValue extract(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue extract(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AvatarError {
 		int field = arg2.checkInteger(state);
 		int width = arg3.optInteger(state, 1);
 
@@ -102,7 +102,7 @@ public final class Bit32Lib {
 		return bitsToValue((arg1.checkInteger(state) >>> field) & (-1 >>> (32 - width)));
 	}
 
-	private static LuaValue replace(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue replace(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int n = args.arg(1).checkInteger(state);
 		int v = args.arg(2).checkInteger(state);
 		int field = args.arg(3).checkInteger(state);
@@ -117,25 +117,25 @@ public final class Bit32Lib {
 		return bitsToValue(n);
 	}
 
-	private static LuaValue arshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue arshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		int x = arg1.checkInteger(state);
 		int disp = arg2.checkInteger(state);
 		return bitsToValue(disp >= 0 ? x >> disp : x << -disp);
 	}
 
-	private static LuaValue lrotate(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue lrotate(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		return bitsToValue(rotate(arg1.checkInteger(state), arg2.checkInteger(state)));
 	}
 
-	private static LuaValue rrotate(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rrotate(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		return bitsToValue(rotate(arg1.checkInteger(state), -arg2.checkInteger(state)));
 	}
 
-	private static LuaValue lshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue lshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		return bitsToValue(shift(arg1.checkInteger(state), arg2.checkInteger(state)));
 	}
 
-	private static LuaValue rshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rshift(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		return bitsToValue(shift(arg1.checkInteger(state), -arg2.checkInteger(state)));
 	}
 

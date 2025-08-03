@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
@@ -243,7 +243,7 @@ public final class LuaThread extends LuaValue {
 	 * @throws LuaError        If attempting to yield the main thread.
 	 * @throws UnwindThrowable If we can yield this stack with an exception.
 	 */
-	public static <T> T yield(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static <T> T yield(LuaState state, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		Objects.requireNonNull(args, "args cannot be null");
 
 		LuaThread thread = state.currentThread;
@@ -265,7 +265,7 @@ public final class LuaThread extends LuaValue {
 	 * @throws LuaError        If this coroutine cannot resume another.
 	 * @throws UnwindThrowable If we can yield this stack with an exception
 	 */
-	public static <T> T resume(LuaState state, LuaThread thread, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static <T> T resume(LuaState state, LuaThread thread, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		LuaThread current = state.currentThread;
 		if (current.status != Status.RUNNING) {
 			throw new LuaError("cannot resume from a " + current.status.getDisplayName() + " thread", state.allocationTracker);
@@ -295,15 +295,15 @@ public final class LuaThread extends LuaValue {
 	 * @return {@link Varargs} provided as arguments to {@link #yield(LuaState, Varargs)}
 	 * @throws LuaError If the current function threw an exception.
 	 */
-	public static Varargs run(LuaThread thread, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static Varargs run(LuaThread thread, Varargs args) throws LuaError, AvatarError {
 		return run(thread.luaState, thread, null, args);
 	}
 
-	private static Varargs run(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs run(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AvatarError {
 		return loop(state, thread, function, args);
 	}
 
-	private static Varargs loop(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs loop(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AvatarError {
 		LuaError le = null;
 		do {
 			final DebugState ds = thread.debugState;

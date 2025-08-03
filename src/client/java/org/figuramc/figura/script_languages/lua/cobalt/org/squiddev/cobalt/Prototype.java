@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaInterpretedFunction;
@@ -90,7 +91,7 @@ public final class Prototype {
 		LuaString source, LuaString shortSource,
 		LuaValue[] constants, int[] code, Prototype[] children, int parameters, boolean isVarArg, int maxStackSize, UpvalueInfo[] upvalues,
 		int lineDefined, int lastLineDefined, int[] lineInfo, int[] columnInfo, LocalVariable[] locals
-	) throws AllocationTracker.AvatarOOMException {
+	) throws AvatarError {
 		this.state = state;
 		this.source = source;
 		this.shortSource = shortSource;

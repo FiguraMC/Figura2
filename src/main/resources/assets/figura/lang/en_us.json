@@ -6,6 +6,7 @@
 
       "figura.error.internal.unexpected": "Unexpected internal error in Figura. Check your log to find the error stacktrace, and please report this to the devs so we can add a better error message!",
       "figura.error.internal.general": "Unexpected internal error in Figura: [%s]. Please report this to the devs so we can fix it!",
+      "figura.error.internal.escaper": "This message should not appear - it's meant to only be used internally. If you find it, please report to devs!",
 
     "figura.COMMENT.--------------------IMPORT ERRORS--------------------": "",
       "figura.error.importing": "Error while importing avatar.",

@@ -1,6 +1,9 @@
 package org.figuramc.figura.data;
 
-import com.google.gson.*;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.CallbackTypeParser;
@@ -8,7 +11,6 @@ import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.JsonUtils;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.MapUtils;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;

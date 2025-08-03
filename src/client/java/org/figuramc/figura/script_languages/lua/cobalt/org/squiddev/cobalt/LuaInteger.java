@@ -24,8 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.jetbrains.annotations.Nullable;
+import org.figuramc.figura.avatars.AvatarError;
 
 /**
  * Extension of {@link LuaNumber} which can hold a Java int as its value.
@@ -109,12 +108,12 @@ public final class LuaInteger extends LuaNumber {
 	}
 
 	@Override
-	public LuaString checkLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public LuaString checkLuaString(LuaState state) throws AvatarError {
 		return LuaString.valueOf(state.allocationTracker, Integer.toString(v));
 	}
 
 	@Override
-	public LuaValue toLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public LuaValue toLuaString(LuaState state) throws AvatarError {
 		return LuaString.valueOf(state.allocationTracker, Integer.toString(v));
 	}
 

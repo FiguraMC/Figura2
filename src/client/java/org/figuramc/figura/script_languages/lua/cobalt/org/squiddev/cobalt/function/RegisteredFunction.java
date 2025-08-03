@@ -1,6 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 
@@ -24,13 +24,13 @@ public class RegisteredFunction {
 		return function;
 	}
 
-	public static LuaTable bind(LuaState state, RegisteredFunction[] functions) throws AllocationTracker.AvatarOOMException {
+	public static LuaTable bind(LuaState state, RegisteredFunction[] functions) throws AvatarError {
 		LuaTable table = new LuaTable(0, functions.length, state.allocationTracker);
 		bind(table, functions);
 		return table;
 	}
 
-	public static void bind(LuaTable table, RegisteredFunction[] functions) throws AllocationTracker.AvatarOOMException {
+	public static void bind(LuaTable table, RegisteredFunction[] functions) throws AvatarError {
 		for (RegisteredFunction def : functions) {
 			table.rawset(def.name, def.create());
 		}

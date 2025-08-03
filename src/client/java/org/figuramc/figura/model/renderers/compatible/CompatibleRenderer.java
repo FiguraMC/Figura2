@@ -48,7 +48,8 @@ public class CompatibleRenderer implements FiguraModelPartRenderer {
             int overlay
     ) throws StackOverflowError {
 
-        for (var callback : part.preRenderCallbacks) callback.call(new CallbackItem.F32(tickDelta));
+        for (var callback : part.preRenderCallbacks)
+            callback.call(new CallbackItem.F32(tickDelta));
 
         // Cancel if not invisible
         if (!part.transform.getVisible())
@@ -96,7 +97,8 @@ public class CompatibleRenderer implements FiguraModelPartRenderer {
             }
         }
 
-        for (var callback : part.postRenderCallbacks) callback.call(new CallbackItem.F32(tickDelta));
+        for (var callback : part.postRenderCallbacks)
+            callback.call(new CallbackItem.F32(tickDelta));
 
         // Pop matrix stack
         matrixStack.pop();

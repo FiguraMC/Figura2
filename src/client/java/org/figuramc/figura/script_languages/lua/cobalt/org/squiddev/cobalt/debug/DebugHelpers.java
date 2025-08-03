@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.DebugLib;
@@ -72,7 +72,7 @@ public final class DebugHelpers {
 	 * @param level  0-based level to start reporting on
 	 * @return String containing the stack trace.
 	 */
-	public static String traceback(LuaThread thread, int level) throws AllocationTracker.AvatarOOMException {
+	public static String traceback(LuaThread thread, int level) throws AvatarError {
 		return traceback(new Buffer(thread.luaState.allocationTracker), thread, level).toJavaString();
 	}
 
@@ -83,7 +83,7 @@ public final class DebugHelpers {
 	 * @param thread LuaThread to provide stack trace for
 	 * @param level  0-based level to start reporting on
 	 */
-	public static Buffer traceback(Buffer sb, LuaThread thread, int level) throws AllocationTracker.AvatarOOMException {
+	public static Buffer traceback(Buffer sb, LuaThread thread, int level) throws AvatarError {
 		sb.append("stack traceback:");
 
 		DebugState state = thread.getDebugState();
@@ -128,7 +128,7 @@ public final class DebugHelpers {
 	 * @return String identifying the file and line of the nearest lua closure,
 	 * or the function name of the Java call if no closure is being called.
 	 */
-	public static String fileLine(LuaThread thread) throws AllocationTracker.AvatarOOMException {
+	public static String fileLine(LuaThread thread) throws AvatarError {
 		DebugState ds = thread.getDebugState();
 		DebugFrame di;
 		for (int i = 0, n = ds.top; i <= n; i++) {
@@ -150,7 +150,7 @@ public final class DebugHelpers {
 		return new ObjectName(name, METAMETHOD);
 	}
 
-	public static @Nullable ObjectName getFuncName(DebugFrame di, int stackpos) throws AllocationTracker.AvatarOOMException {
+	public static @Nullable ObjectName getFuncName(DebugFrame di, int stackpos) throws AvatarError {
 		if (di.closure == null) return null;
 		if ((di.flags & FLAG_ANY_HOOK) != 0) return new ObjectName(QUESTION, HOOK);
 
@@ -178,7 +178,7 @@ public final class DebugHelpers {
 	}
 
 	// return StrValue[] { name, namewhat } if found, null if not
-	public static @Nullable ObjectName getObjectName(DebugFrame di, int stackpos) throws AllocationTracker.AvatarOOMException {
+	public static @Nullable ObjectName getObjectName(DebugFrame di, int stackpos) throws AvatarError {
 		if (di.closure == null) return null;
 		if ((di.flags & FLAG_ANY_HOOK) != 0) return new ObjectName(QUESTION, HOOK);
 
@@ -254,7 +254,7 @@ public final class DebugHelpers {
 		return setreg;
 	}
 
-	private static LuaString constantName(Prototype proto, int index) throws AllocationTracker.AvatarOOMException {
+	private static LuaString constantName(Prototype proto, int index) throws AvatarError {
 		if (ISK(index) && proto.constants[INDEXK(index)].isString()) {
 			return (LuaString) proto.constants[INDEXK(index)].toLuaString(proto.state);
 		} else {

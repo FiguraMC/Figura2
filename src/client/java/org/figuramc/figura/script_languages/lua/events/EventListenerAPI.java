@@ -1,6 +1,5 @@
 package org.figuramc.figura.script_languages.lua.events;
 
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.EventListener;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
@@ -50,7 +49,7 @@ public class EventListenerAPI {
     }
 
     // Separate into its own method so we can use generics properly
-    private static <I extends CallbackItem> void callImpl(LuaState s, EventListener<I> eventListener, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+    private static <I extends CallbackItem> void callImpl(LuaState s, EventListener<I> eventListener, Varargs args) throws LuaError, AvatarError {
         // Handle tuple args specially. We treat tuples as lua varargs at top level for convenience
         CallbackType<I> paramType = eventListener.funcType.param();
         // Typecheck (and count-check) the provided args against the expected args

@@ -1,18 +1,17 @@
 package org.figuramc.figura.manage;
 
-import org.figuramc.figura.avatars.AvatarModules;
-import org.figuramc.figura.avatars.AvatarTemplates;
-import org.figuramc.figura.data.ModuleImportingException;
-import org.figuramc.figura.data.ModuleMaterials;
-import org.figuramc.figura.data.ModuleImporter;
-import org.figuramc.figura.directory.FiguraDir;
-import org.figuramc.figura.util.ErrorReporting;
-import org.figuramc.figura.util.RenderUtils;
-import org.figuramc.figura.util.exception.ExceptionUtils;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.AvatarTemplates;
+import org.figuramc.figura.data.ModuleImporter;
+import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.directory.FiguraDir;
+import org.figuramc.figura.util.ErrorReporting;
+import org.figuramc.figura.util.RenderUtils;
+import org.figuramc.figura.util.exception.ExceptionUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Files;
@@ -64,7 +63,7 @@ public class CemManager {
             if (result == null) return;
             // Otherwise, this entity has CEM, so launch a task to load it.
             AvatarManager.ENTITY_AVATARS.load(uuid, CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(
-                    () -> AvatarTemplates.cemAvatar(uuid, RenderUtils.getRenderer(entity), new AvatarModules(result)),
+                    () -> AvatarTemplates.cemAvatar(uuid, RenderUtils.getRenderer(entity), AvatarModules.loadModules(result)),
                     CompletionException::new
             ), Runnable::run)); // TODO: Fix texture loading so it can work in an off thread instead of render thread
         } catch (CompletionException ex) {

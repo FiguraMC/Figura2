@@ -25,7 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
@@ -55,7 +55,7 @@ public final class CoroutineLib {
 	private CoroutineLib() {
 	}
 
-	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws LuaError, AvatarError {
 		LibFunction.setGlobalLibrary(state, "coroutine", RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.of("create", CoroutineLib::create),
 			RegisteredFunction.ofV("running", CoroutineLib::running),
@@ -67,7 +67,7 @@ public final class CoroutineLib {
 		}));
 	}
 
-	private static LuaValue create(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue create(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		final LuaFunction func = arg.checkFunction(state);
 		return new LuaThread(state, func);
 	}
@@ -77,16 +77,16 @@ public final class CoroutineLib {
 		return varargsOf(r, LuaBoolean.valueOf(r.isMainThread()));
 	}
 
-	private static LuaValue status(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue status(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		return arg.checkThread(state).getStatus().getDisplayNameValue();
 	}
 
-	private static LuaValue isyieldable(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue isyieldable(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		// Much simpler in our case, as coroutines can always yield.
 		return LuaBoolean.valueOf(!arg.optThread(state, state.getCurrentThread()).isMainThread());
 	}
 
-	private static LuaValue wrap(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue wrap(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		final LuaFunction func = arg.checkFunction(state);
 		final LuaThread thread = new LuaThread(state, func);
 
@@ -95,7 +95,7 @@ public final class CoroutineLib {
 
 	private static class Resume extends ResumableVarArgFunction<Void> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			// TODO: Is this really the right way to do this?
 			di.flags |= FLAG_YPCALL;
 			LuaThread thread = args.arg(1).checkThread(state);
@@ -120,7 +120,7 @@ public final class CoroutineLib {
 
 	private static class Yield extends ResumableVarArgFunction<Void> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			return LuaThread.yield(state, args);
 		}
 
@@ -138,7 +138,7 @@ public final class CoroutineLib {
 		}
 
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			return LuaThread.resume(state, thread, args);
 		}
 

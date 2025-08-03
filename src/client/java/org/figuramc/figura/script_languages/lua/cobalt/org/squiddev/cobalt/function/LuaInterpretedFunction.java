@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
@@ -105,7 +106,7 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 	 *
 	 * @param p The prototype to run
 	 */
-	public LuaInterpretedFunction(@Nullable AllocationTracker allocTracker, Prototype p) throws AllocationTracker.AvatarOOMException {
+	public LuaInterpretedFunction(@Nullable AllocationTracker allocTracker, Prototype p) throws AvatarError {
 		this.p = p;
 		if (p.upvalues() > 0) {
 			this.upvalues = new Upvalue[p.upvalues()];
@@ -144,7 +145,7 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 	}
 
 	@Override
-	public Varargs resume(LuaState state, Object object, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public Varargs resume(LuaState state, Object object, Varargs value) throws LuaError, AvatarError, UnwindThrowable {
 		DebugState ds = DebugState.get(state);
 		var frame = ds.getStackUnsafe();
 

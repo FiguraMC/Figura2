@@ -6,6 +6,7 @@ import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.model.texture.FiguraTextureAtlas;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.RenderUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,31 +23,31 @@ public class Textures implements AvatarComponent<Textures> {
 
     // The atlas texture. Textures which don't opt out of being atlased go in here to keep things more efficient.
     public final @Nullable FiguraTextureAtlas atlas;
-    private final List<AvatarTexture> textures;
-    private final int[] indexOffsetsByModule;
+    private final List<List<AvatarTexture>> textures; // textures[moduleIndex][textureIndex]
 
-    public Textures(AvatarModules modules) throws AvatarError {
+    public Textures(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         FiguraTextureAtlas.Builder atlasBuilder = FiguraTextureAtlas.builder();
         textures = new ArrayList<>();
-        indexOffsetsByModule = new int[modules.modules.size()];
-        for (int i = 0; i < modules.modules.size(); i++) {
-            AvatarModules.Module module = modules.modules.get(i);
-            indexOffsetsByModule[i] = textures.size();
+        for (var module : modules) {
+            ArrayList<AvatarTexture> moduleTextures = new ArrayList<>();
             for (ModuleMaterials.TextureMaterials mats : module.materials.textures())
-                textures.add(AvatarTexture.from(this, mats, atlasBuilder));
+                moduleTextures.add(AvatarTexture.from(this, mats, atlasBuilder));
+            textures.add(moduleTextures);
         }
         atlas = atlasBuilder.build();
     }
 
     public AvatarTexture getTexture(int moduleIndex, int textureIndex) {
-        return textures.get(indexOffsetsByModule[moduleIndex] + textureIndex);
+        return textures.get(moduleIndex).get(textureIndex);
     }
 
     @Override
     public void destroy() {
         RenderUtils.runOnRenderThread(() -> {
             if (atlas != null) atlas.destroy();
-            for (AvatarTexture texture : textures) texture.destroy();
+            for (var moduleTextures : textures)
+                for (var texture : moduleTextures)
+                    texture.destroy();
             textures.clear();
         });
     }

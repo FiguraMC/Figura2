@@ -1,16 +1,14 @@
 package org.figuramc.figura.model.part;
 
-import org.figuramc.figura.avatars.components.Textures;
-import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.data.ModuleMaterials;
-import org.figuramc.figura.model.texture.AvatarTexture;
 import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.world.item.ItemDisplayContext;
+import org.figuramc.figura.avatars.components.Textures;
+import org.figuramc.figura.avatars.components.VanillaRendering;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
-import java.util.List;
 import java.util.Map;
 
 /**

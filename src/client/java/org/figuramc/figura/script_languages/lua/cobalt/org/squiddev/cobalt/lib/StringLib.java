@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.*;
@@ -35,7 +35,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.tableOf;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 /**
  * Subclass of {@link LibFunction} which implements the lua standard {@code string}
@@ -54,7 +55,7 @@ public final class StringLib {
 	private StringLib() {
 	}
 
-	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws LuaError, AvatarError {
 		LuaTable t = RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.of("len", StringLib::len),
 			RegisteredFunction.of("lower", StringLib::lower),
@@ -81,11 +82,11 @@ public final class StringLib {
 		state.stringMetatable = tableOf(state.allocationTracker, INDEX, t);
 	}
 
-	private static LuaValue len(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue len(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		return LuaInteger.valueOf(arg.checkLuaString(state).length());
 	}
 
-	private static LuaValue lower(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue lower(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		LuaString string = arg.checkLuaString(state);
 
 		// Find the first capital letter,
@@ -107,7 +108,7 @@ public final class StringLib {
 		return LuaString.valueOfNoCopy(value);
 	}
 
-	private static LuaValue reverse(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue reverse(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		LuaString s = arg.checkLuaString(state);
 		int n = s.length();
 		byte[] b = new byte[n];
@@ -116,7 +117,7 @@ public final class StringLib {
 		return LuaString.valueOfNoCopy(b);
 	}
 
-	private static LuaValue upper(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue upper(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		LuaString string = arg.checkLuaString(state);
 
 		// Find the first lower-case letter
@@ -138,13 +139,13 @@ public final class StringLib {
 		return LuaString.valueOfNoCopy(value);
 	}
 
-	private static LuaValue packsize(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue packsize(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		return LuaInteger.valueOf(StringPacker.packsize(arg.checkLuaString(state), state.allocationTracker));
 	}
 
 	private static final class GSub extends ResumableVarArgFunction<GSubState> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaString src = args.arg(1).checkLuaString(state);
 			LuaString p = args.arg(2).checkLuaString(state);
 			LuaValue replace = args.arg(3);
@@ -156,14 +157,14 @@ public final class StringLib {
 		}
 
 		@Override
-		public Varargs resume(LuaState state, GSubState subState, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public Varargs resume(LuaState state, GSubState subState, Varargs value) throws LuaError, AvatarError, UnwindThrowable {
 			return StringMatch.gsubRun(state, subState, value.first());
 		}
 	}
 
 	private static final class Format extends ResumableVarArgFunction<FormatState> {
 		@Override
-		public Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaString src = args.arg(1).checkLuaString(state);
 			FormatState format = new FormatState(src, new Buffer(src.length(), state.allocationTracker), args);
 			di.state = format;
@@ -171,7 +172,7 @@ public final class StringLib {
 		}
 
 		@Override
-		public Varargs resume(LuaState state, FormatState formatState, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public Varargs resume(LuaState state, FormatState formatState, Varargs value) throws LuaError, AvatarError, UnwindThrowable {
 			LuaString s = OperationHelper.checkToString(value.first(), state);
 			formatState.current.format(formatState.buffer, s);
 			return StringFormat.format(state, formatState);
@@ -189,7 +190,7 @@ public final class StringLib {
 	 *
 	 * @param args the calling args
 	 */
-	private static Varargs byte$(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs byte$(LuaState state, Varargs args) throws LuaError, AvatarError {
 		LuaString s = args.arg(1).checkLuaString(state);
 		int l = s.length();
 		int posi = posRelative(args.arg(2).optInteger(state, 1), l);
@@ -223,7 +224,7 @@ public final class StringLib {
 	 * @return The characters for this string
 	 * @throws LuaError If the argument is not a number or is out of bounds.
 	 */
-	private static LuaValue char$(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue char$(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int n = args.count();
 		byte[] bytes = new byte[n];
 		if (state.allocationTracker != null) state.allocationTracker.track(bytes);
@@ -246,7 +247,7 @@ public final class StringLib {
 	 *
 	 * @throws LuaError If the function cannot be dumped.
 	 */
-	static LuaValue dump(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	static LuaValue dump(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		LuaFunction f = arg1.checkFunction(state);
 		boolean strip = arg2.optBoolean(state, false);
 		var bytecode = state.getBytecodeFormat();
@@ -270,7 +271,7 @@ public final class StringLib {
 	 * <p>
 	 * Returns a string that is the concatenation of n copies of the string s.
 	 */
-	private static Varargs rep(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs rep(LuaState state, Varargs args) throws LuaError, AvatarError {
 		LuaString s = args.arg(1).checkLuaString(state);
 		int len = s.length();
 		int n = args.arg(2).checkInteger(state);
@@ -311,7 +312,7 @@ public final class StringLib {
 	 * string.sub(s, -i)
 	 * returns a suffix of s with length i.
 	 */
-	private static Varargs sub(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs sub(LuaState state, Varargs args) throws LuaError, AvatarError {
 		final LuaString s = args.arg(1).checkLuaString(state);
 		final int l = s.length();
 

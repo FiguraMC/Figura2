@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
@@ -48,13 +48,13 @@ final class LuaInterpreter {
 		return stack;
 	}
 
-	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, int flags) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, int flags) throws UnwindThrowable, LuaError, AvatarError {
 		Prototype p = function.p;
 		LuaValue[] stack = createStack(p);
 		setupFrame(ds, frame, function, NONE, stack, flags);
 	}
 
-	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg, int flags) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg, int flags) throws LuaError, AvatarError, UnwindThrowable {
 		Prototype p = function.p;
 		LuaValue[] stack = createStack(p);
 
@@ -67,7 +67,7 @@ final class LuaInterpreter {
 		}
 	}
 
-	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg1, LuaValue arg2, int flags) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg1, LuaValue arg2, int flags) throws LuaError, AvatarError, UnwindThrowable {
 		Prototype p = function.p;
 		LuaValue[] stack = createStack(p);
 
@@ -87,7 +87,7 @@ final class LuaInterpreter {
 		}
 	}
 
-	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg1, LuaValue arg2, LuaValue arg3, int flags) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, LuaValue arg1, LuaValue arg2, LuaValue arg3, int flags) throws LuaError, AvatarError, UnwindThrowable {
 		Prototype p = function.p;
 		LuaValue[] stack = createStack(p);
 
@@ -125,14 +125,14 @@ final class LuaInterpreter {
 		return prototype.isVarArg ? varargs.subargs(prototype.parameters + 1) : NONE;
 	}
 
-	static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, Varargs varargs, int flags) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	static void setupCall(DebugState ds, DebugFrame frame, LuaInterpretedFunction function, Varargs varargs, int flags) throws LuaError, AvatarError, UnwindThrowable {
 		Prototype p = function.p;
 		LuaValue[] stack = createStack(p);
 		Varargs args = setupStack(p, stack, varargs);
 		setupFrame(ds, frame, function, args, stack, flags);
 	}
 
-	private static void setupFrame(DebugState ds, DebugFrame di, LuaClosure function, Varargs varargs, LuaValue[] stack, int flags) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+	private static void setupFrame(DebugState ds, DebugFrame di, LuaClosure function, Varargs varargs, LuaValue[] stack, int flags) throws UnwindThrowable, LuaError, AvatarError {
 		di.func = function;
 		di.closure = function;
 		di.varargs = varargs;
@@ -155,7 +155,7 @@ final class LuaInterpreter {
 		else return ((x & 7) + 8) << (e - 1);
 	}
 
-	static Varargs execute(final LuaState state, DebugFrame di, LuaInterpretedFunction function) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	static Varargs execute(final LuaState state, DebugFrame di, LuaInterpretedFunction function) throws LuaError, AvatarError, UnwindThrowable {
 		final DebugState ds = DebugState.get(state);
 
 		newFrame:
@@ -589,7 +589,7 @@ final class LuaInterpreter {
 		return GETARG_sBx(i) + e;
 	}
 
-	private static void nativeCall(LuaState state, DebugFrame di, LuaValue[] stack, LuaValue val, int i, int a, int b, int c) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+	private static void nativeCall(LuaState state, DebugFrame di, LuaValue[] stack, LuaValue val, int i, int a, int b, int c) throws UnwindThrowable, LuaError, AvatarError {
 		switch (i & (MASK_B | MASK_C)) {
 			case (1 << POS_B) | (0 << POS_C) -> {
 				Varargs v = di.extras = Dispatch.invoke(state, val, NONE, a);
@@ -623,7 +623,7 @@ final class LuaInterpreter {
 		}
 	}
 
-	private static void concat(LuaState state, DebugFrame frame, LuaValue[] stack, int top, int total) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static void concat(LuaState state, DebugFrame frame, LuaValue[] stack, int top, int total) throws LuaError, AvatarError, UnwindThrowable {
 		try {
 			do {
 				LuaValue left = stack[top - 2];
@@ -673,7 +673,7 @@ final class LuaInterpreter {
 		}
 	}
 
-	public static void resume(LuaState state, DebugFrame di, LuaInterpretedFunction function, Varargs varargs) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static void resume(LuaState state, DebugFrame di, LuaInterpretedFunction function, Varargs varargs) throws LuaError, AvatarError, UnwindThrowable {
 		int pc = di.pc++;
 		Prototype p = function.p;
 		int i = p.code[pc];
@@ -745,7 +745,7 @@ final class LuaInterpreter {
 		}
 	}
 
-	private static LuaError reportIllegalResume(LuaState state, Prototype prototype, int pc) throws AllocationTracker.AvatarOOMException {
+	private static LuaError reportIllegalResume(LuaState state, Prototype prototype, int pc) throws AvatarError {
 		LuaError err = new LuaError("cannot resume this opcode", state.allocationTracker);
 		state.reportInternalError(err, () -> {
 			StringBuilder output = new StringBuilder();

@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 
 /**
  * A value which can be "resumed" with a specified state.
@@ -40,7 +40,7 @@ public interface Resumable<T> {
 	 * @throws LuaError        When a runtime error occurs.
 	 * @throws UnwindThrowable If this {@link Resumable} transfers control to another coroutine.
 	 */
-	Varargs resume(LuaState state, T object, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	Varargs resume(LuaState state, T object, Varargs value) throws LuaError, AvatarError, UnwindThrowable;
 
 	/**
 	 * Resume this resumable with an error
@@ -52,7 +52,7 @@ public interface Resumable<T> {
 	 * @throws LuaError        When a runtime error occurs.
 	 * @throws UnwindThrowable If this {@link Resumable} transfers control to another coroutine.
 	 */
-	default Varargs resumeError(LuaState state, T object, LuaError error) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	default Varargs resumeError(LuaState state, T object, LuaError error) throws LuaError, AvatarError, UnwindThrowable {
 		throw error;
 	}
 }

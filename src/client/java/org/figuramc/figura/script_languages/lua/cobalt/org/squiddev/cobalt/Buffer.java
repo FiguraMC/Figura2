@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +58,7 @@ public final class Buffer {
 	 *
 	 * @see #DEFAULT_CAPACITY
 	 */
-	public Buffer(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public Buffer(@Nullable AllocationTracker allocTracker) throws AvatarError {
 		this(DEFAULT_CAPACITY, allocTracker);
 	}
 
@@ -66,7 +67,7 @@ public final class Buffer {
 	 *
 	 * @param initialCapacity the initial capacity
 	 */
-	public Buffer(int initialCapacity, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public Buffer(int initialCapacity, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		bytes = new byte[initialCapacity];
 		length = 0;
 		tracker = allocTracker;
@@ -97,7 +98,7 @@ public final class Buffer {
 		return "(Lua Buffer toString() unimplemented - use toJavaString instead!)";
 	}
 
-	public String toJavaString() throws AllocationTracker.AvatarOOMException {
+	public String toJavaString() throws AvatarError {
 		return toLuaString().toJavaString(this.tracker);
 	}
 
@@ -106,7 +107,7 @@ public final class Buffer {
 	 *
 	 * @param b The byte to append
 	 */
-	public void append(byte b) throws AllocationTracker.AvatarOOMException {
+	public void append(byte b) throws AvatarError {
 		ensure(1);
 		bytes[length++] = b;
 	}
@@ -116,7 +117,7 @@ public final class Buffer {
 	 *
 	 * @param b The bytes to append
 	 */
-	public void append(byte[] b) throws AllocationTracker.AvatarOOMException {
+	public void append(byte[] b) throws AvatarError {
 		ensure(b.length);
 		System.arraycopy(b, 0, bytes, length, b.length);
 		length += b.length;
@@ -129,7 +130,7 @@ public final class Buffer {
 	 * @param start  The start index
 	 * @param length The number of values to append
 	 */
-	public Buffer append(byte[] b, int start, int length) throws AllocationTracker.AvatarOOMException {
+	public Buffer append(byte[] b, int start, int length) throws AvatarError {
 		ensure(length);
 		System.arraycopy(b, start, bytes, this.length, length);
 		this.length += length;
@@ -141,7 +142,7 @@ public final class Buffer {
 	 *
 	 * @param c The byte to append
 	 */
-	public void append(char c) throws AllocationTracker.AvatarOOMException {
+	public void append(char c) throws AvatarError {
 		ensure(1);
 		bytes[length++] = c < 256 ? (byte) c : 63;
 	}
@@ -153,7 +154,7 @@ public final class Buffer {
 	 * @param start  The start index
 	 * @param length The number of values to append
 	 */
-	public void append(char[] chars, int start, int length) throws AllocationTracker.AvatarOOMException {
+	public void append(char[] chars, int start, int length) throws AvatarError {
 		ensure(length);
 		int j = this.length;
 		for (int i = start; i < start + length; i++, j++) {
@@ -169,7 +170,7 @@ public final class Buffer {
 	 * @param str The string to append
 	 * @return {@code this}, for chaining.
 	 */
-	public Buffer append(LuaString str) throws AllocationTracker.AvatarOOMException {
+	public Buffer append(LuaString str) throws AvatarError {
 		ensure(str.length());
 		length = str.copyTo(bytes, length);
 		return this;
@@ -181,7 +182,7 @@ public final class Buffer {
 	 * @param str The string to append
 	 * @return {@code this}, for chaining.
 	 */
-	public Buffer append(LuaString str, int start, int srcLength) throws AllocationTracker.AvatarOOMException {
+	public Buffer append(LuaString str, int start, int srcLength) throws AvatarError {
 		ensure(length);
 		length = str.copyTo(start, bytes, length, srcLength);
 		return this;
@@ -195,7 +196,7 @@ public final class Buffer {
 	 * @return {@code this}, for chaining.
 	 * @see LuaString#encode(String, byte[], int)
 	 */
-	public Buffer append(String str) throws AllocationTracker.AvatarOOMException {
+	public Buffer append(String str) throws AvatarError {
 		final int n = str.length();
 		ensure(n);
 		LuaString.encode(str, bytes, length);
@@ -208,7 +209,7 @@ public final class Buffer {
 	 *
 	 * @param space number of unused bytes which must follow the data after this completes
 	 */
-	public void ensure(int space) throws AllocationTracker.AvatarOOMException {
+	public void ensure(int space) throws AvatarError {
 		int newLength = length + space;
 		if (bytes.length >= newLength) return;
 
@@ -221,7 +222,7 @@ public final class Buffer {
 	 *
 	 * @param newSize the size of the buffer to use
 	 */
-	private void realloc(int newSize) throws AllocationTracker.AvatarOOMException {
+	private void realloc(int newSize) throws AvatarError {
 		if (newSize == bytes.length) return;
 
 		byte[] newBytes = new byte[newSize];

@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.LegacyEnv;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -59,7 +59,7 @@ public final class BaseLib {
 	private BaseLib() {
 	}
 
-	public static void add(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws AvatarError {
 		var env = state.globals();
 		var self = new BaseLib();
 		env.rawset("_G", env);
@@ -93,12 +93,12 @@ public final class BaseLib {
 		self.inext = RegisteredFunction.ofS("inext", BaseLib::inext).create();
 	}
 
-	private static LuaValue error(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue error(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		// error( message [,level] ) -> ERR
 		throw new LuaError(arg1.isNil() ? Constants.NIL : arg1, arg2.optInteger(state, 1));
 	}
 
-	private static Varargs setfenv(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs setfenv(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// setfenv(f, table) -> void
 		LuaTable t = args.arg(2).checkTable(state);
 		LuaValue f = getfenvobj(state, args.arg(1), false);
@@ -107,7 +107,7 @@ public final class BaseLib {
 		return f;
 	}
 
-	private static LuaValue getfenvobj(LuaState state, LuaValue arg, boolean optional) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue getfenvobj(LuaState state, LuaValue arg, boolean optional) throws LuaError, AvatarError {
 		if (arg instanceof LuaFunction) return arg;
 
 		int level = optional ? arg.optInteger(state, 1) : arg.checkInteger(state);
@@ -118,7 +118,7 @@ public final class BaseLib {
 		return f;
 	}
 
-	private static Varargs assert_(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs assert_(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// assert( v [,message] ) -> v, message | ERR
 		if (args.first().toBoolean()) return args;
 		args.checkValue(state.allocationTracker, 1);
@@ -126,27 +126,27 @@ public final class BaseLib {
 	}
 
 
-	private static LuaValue getfenv(LuaState state, LuaValue args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue getfenv(LuaState state, LuaValue args) throws LuaError, AvatarError {
 		// getfenv( [f] ) -> env
 		LuaValue f = getfenvobj(state, args, true);
 		var env = LegacyEnv.getEnv(f);
 		return env == null ? state.globals() : env;
 	}
 
-	private static LuaValue getmetatable(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue getmetatable(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// getmetatable( object ) -> table
 		LuaTable mt = args.checkValue(state.allocationTracker, 1).getMetatable(state);
 		return mt != null ? mt.rawget(Constants.METATABLE).optValue(mt) : Constants.NIL;
 	}
 
-	private static Varargs loadstring(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs loadstring(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		// loadstring( string [,chunkname] ) -> chunk | nil, msg
 		LuaString script = args.arg(1).checkLuaString(state);
 		InputStream is = script.toInputStream();
 		return loadStream(state, di, is, args.arg(2).optLuaString(state, script), null, state.globals());
 	}
 
-	private static Varargs select(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs select(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// select(f, ...) -> value1, ...
 		int n = args.count() - 1;
 		if (args.first() instanceof LuaString s && s.charAt(0) == '#') return LuaInteger.valueOf(n);
@@ -155,22 +155,22 @@ public final class BaseLib {
 		return args.subargs(i < 0 ? n + i + 2 : i + 1);
 	}
 
-	private static LuaValue type(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue type(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// type(v) -> value
 		return args.checkValue(state.allocationTracker, 1).luaTypeName();
 	}
 
-	private static LuaValue rawequal(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rawequal(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// rawequal(v1, v2) -> boolean
 		return LuaBoolean.valueOf(args.checkValue(state.allocationTracker, 1).equals(args.checkValue(state.allocationTracker, 2)));
 	}
 
-	private static LuaValue rawget(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rawget(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// rawget(table, index) -> value
 		return args.arg(1).checkTable(state).rawget(args.checkValue(state.allocationTracker, 2));
 	}
 
-	private static LuaValue rawset(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rawset(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// rawset(table, index, value) -> table
 		LuaTable t = args.arg(1).checkTable(state);
 		LuaValue k = args.checkValue(state.allocationTracker, 2);
@@ -179,7 +179,7 @@ public final class BaseLib {
 		return t;
 	}
 
-	private static LuaValue setmetatable(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue setmetatable(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// setmetatable(table, metatable) -> table
 		LuaValue t = args.first();
 		LuaTable mt;
@@ -201,12 +201,12 @@ public final class BaseLib {
 		return t;
 	}
 
-	private static LuaValue tostring(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static LuaValue tostring(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		// tostring(e) -> value
 		return SuspendedAction.run(di, () -> OperationHelper.toString(state, args.checkValue(state.allocationTracker, 1))).first();
 	}
 
-	private static LuaValue tonumber(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue tonumber(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// tonumber"(e [,base]) -> value
 		LuaValue arg1 = args.checkValue(state.allocationTracker, 1);
 		final int base = args.arg(2).optInteger(state, 10);
@@ -220,7 +220,7 @@ public final class BaseLib {
 		}
 	}
 
-	private Varargs pairs(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private Varargs pairs(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		// pairs(t) -> iter-func, t, nil
 		LuaValue value = args.checkValue(state.allocationTracker, 1);
 		LuaValue pairs = value.metatag(state, Constants.PAIRS);
@@ -231,12 +231,12 @@ public final class BaseLib {
 		}
 	}
 
-	private Varargs ipairs(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private Varargs ipairs(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// ipairst) -> iter-func, t, 0
 		return varargsOf(inext, args.checkValue(state.allocationTracker, 1), Constants.ZERO);
 	}
 
-	private static LuaValue rawlen(LuaState state, LuaValue v) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue rawlen(LuaState state, LuaValue v) throws LuaError, AvatarError {
 		// rawlen( table | string ) -> int
 		return switch (v.type()) {
 			case Constants.TTABLE -> LuaInteger.valueOf(v.checkTable(state).length());
@@ -245,12 +245,12 @@ public final class BaseLib {
 		};
 	}
 
-	private static Varargs next(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs next(LuaState state, Varargs args) throws LuaError, AvatarError {
 		// next( table, [index] ) -> next-index, next-value
 		return args.arg(1).checkTable(state).next(args.arg(2));
 	}
 
-	private static Varargs inext(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs inext(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		// inext( table, [int-index] ) -> next-index, next-value
 		LuaValue table = args.arg(1);
 		int key = args.arg(2).checkInteger(state) + 1;
@@ -270,7 +270,7 @@ public final class BaseLib {
 	// pcall(f, arg1, ...) -> status, result1, ...
 	private static class PCall extends ResumableVarArgFunction<ProtectedCall> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue func = args.checkValue(state.allocationTracker, 1);
 
 			ProtectedCall call = new ProtectedCall(di, null);
@@ -279,12 +279,12 @@ public final class BaseLib {
 		}
 
 		@Override
-		public Varargs resume(LuaState state, ProtectedCall call, Varargs value) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+		public Varargs resume(LuaState state, ProtectedCall call, Varargs value) throws UnwindThrowable, AvatarError {
 			return call.resume(state, value).asBoolAndResult();
 		}
 
 		@Override
-		public Varargs resumeError(LuaState state, ProtectedCall call, LuaError error) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+		public Varargs resumeError(LuaState state, ProtectedCall call, LuaError error) throws UnwindThrowable, AvatarError {
 			return call.resumeError(state, error).asBoolAndResult();
 		}
 	}
@@ -292,7 +292,7 @@ public final class BaseLib {
 	// xpcall(f, err) -> result1, ...
 	private static class XpCall extends ResumableVarArgFunction<ProtectedCall> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue func = args.checkValue(state.allocationTracker, 1);
 			LuaValue errFunc = args.checkValue(state.allocationTracker, 2);
 
@@ -302,12 +302,12 @@ public final class BaseLib {
 		}
 
 		@Override
-		public Varargs resume(LuaState state, ProtectedCall call, Varargs value) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+		public Varargs resume(LuaState state, ProtectedCall call, Varargs value) throws UnwindThrowable, AvatarError {
 			return call.resume(state, value).asBoolAndResult();
 		}
 
 		@Override
-		public Varargs resumeError(LuaState state, ProtectedCall call, LuaError error) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+		public Varargs resumeError(LuaState state, ProtectedCall call, LuaError error) throws UnwindThrowable, AvatarError {
 			return call.resumeError(state, error).asBoolAndResult();
 		}
 	}
@@ -315,7 +315,7 @@ public final class BaseLib {
 	// load( func|str [,chunkname[, mode[, env]]] ) -> chunk | nil, msg
 	static class Load extends ResumableVarArgFunction<Object> {
 		@Override
-		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		protected Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue scriptGen = args.arg(1);
 			LuaString chunkName = args.arg(2).optLuaString(state, null);
 			LuaString mode = args.arg(3).optLuaString(state, LOAD_MODE);
@@ -341,7 +341,7 @@ public final class BaseLib {
 		}
 
 		@Override
-		public Varargs resume(LuaState state, Object funcState, Varargs value) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+		public Varargs resume(LuaState state, Object funcState, Varargs value) throws UnwindThrowable, LuaError, AvatarError {
 			if (funcState instanceof ProtectedCall call) {
 				return call.resume(state, value).asResultOrFailure();
 			} else {
@@ -350,7 +350,7 @@ public final class BaseLib {
 		}
 
 		@Override
-		public Varargs resumeError(LuaState state, Object funcState, LuaError error) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+		public Varargs resumeError(LuaState state, Object funcState, LuaError error) throws UnwindThrowable, LuaError, AvatarError {
 			if (funcState instanceof ProtectedCall call) {
 				return call.resumeError(state, error).asResultOrFailure();
 			} else {
@@ -359,7 +359,7 @@ public final class BaseLib {
 		}
 	}
 
-	private static Varargs loadStream(LuaState state, DebugFrame frame, InputStream is, LuaString chunkName, LuaString mode, LuaValue env) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs loadStream(LuaState state, DebugFrame frame, InputStream is, LuaString chunkName, LuaString mode, LuaValue env) throws UnwindThrowable, LuaError, AvatarError {
 		return SuspendedAction.run(frame, () -> {
 			try {
 				return state.compiler.load(state.allocationTracker, LuaC.compile(state, new LuaC.InputStreamReader(state, is), chunkName, mode), env);
@@ -382,7 +382,7 @@ public final class BaseLib {
 		}
 
 		@Override
-		public int read() throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public int read() throws LuaError, AvatarError, UnwindThrowable {
 			if (!bytes.hasRemaining()) {
 				LuaValue value = Dispatch.call(state, func);
 				if (!fillBuffer(value)) return -1;
@@ -392,12 +392,12 @@ public final class BaseLib {
 		}
 
 		@Override
-		public int resume(Varargs varargs) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public int resume(Varargs varargs) throws LuaError, AvatarError, UnwindThrowable {
 			if (!fillBuffer(varargs.first())) return -1;
 			return read();
 		}
 
-		private boolean fillBuffer(LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+		private boolean fillBuffer(LuaValue value) throws LuaError, AvatarError {
 			if (value.isNil()) return false;
 			// This used to be "new LuaError(new LuaError(...))".
 			// I'm assuming that was a mistake, so I made it only 1 LuaError.

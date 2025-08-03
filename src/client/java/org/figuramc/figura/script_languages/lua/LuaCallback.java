@@ -5,11 +5,11 @@ import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 // Implementation of ScriptCallback for Lua
@@ -31,11 +31,17 @@ public class LuaCallback<I extends CallbackItem, O extends CallbackItem> impleme
         return type;
     }
 
+    @Override
+    public Avatar<?> getOwningAvatar() {
+        return state.avatar;
+    }
+
     // TODO look into caching the result of conversion when multiple callbacks are run with the same args (for example, events)
     // Remember that the things running here are the fault of the CALLEE.
     // So if an error arises, we don't throw it back to the CALLER, we fault the Avatar who created this incorrect callback.
     @Override
     public O call(I arg) {
+        Objects.requireNonNull(state.avatar, "Attempt to call LuaCallback before its avatar was set! Internal Figura bug, please report");
         // If we're errored, don't call the function
         if (!state.avatar.isErrored()) {
             // Convert the arg into Lua Varargs to pass to our function.
@@ -57,19 +63,19 @@ public class LuaCallback<I extends CallbackItem, O extends CallbackItem> impleme
             } catch (LuaError luaError) {
                 // The callback encountered an error while running.
                 state.avatar.error(new AvatarError("figura.error.runtime.script.lua.error_in_callback", luaError, luaError.getMessage()));
-            } catch (AllocationTracker.AvatarOOMException outOfMemory) {
+            } catch (AvatarError avatarError) {
                 // The callback's owner ran out of memory
-                state.avatar.error(outOfMemory);
+                state.avatar.error(avatarError);
             }
         }
-        // TODO: Figure out what to return to the caller if the callee failed. A default value of type O?
+        // TODO: Figure out what to return to the caller if the callee failed. A default return value?
         throw new UnsupportedOperationException("TODO");
     }
 
     // Do NOT invoke this across different LuaState! Ensure it's the same first.
     // This is here for the fast track of invoking callbacks from within the same LuaState,
     // meaning no conversions are needed.
-    public LuaValue localCall(Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+    public LuaValue localCall(Varargs args) throws LuaError, AvatarError {
         try {
             // TODO optionally type-check the args/return type for improved error messages, even if there's no conversions happening
             return Dispatch.invoke(state, wrapped, args).first();

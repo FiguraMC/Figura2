@@ -36,7 +36,6 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compi
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptHandler;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -94,7 +93,8 @@ public final class LuaState {
 	public final LuaToCallbackItem luaToCallbackItem;
 	public final CallbackItemToLua callbackItemToLua;
 	// Figura: The avatar which this state belongs to
-	public final Avatar<?> avatar;
+	// This is filled in LATER than when the state is created; instead it's when initialization occurs.
+	public @Nullable Avatar<?> avatar;
 
 	/**
 	 * The currently executing thread
@@ -115,8 +115,8 @@ public final class LuaState {
 
 	private final GlobalRegistry registry;
 
-	public LuaState(Avatar<?> avatar) throws LuaError, AvatarError {
-		this(new LuaState.Builder(avatar));
+	public LuaState() throws LuaError, AvatarError {
+		this(new LuaState.Builder());
 	}
 
 	private LuaState(Builder builder) throws LuaError, AvatarError {
@@ -128,7 +128,6 @@ public final class LuaState {
 		figuraMetatables = new FiguraMetatables(this);
 		luaToCallbackItem = new LuaToCallbackItem(this);
 		callbackItemToLua = new CallbackItemToLua(this);
-		avatar = builder.avatar;
 
 		globals = new LuaTable(allocationTracker);
 		registry = new GlobalRegistry(allocationTracker);
@@ -259,8 +258,8 @@ public final class LuaState {
 		if (reportError != null) reportError.report(error, message);
 	}
 
-	public static LuaState.Builder builder(Avatar<?> avatar) {
-		return new LuaState.Builder(avatar);
+	public static LuaState.Builder builder() {
+		return new LuaState.Builder();
 	}
 
 	/**
@@ -272,11 +271,6 @@ public final class LuaState {
 		private @Nullable ErrorReporter reportError;
 		private @Nullable BytecodeFormat bytecodeFormat;
 		private @Nullable AllocationTracker allocationTracker;
-		private final Avatar<?> avatar;
-
-		public Builder(@NotNull Avatar<?> avatar) {
-			this.avatar = avatar;
-		}
 
 		/**
 		 * Build a Lua state from this builder

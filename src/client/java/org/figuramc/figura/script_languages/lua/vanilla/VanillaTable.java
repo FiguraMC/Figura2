@@ -3,9 +3,9 @@ package org.figuramc.figura.script_languages.lua.vanilla;
 import net.minecraft.client.model.Model;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.vanillamodel.ModelNames;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
+import org.figuramc.figura.vanillamodel.ModelNames;
 
 /**
  * The global table "vanilla", storing APIs related to rendering of the vanilla entity.

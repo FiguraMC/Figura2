@@ -3,7 +3,6 @@ package org.figuramc.figura.avatars;
 import org.figuramc.figura.util.enumlike.EnumLike;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 
 // Self should just be the class itself that's implementing the interface.
 public interface AvatarComponent<Self extends AvatarComponent<Self>> {
@@ -26,18 +25,14 @@ public interface AvatarComponent<Self extends AvatarComponent<Self>> {
     // Get the type. This should just return a static variable in the class as defined above.
     Type<Self> getType();
 
-    // This is called upon creation of an Avatar.
-    // This method runs on an off-thread, so do not use anything requiring the main threads without appropriate wrapping.
-    default void initialize(AvatarModules modules, Avatar<?> self) throws AvatarError {}
-
     // Once loading is complete, this is run on the main/render thread, to instantiate the avatar.
-    default void mainThreadInitialize() { }
+    default void mainThreadInitialize(Avatar<?> avatar) throws AvatarError, Throwable { }
 
     // Run on Avatar cleanup. Should eventually destroy any native resources that won't be GC'ed and prevent a memory leak.
     default void destroy() { }
 
     // Runs when the Avatar is ticked.
     // Dependencies will always run before this, as declared in createId().
-    default void tick() { }
+    default void tick(Avatar<?> self) { }
 
 }

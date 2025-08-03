@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
@@ -263,7 +264,7 @@ public abstract class LuaValue extends Varargs {
 		return ErrorFactory.typeName(null, this) + ": " + Integer.toHexString(hashCode());
 	}
 
-	public String toJavaString(@Nullable AllocationTracker allocationTracker) throws AllocationTracker.AvatarOOMException {
+	public String toJavaString(@Nullable AllocationTracker allocationTracker) throws AvatarError {
 		String s = toString();
 		if (allocationTracker != null) allocationTracker.track(s);
 		return s;
@@ -272,7 +273,7 @@ public abstract class LuaValue extends Varargs {
 	public String toJavaStringNoAlloc() {
 		try {
 			return toJavaString(null);
-		} catch (AllocationTracker.AvatarOOMException impossible) {
+		} catch (AvatarError impossible) {
 			throw new IllegalStateException("Should never happen, contact Figura devs!", impossible);
 		}
 	}
@@ -322,7 +323,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #checkLuaString()
 	 * @see #toString()
 	 */
-	public LuaValue toLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public LuaValue toLuaString(LuaState state) throws AvatarError {
 		return Constants.NIL;
 	}
 
@@ -337,7 +338,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #checkBoolean()
 	 * @see Constants#TBOOLEAN
 	 */
-	public final boolean optBoolean(LuaState state, boolean defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final boolean optBoolean(LuaState state, boolean defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkBoolean(state);
 	}
 
@@ -356,7 +357,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final double optDouble(LuaState state, double defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final double optDouble(LuaState state, double defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkDouble(state);
 	}
 
@@ -376,7 +377,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #checkFunction()
 	 * @see Constants#TFUNCTION
 	 */
-	public final LuaFunction optFunction(LuaState state, LuaFunction defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final LuaFunction optFunction(LuaState state, LuaFunction defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkFunction(state);
 	}
 
@@ -396,7 +397,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final int optInteger(LuaState state, int defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final int optInteger(LuaState state, int defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkInteger(state);
 	}
 
@@ -416,7 +417,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final long optLong(LuaState state, long defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final long optLong(LuaState state, long defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkLong(state);
 	}
 
@@ -437,7 +438,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final LuaNumber optNumber(LuaState state, LuaNumber defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final LuaNumber optNumber(LuaState state, LuaNumber defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkNumber(state);
 	}
 
@@ -455,7 +456,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final String optString(LuaState state, String defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final String optString(LuaState state, String defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkString(state);
 	}
 
@@ -473,7 +474,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final LuaString optLuaString(LuaState state, LuaString defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final LuaString optLuaString(LuaState state, LuaString defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkLuaString(state);
 	}
 
@@ -488,7 +489,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #checkTable()
 	 * @see Constants#TTABLE
 	 */
-	public final LuaTable optTable(LuaState state, LuaTable defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final LuaTable optTable(LuaState state, LuaTable defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkTable(state);
 	}
 
@@ -504,11 +505,11 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isThread()
 	 * @see Constants#TTHREAD
 	 */
-	public final LuaThread optThread(LuaState state, LuaThread defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final LuaThread optThread(LuaState state, LuaThread defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkThread(state);
 	}
 
-	public final <T> T optUserdata(LuaState state, Class<T> targetClass, T defval) throws LuaError, AllocationTracker.AvatarOOMException {
+	public final <T> T optUserdata(LuaState state, Class<T> targetClass, T defval) throws LuaError, AvatarError {
 		return this == NIL ? defval : checkUserdata(state, targetClass);
 	}
 
@@ -536,7 +537,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optBoolean(boolean)
 	 * @see Constants#TBOOLEAN
 	 */
-	public boolean checkBoolean(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public boolean checkBoolean(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "boolean");
 	}
 
@@ -554,7 +555,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optDouble(double)
 	 * @see Constants#TNUMBER
 	 */
-	public double checkDouble(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public double checkDouble(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -569,11 +570,11 @@ public abstract class LuaValue extends Varargs {
 	 * @return {@code this} if if a lua function or closure
 	 * @throws LuaError if not a function
 	 */
-	public LuaFunction checkFunction(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaFunction checkFunction(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "function");
 	}
 
-	public LuaFunction checkFunction(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaFunction checkFunction(LuaState state, String message) throws LuaError, AvatarError {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -591,7 +592,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optInteger(int)
 	 * @see Constants#TNUMBER
 	 */
-	public int checkInteger(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public int checkInteger(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -609,7 +610,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optLong(long)
 	 * @see Constants#TNUMBER
 	 */
-	public long checkLong(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public long checkLong(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -626,7 +627,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaNumber checkNumber(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -644,7 +645,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AvatarError {
 		throw new LuaError(msg, state.allocationTracker);
 	}
 
@@ -663,10 +664,10 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isString
 	 * @see Constants#TSTRING
 	 */
-	public String checkString(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "string");
 	}
-	public String checkString(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state, String message) throws LuaError, AvatarError {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -685,7 +686,7 @@ public abstract class LuaValue extends Varargs {
 	 * @see #isString()
 	 * @see Constants#TSTRING
 	 */
-	public LuaString checkLuaString(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaString checkLuaString(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "string");
 	}
 
@@ -697,11 +698,11 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optTable(LuaTable)
 	 * @see Constants#TTABLE
 	 */
-	public LuaTable checkTable(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaTable checkTable(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "table");
 	}
 
-	public LuaTable checkTable(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaTable checkTable(LuaState state, String message) throws LuaError, AvatarError {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -714,12 +715,12 @@ public abstract class LuaValue extends Varargs {
 	 * @see #optThread(LuaThread)
 	 * @see Constants#TTHREAD
 	 */
-	public LuaThread checkThread(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaThread checkThread(LuaState state) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "thread");
 	}
 
 	// Check that this is a userdata wrapping a T, and return that T.
-	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AllocationTracker.AvatarOOMException {
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "userdata(" + targetClass.getSimpleName() + ")");
 	}
 
@@ -771,7 +772,7 @@ public abstract class LuaValue extends Varargs {
 	 * @param metatable {@link LuaValue} instance to serve as the metatable, or null to reset it.
 	 * @throws LuaError If the metatable cannot be set.
 	 */
-	public void setMetatable(LuaState state, LuaTable metatable) throws LuaError, AllocationTracker.AvatarOOMException {
+	public void setMetatable(LuaState state, LuaTable metatable) throws LuaError, AvatarError {
 		throw ErrorFactory.argError(state, this, "table");
 	}
 

@@ -63,6 +63,10 @@ public abstract class EnumLike {
         return (List<? extends T>) ALL_VALUES.getOrDefault(clazz, List.of());
     }
 
+    public static <T extends EnumLike> int count(Class<? super T> clazz) {
+        return values(clazz).size();
+    }
+
     // Hashcode impl
     @Override
     public int hashCode() {

@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_hooks;
 
+import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 
@@ -26,8 +27,16 @@ public interface ScriptRuntime {
     void destroy();
 
     /**
-     * Initialize the given module (which uses this runtime)
+     * Initialize the state on the main thread. This runs before any initModule calls.
+     * This is used so scripts can reference the Avatar.
+     * (TODO: look into providing the avatar earlier? Avatar object exists before main thread init...)
      */
-    void initModule(AvatarModules.Module module) throws AvatarError;
+    void mainThreadInitialize(Avatar<?> self) throws AvatarError;
+
+    /**
+     * Initialize the given runtime module.
+     * This happens on the main thread.
+     */
+    void initModule(AvatarModules.RuntimeModule module) throws AvatarError;
 
 }

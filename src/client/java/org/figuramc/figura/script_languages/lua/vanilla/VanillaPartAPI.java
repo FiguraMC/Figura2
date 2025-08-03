@@ -3,15 +3,12 @@ package org.figuramc.figura.script_languages.lua.vanilla;
 import net.minecraft.client.model.geom.ModelPart;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
-
-import java.util.Objects;
 
 public class VanillaPartAPI {
 

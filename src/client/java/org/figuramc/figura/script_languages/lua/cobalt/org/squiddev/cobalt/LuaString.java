@@ -24,9 +24,10 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.jetbrains.annotations.Nullable;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.NumberParser;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -112,7 +113,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	 * @param string Java String containing characters which will be limited to the 0-255 range
 	 * @return {@link LuaString} with bytes corresponding to the supplied String
 	 */
-	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) throws AllocationTracker.AvatarOOMException {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) throws AvatarError {
 		byte[] bytes = new byte[string.length()];
 		if (allocTracker != null) allocTracker.track(bytes);
 		encode(string, bytes, 0);
@@ -124,7 +125,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	public static LuaString valueOfNoAlloc(String string) {
 		try {
 			return valueOf(null, string);
-		} catch (AllocationTracker.AvatarOOMException impossible) {
+		} catch (AvatarError impossible) {
 			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
 		}
 	}
@@ -139,7 +140,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	 * @param len   length of the byte buffer
 	 * @return {@link LuaString} wrapping the byte buffer
 	 */
-	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len, boolean forceNoCopy) throws AllocationTracker.AvatarOOMException {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len, boolean forceNoCopy) throws AvatarError {
 		// Don't bother tracking strings that are shorter than RECENT_STRINGS_MAX_LENGTH.
 		// They aren't the memory hogs anyway.
 		if (bytes.length < RECENT_STRINGS_MAX_LENGTH) {
@@ -157,7 +158,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 			return len < RECENT_STRINGS_MAX_LENGTH ? Cache.instance.get(string) : string;
 		}
 	}
-	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len) throws AllocationTracker.AvatarOOMException {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len) throws AvatarError {
 		return valueOf(allocTracker, bytes, off, len, false);
 	}
 
@@ -166,7 +167,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	public static LuaString valueOfNoCopy(byte[] bytes, int off, int len) {
 		try {
 			return valueOf(null, bytes, off, len, true);
-		} catch (AllocationTracker.AvatarOOMException impossible) {
+		} catch (AvatarError impossible) {
 			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
 		}
 	}
@@ -194,7 +195,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	 * @param strLength The length of the resulting string. This must be equal
 	 * @return The resulting Lua string.
 	 */
-	public static LuaString valueOfStrings(@Nullable AllocationTracker allocTracker, LuaValue[] contents, int offset, int length, int strLength) throws AllocationTracker.AvatarOOMException {
+	public static LuaString valueOfStrings(@Nullable AllocationTracker allocTracker, LuaValue[] contents, int offset, int length, int strLength) throws AvatarError {
 		if (length == 0 || strLength == 0) return Constants.EMPTYSTRING;
 		if (length == 1) return (LuaString) contents[0];
 
@@ -226,12 +227,12 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	public String toString() {
 		try {
 			return decode(null, contents, offset, length);
-		} catch (AllocationTracker.AvatarOOMException impossible) {
+		} catch (AvatarError impossible) {
 			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
 		}
 	}
 
-	public String toJavaString(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public String toJavaString(@Nullable AllocationTracker allocTracker) throws AvatarError {
 		return decode(allocTracker, contents, offset, length);
 	}
 
@@ -489,7 +490,7 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	 * @return Java String corresponding to the value of bytes interpreted using UTF8
 	 * @see #encode(String, byte[], int)
 	 */
-	private static String decode(@Nullable AllocationTracker allocTracker, byte[] bytes, int offset, int length) throws AllocationTracker.AvatarOOMException {
+	private static String decode(@Nullable AllocationTracker allocTracker, byte[] bytes, int offset, int length) throws AvatarError {
 		char[] chars = new char[length];
 		for (int i = 0; i < length; i++) {
 			chars[i] = ((char) (bytes[offset + i] & 0xFF));
@@ -521,17 +522,17 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 
 	// region Number conversion
 	@Override
-	public int checkInteger(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public int checkInteger(LuaState state) throws LuaError, AvatarError {
 		return (int) (long) checkDouble(state);
 	}
 
 	@Override
-	public long checkLong(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public long checkLong(LuaState state) throws LuaError, AvatarError {
 		return (long) checkDouble(state);
 	}
 
 	@Override
-	public double checkDouble(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public double checkDouble(LuaState state) throws LuaError, AvatarError {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
 			throw ErrorFactory.argError(state, this, "number");
@@ -540,12 +541,12 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	}
 
 	@Override
-	public LuaNumber checkNumber(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaNumber checkNumber(LuaState state) throws LuaError, AvatarError {
 		return LuaDouble.valueOf(checkDouble(state));
 	}
 
 	@Override
-	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AvatarError {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
 			throw new LuaError(msg, state.allocationTracker);
@@ -580,12 +581,12 @@ public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	}
 
 	@Override
-	public String checkString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state) throws AvatarError {
 		return toJavaString(state.allocationTracker);
 	}
 
 	@Override
-	public String checkString(LuaState state, String message) throws AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state, String message) throws AvatarError {
 		return toJavaString(state.allocationTracker);
 	}
 

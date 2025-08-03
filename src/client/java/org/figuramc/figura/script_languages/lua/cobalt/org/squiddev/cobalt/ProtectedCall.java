@@ -1,7 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.figuramc.figura.avatars.AvatarError;
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
@@ -39,7 +38,7 @@ public class ProtectedCall {
 	 * @return The success/failure of calling this function.
 	 * @throws UnwindThrowable If the underlying function yields.
 	 */
-	public Result apply(LuaState state, LuaValue func, Varargs args) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+	public Result apply(LuaState state, LuaValue func, Varargs args) throws UnwindThrowable, AvatarError {
 		return apply(state, new CallSuspended(func, args));
 	}
 
@@ -54,7 +53,7 @@ public class ProtectedCall {
 	 * @return The success/failure of calling this function.
 	 * @throws UnwindThrowable If the underlying function yields.
 	 */
-	public Result apply(LuaState state, SuspendedFunction<Varargs> task) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+	public Result apply(LuaState state, SuspendedFunction<Varargs> task) throws UnwindThrowable, AvatarError {
 		if ((currentFrame.flags & FLAG_YPCALL) != 0) throw new IllegalStateException("Cannot have nested pcalls");
 		if (currentTask != null) throw new IllegalStateException("Already have a task present");
 
@@ -69,7 +68,7 @@ public class ProtectedCall {
 		try {
 			return finishSuccess(state, task.call(state));
 		} catch (AvatarError dontCatch) {
-			// Dont let pcall catch OOMs
+			// Dont let pcall catch AvatarError (such as OOM errors)
 			throw dontCatch;
 		} catch (Exception | VirtualMachineError e) {
 			return callErrorHandler(state, e);
@@ -84,7 +83,7 @@ public class ProtectedCall {
 	 * @return The success/failure of calling this function.
 	 * @see Resumable#resume(LuaState, Object, Varargs)
 	 */
-	public Result resume(LuaState state, Varargs args) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+	public Result resume(LuaState state, Varargs args) throws UnwindThrowable, AvatarError {
 		if (currentTask != null) {
 			// If we're still inside our task, then resume it.
 			try {
@@ -125,13 +124,13 @@ public class ProtectedCall {
 	 * @throws UnwindThrowable If the error handler yields.
 	 * @see Resumable#resumeError(LuaState, Object, LuaError)
 	 */
-	public Result resumeError(LuaState state, LuaError error) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+	public Result resumeError(LuaState state, LuaError error) throws UnwindThrowable, AvatarError {
 		// If we've already had an error, then this must be a problem in the error handler and so fail. Otherwise the
 		// original function errored, so call the handler.
 		return isError ? finishError(state, ERROR_IN_HANDLER) : callErrorHandler(state, error);
 	}
 
-	private Result callErrorHandler(LuaState state, Throwable error) throws UnwindThrowable, AllocationTracker.AvatarOOMException {
+	private Result callErrorHandler(LuaState state, Throwable error) throws UnwindThrowable, AvatarError {
 		// Mark the top frame as errored, meaning it will not be resumed.
 		var debug = DebugState.get(state);
 		debug.getStackUnsafe().flags |= FLAG_ERROR;
@@ -222,7 +221,7 @@ public class ProtectedCall {
 		}
 
 		@Override
-		public Varargs call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public Varargs call(LuaState state) throws LuaError, AvatarError, UnwindThrowable {
 			return Dispatch.invoke(state, func, args);
 		}
 

@@ -10,8 +10,6 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Objects;
-
 public class FigmodelAPI {
 
     public static LuaTable createMetatable(LuaState state, @NotNull LuaTable modelPart) throws LuaError, AvatarError {

@@ -1,16 +1,16 @@
 package org.figuramc.figura.script_languages.lua.callback.from_lua;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.script_hooks.callback.items.ListView;
 import org.figuramc.figura.script_hooks.callback.items.StringView;
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
 
 // TODO make conversion errors translatable / have more context...
-public class LuaToCallbackItem implements CallbackType.ToItemVisitor<LuaValue, LuaError, AllocationTracker.AvatarOOMException> {
+public class LuaToCallbackItem implements CallbackType.ToItemVisitor<LuaValue, LuaError, AvatarError> {
 
     private final LuaState state;
 
@@ -29,27 +29,27 @@ public class LuaToCallbackItem implements CallbackType.ToItemVisitor<LuaValue, L
     }
 
     @Override
-    public CallbackItem.Bool visit(CallbackType.Bool bool, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+    public CallbackItem.Bool visit(CallbackType.Bool bool, LuaValue value) throws LuaError, AvatarError {
         return new CallbackItem.Bool(value.toBoolean()); // Use truthiness here? Or typecheck it as a bool? Not sure...
     }
 
     @Override
-    public CallbackItem.F32 visit(CallbackType.F32 f32, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+    public CallbackItem.F32 visit(CallbackType.F32 f32, LuaValue value) throws LuaError, AvatarError {
         return new CallbackItem.F32((float) value.checkDouble(state));
     }
 
     @Override
-    public CallbackItem.F64 visit(CallbackType.F64 f64, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+    public CallbackItem.F64 visit(CallbackType.F64 f64, LuaValue value) throws LuaError, AvatarError {
         return new CallbackItem.F64(value.checkDouble(state));
     }
 
     @Override
-    public StringView visit(CallbackType.Str str, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+    public StringView visit(CallbackType.Str str, LuaValue value) throws LuaError, AvatarError {
         return new LuaStringView(value.checkLuaString(state));
     }
 
     @Override
-    public <T extends CallbackItem> ListView<T> visit(CallbackType.List<T> list, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+    public <T extends CallbackItem> ListView<T> visit(CallbackType.List<T> list, LuaValue value) throws LuaError, AvatarError {
         return new LuaListView<>(state, value.checkTable(state), list.element());
     }
 }

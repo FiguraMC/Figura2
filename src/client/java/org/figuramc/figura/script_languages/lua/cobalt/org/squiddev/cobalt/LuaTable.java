@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.functional.BiThrowingBiConsumer;
 import org.figuramc.figura.util.functional.ThrowingBiConsumer;
@@ -36,7 +37,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 /**
  * Subclass of {@link LuaValue} for representing lua tables.
@@ -107,7 +108,7 @@ public final class LuaTable extends LuaValue {
 	/**
 	 * Construct empty table
 	 */
-	public LuaTable(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public LuaTable(@Nullable AllocationTracker allocTracker) throws AvatarError {
 		super(TTABLE);
 		this.allocTracker = allocTracker;
 		if (allocTracker != null)
@@ -120,7 +121,7 @@ public final class LuaTable extends LuaValue {
 	 * @param arraySize capacity of array part
 	 * @param hashSize  capacity of hash part
 	 */
-	public LuaTable(int arraySize, int hashSize, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public LuaTable(int arraySize, int hashSize, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		this(allocTracker);
 		resize(arraySize, hashSize, false);
 	}
@@ -142,7 +143,7 @@ public final class LuaTable extends LuaValue {
 	 *
 	 * @param nArray the number of array slots to preallocate in the table.
 	 */
-	public void presize(int nArray) throws AllocationTracker.AvatarOOMException {
+	public void presize(int nArray) throws AvatarError {
 		if (nArray > array.length) {
 			resize(nArray, keys.length, false);
 		}
@@ -154,7 +155,7 @@ public final class LuaTable extends LuaValue {
 	}
 
 	@Override
-	public void setMetatable(@Nullable LuaState state, LuaTable mt) throws AllocationTracker.AvatarOOMException {
+	public void setMetatable(@Nullable LuaState state, LuaTable mt) throws AvatarError {
 		metatable = mt;
 
 		boolean newWeakKeys = false, newWeakValues = false;
@@ -191,7 +192,7 @@ public final class LuaTable extends LuaValue {
 	 * @param key   the key to use, must not be null
 	 * @param value the value to use, can be {@link Constants#NIL}, must not be null
 	 */
-	public void rawset(String key, LuaValue value) throws AllocationTracker.AvatarOOMException {
+	public void rawset(String key, LuaValue value) throws AvatarError {
 		rawsetImpl(LuaString.valueOf(allocTracker, key), value);
 	}
 
@@ -202,7 +203,7 @@ public final class LuaTable extends LuaValue {
 	 * @param to    The destination position.
 	 * @param count The number of values to move.
 	 */
-	public void move(int from, int to, int count) throws AllocationTracker.AvatarOOMException {
+	public void move(int from, int to, int count) throws AvatarError {
 		// TODO: Use System.arraycopy here where possible.
 		if (to >= from + count || to <= from) {
 			for (int i = 0; i < count; i++) rawset(to + i, rawget(from + i));
@@ -304,7 +305,7 @@ public final class LuaTable extends LuaValue {
 	 * @see Varargs#arg(int)
 	 * @see #isNil()
 	 */
-	public Varargs next(LuaValue key) throws LuaError, AllocationTracker.AvatarOOMException {
+	public Varargs next(LuaValue key) throws LuaError, AvatarError {
 		int i = findIndex(key);
 		if (i < 0) throw new LuaError("invalid key to 'next'", allocTracker);
 
@@ -351,7 +352,7 @@ public final class LuaTable extends LuaValue {
 	}
 
 	// Call the BiConsumer on each (key, value) pair in the table
-	public <E1 extends Throwable, E2 extends Throwable> void forEach(BiThrowingBiConsumer<LuaValue, LuaValue, E1, E2> consumer) throws E1, E2, LuaError, AllocationTracker.AvatarOOMException {
+	public <E1 extends Throwable, E2 extends Throwable> void forEach(BiThrowingBiConsumer<LuaValue, LuaValue, E1, E2> consumer) throws E1, E2, LuaError, AvatarError {
 		LuaValue k = Constants.NIL;
 		while (true) {
 			Varargs n = this.next(k);
@@ -442,7 +443,7 @@ public final class LuaTable extends LuaValue {
 	/**
 	 * Resize the table
 	 */
-	private static Object[] setArrayVector(@Nullable AllocationTracker allocTracker, Object[] oldArray, int n, boolean metaChange, boolean weakValues) throws AllocationTracker.AvatarOOMException {
+	private static Object[] setArrayVector(@Nullable AllocationTracker allocTracker, Object[] oldArray, int n, boolean metaChange, boolean weakValues) throws AvatarError {
 		Object[] newArray = new Object[n];
 		if (allocTracker != null) allocTracker.track(newArray);
 		int len = Math.min(n, oldArray.length);
@@ -501,7 +502,7 @@ public final class LuaTable extends LuaValue {
 		return ause;
 	}
 
-	private void setNodeVector(int size) throws AllocationTracker.AvatarOOMException {
+	private void setNodeVector(int size) throws AvatarError {
 		if (size == 0) {
 			keys = values = EMPTY_ARRAY;
 			next = EMPTY_NEXT;
@@ -527,7 +528,7 @@ public final class LuaTable extends LuaValue {
 		}
 	}
 
-	private void resize(int newArraySize, int newHashSize, boolean modeChange) throws AllocationTracker.AvatarOOMException {
+	private void resize(int newArraySize, int newHashSize, boolean modeChange) throws AvatarError {
 		int oldArraySize = array.length;
 		int oldHashSize = keys.length;
 
@@ -566,7 +567,7 @@ public final class LuaTable extends LuaValue {
 		}
 	}
 
-	private void rehash(LuaValue extraKey, boolean mode) throws AllocationTracker.AvatarOOMException {
+	private void rehash(LuaValue extraKey, boolean mode) throws AvatarError {
 		if (weakValues) dropWeakArrayValues();
 
 		int[] nums = new int[32]; // Counts for various functions
@@ -699,7 +700,7 @@ public final class LuaTable extends LuaValue {
 	 * @param key The key to set
 	 * @throws IllegalArgumentException If this key cannot be used.
 	 */
-	private int newKey(LuaValue key) throws AllocationTracker.AvatarOOMException {
+	private int newKey(LuaValue key) throws AvatarError {
 		if (key.isNil()) throw new IllegalArgumentException("table index is nil");
 
 		// Rehash and let the rawgetter handle it
@@ -842,11 +843,11 @@ public final class LuaTable extends LuaValue {
 	 * @return {@code true} if the table was updated. If {@code false}, the table's metamethod should be invoked.
 	 * @see OperationHelper#setTable(LuaState, LuaValue, int, LuaValue)
 	 */
-	boolean trySet(int key, LuaValue value) throws AllocationTracker.AvatarOOMException {
+	boolean trySet(int key, LuaValue value) throws AvatarError {
 		return trySet(key, value, null);
 	}
 
-	private boolean trySet(int key, LuaValue value, LuaValue keyValue) throws AllocationTracker.AvatarOOMException {
+	private boolean trySet(int key, LuaValue value, LuaValue keyValue) throws AvatarError {
 		if (key > 0 && key <= array.length) {
 			// If value is absent and we've got a __newindex method, don't insert.
 			if (strengthen(array[key - 1]) == NIL && hasNewIndex()) return false;
@@ -876,7 +877,7 @@ public final class LuaTable extends LuaValue {
 	 * @return {@code true} if the table was updated. If {@code false}, the table's metamethod should be invoked.
 	 * @see OperationHelper#setTable(LuaState, LuaValue, LuaValue, LuaValue)
 	 */
-	boolean trySet(LuaValue key, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+	boolean trySet(LuaValue key, LuaValue value) throws LuaError, AvatarError {
 		if (key instanceof LuaInteger keyI) return trySet(keyI.intValue(), value, key);
 
 		int node = getNode(key);
@@ -893,11 +894,11 @@ public final class LuaTable extends LuaValue {
 		return true;
 	}
 
-	public void rawset(int key, LuaValue value) throws AllocationTracker.AvatarOOMException  {
+	public void rawset(int key, LuaValue value) throws AvatarError {
 		rawset(key, value, null);
 	}
 
-	private void rawset(int key, LuaValue value, LuaValue valueOf) throws AllocationTracker.AvatarOOMException {
+	private void rawset(int key, LuaValue value, LuaValue valueOf) throws AvatarError {
 		do {
 			if (key > 0 && key <= array.length) {
 				array[key - 1] = weakValues ? weaken(value) : value;
@@ -918,13 +919,13 @@ public final class LuaTable extends LuaValue {
 		} while (true);
 	}
 
-	public void rawset(LuaValue key, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException {
+	public void rawset(LuaValue key, LuaValue value) throws LuaError, AvatarError {
 		if (key.isNil()) throw new LuaError("table index is nil", allocTracker);
 		if (key instanceof LuaDouble d && Double.isNaN(d.doubleValue())) throw new LuaError("table index is NaN", allocTracker);
 		rawsetImpl(key, value);
 	}
 
-	public void rawsetImpl(LuaValue key, LuaValue value) throws AllocationTracker.AvatarOOMException  {
+	public void rawsetImpl(LuaValue key, LuaValue value) throws AvatarError  {
 		if (key instanceof LuaInteger keyI) {
 			rawset(keyI.intValue(), value, key);
 			return;

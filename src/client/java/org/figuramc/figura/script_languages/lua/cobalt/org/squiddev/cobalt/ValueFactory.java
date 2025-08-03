@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +43,7 @@ public final class ValueFactory {
 	 * @param values array of {@link LuaValue} containing the values to use in initialization
 	 * @return new {@link LuaTable} instance with sequential elements coming from the array.
 	 */
-	public static LuaTable listOf(@Nullable AllocationTracker allocTracker, LuaValue... values) throws AllocationTracker.AvatarOOMException {
+	public static LuaTable listOf(@Nullable AllocationTracker allocTracker, LuaValue... values) throws AvatarError {
 		LuaTable table = new LuaTable(values.length, 0, allocTracker);
 		for (int i = 0; i < values.length; i++) table.rawset(i + 1, values[i]);
 		return table;
@@ -55,7 +56,7 @@ public final class ValueFactory {
 	 *              in order {@code {key-a, value-a, key-b, value-b, ...} }
 	 * @return new {@link LuaTable} instance with non-sequential keys coming from the supplied array.
 	 */
-	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker, LuaValue... items) throws LuaError, AllocationTracker.AvatarOOMException  {
+	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker, LuaValue... items) throws LuaError, AvatarError  {
 		LuaTable table = new LuaTable(0, items.length >> 1, allocTracker);
 		for (int i = 0; i < items.length; i += 2) {
 			if (!items[i + 1].isNil()) table.rawset(items[i], items[i + 1]);

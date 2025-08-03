@@ -11,7 +11,8 @@ import org.joml.Vector3d;
 import org.joml.Vector4d;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.tableOf;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 @SuppressWarnings("DuplicatedCode")
 public class Vector4API {
@@ -421,7 +422,7 @@ public class Vector4API {
             default -> throw new InvalidSwizzleException(); // Signal to caller to return nil
         };
     }
-    private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError, AllocationTracker.AvatarOOMException {
+    private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError, AvatarError {
         switch (c) {
             case '_' -> {}
             case 'x', 'r', 'u' -> v.x = num;

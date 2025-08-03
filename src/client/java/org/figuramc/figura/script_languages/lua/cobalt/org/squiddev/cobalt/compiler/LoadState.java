@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
@@ -71,7 +72,7 @@ public final class LoadState {
 		 * @param env       The function's environment.
 		 * @return The loaded function
 		 */
-		LuaClosure load(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AllocationTracker.AvatarOOMException;
+		LuaClosure load(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AvatarError;
 	}
 
 	private LoadState() {
@@ -80,14 +81,14 @@ public final class LoadState {
 	/**
 	 * A basic {@link FunctionFactory} which loads into
 	 */
-	public static LuaClosure interpretedFunction(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AllocationTracker.AvatarOOMException {
+	public static LuaClosure interpretedFunction(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AvatarError {
 		LuaInterpretedFunction closure = new LuaInterpretedFunction(allocTracker, prototype);
 		closure.nilUpvalues();
 		if (closure.upvalues.length > 0) closure.upvalues[0].setValue(env);
 		return closure;
 	}
 
-	public static LuaClosure load(LuaState state, InputStream stream, String name, LuaValue env) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+	public static LuaClosure load(LuaState state, InputStream stream, String name, LuaValue env) throws CompileException, LuaError, AvatarError {
 		return load(state, stream, LuaString.valueOf(state.allocationTracker, name), env);
 	}
 
@@ -102,7 +103,7 @@ public final class LoadState {
 	 * @throws IllegalArgumentException If the signature is bac
 	 * @throws CompileException         If the stream cannot be loaded.
 	 */
-	public static LuaClosure load(LuaState state, InputStream stream, LuaString name, LuaValue env) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+	public static LuaClosure load(LuaState state, InputStream stream, LuaString name, LuaValue env) throws CompileException, LuaError, AvatarError {
 		return state.compiler.load(state.allocationTracker, LuaC.compile(state, stream, name), env);
 	}
 
@@ -115,7 +116,7 @@ public final class LoadState {
 	private static final LuaString EMPTY_STRING = LuaString.valueOfNoAlloc("[string \"\"]");
 	private static final LuaString NEW_LINES = LuaString.valueOfNoAlloc("\r\n");
 
-	static LuaString getShortName(LuaString name, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	static LuaString getShortName(LuaString name, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		if (name.length() == 0) return EMPTY_STRING;
 		switch (name.charAt(0)) {
 			case '=' -> {

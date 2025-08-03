@@ -1,11 +1,10 @@
 package org.figuramc.figura.script_languages.lua;
 
-import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.animations.AnimationInstanceAPI;
-import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
 import org.figuramc.figura.script_languages.lua.callback.CallbackTypeAPI;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
 import org.figuramc.figura.script_languages.lua.callback.to_lua.ListViewAPI;
 import org.figuramc.figura.script_languages.lua.callback.to_lua.StringViewAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
@@ -148,7 +147,7 @@ public class FiguraMetatables {
         if (superclassMetatable != null) {
             // If there's a superclass involved, make sure to copy all metamethods from the superclass
             // (lua doesn't provide a way to do this any better, sadly :/)
-            superclassMetatable.<LuaError, AllocationTracker.AvatarOOMException>forEach((k, v) -> {
+            superclassMetatable.<LuaError, AvatarError>forEach((k, v) -> {
                 if (!k.isString()) return;
                 if (!thisMetatable.rawget(k).isNil()) return; // If subclass overrides this metamethod, ignore
                 String method = k.checkString(state);

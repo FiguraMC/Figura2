@@ -1,7 +1,7 @@
 package org.figuramc.figura.model.texture;
 
-import org.figuramc.figura.data.ModuleMaterials;
 import net.minecraft.resources.ResourceLocation;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.joml.Vector4f;
 
 import java.util.concurrent.CompletableFuture;

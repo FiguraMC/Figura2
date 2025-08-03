@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugHelpers;
 import org.jetbrains.annotations.Nullable;
@@ -69,7 +70,7 @@ public final class LuaError extends Exception {
 	 *
 	 * @param cause the Throwable that caused the error, if known.
 	 */
-	public LuaError(Throwable cause, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public LuaError(Throwable cause, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		super(cause);
 		level = 1;
 		calculateLevel = true;
@@ -81,7 +82,7 @@ public final class LuaError extends Exception {
 	 *
 	 * @param message message to supply
 	 */
-	public LuaError(String message, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public LuaError(String message, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		super(message);
 		level = 1;
 		calculateLevel = true;
@@ -94,7 +95,7 @@ public final class LuaError extends Exception {
 	 * @param message message to supply
 	 * @param level   where to supply line info from in call stack
 	 */
-	public LuaError(String message, int level, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public LuaError(String message, int level, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		super(message);
 		this.level = level;
 		calculateLevel = false;
@@ -133,7 +134,7 @@ public final class LuaError extends Exception {
 	 * @param error The error to convert
 	 * @return The converted error
 	 */
-	public static LuaError wrap(Throwable error, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	public static LuaError wrap(Throwable error, @Nullable AllocationTracker allocTracker) throws AvatarError {
 		if (error instanceof LuaError) return (LuaError) error;
 		return new LuaError(error, allocTracker);
 	}
@@ -150,7 +151,7 @@ public final class LuaError extends Exception {
 		return value;
 	}
 
-	public void fillTraceback(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public void fillTraceback(LuaState state) throws AvatarError {
 		// TODO: Split this into two methods: one which adds the context, and one which computes the traceback.
 
 		if (traceback != null) return;

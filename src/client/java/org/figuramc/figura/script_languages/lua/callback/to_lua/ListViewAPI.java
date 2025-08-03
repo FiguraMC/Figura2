@@ -4,11 +4,9 @@ import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.script_hooks.callback.items.ListView;
-import org.figuramc.figura.script_hooks.callback.items.StringView;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.callback.from_lua.LuaListView;
-import org.figuramc.figura.script_languages.lua.callback.from_lua.LuaStringView;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 
@@ -39,7 +37,7 @@ public class ListViewAPI {
     }
 
     // Separate into its own method to use generics properly
-    private static <T extends CallbackItem> LuaTable copyImpl(LuaState state, ListView<T> view) throws AllocationTracker.AvatarOOMException {
+    private static <T extends CallbackItem> LuaTable copyImpl(LuaState state, ListView<T> view) throws AvatarError {
         int len = view.length();
         LuaTable tab = new LuaTable(len, 0, state.allocationTracker);
         for (int i = 0; i < len; i++)

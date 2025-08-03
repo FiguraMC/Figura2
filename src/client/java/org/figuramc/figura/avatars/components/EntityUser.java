@@ -1,9 +1,10 @@
 package org.figuramc.figura.avatars.components;
 
-import org.figuramc.figura.avatars.AvatarComponent;
-import org.figuramc.figura.util.ClientUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
+import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.util.ClientUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -28,7 +29,7 @@ public class EntityUser implements AvatarComponent<EntityUser> {
     }
 
     @Override
-    public void mainThreadInitialize() {
+    public void mainThreadInitialize(Avatar<?> avatar) {
         // Fetch the initial entity
         entity = ClientUtils.getEntityByUUID(uuid);
         if (entity != null) justChanged = true;
@@ -38,7 +39,7 @@ public class EntityUser implements AvatarComponent<EntityUser> {
     // If it changed, mark as changed for 1 tick
     @Override
     @SuppressWarnings("resource") // No, I don't want to use try with resources on entity.level()...
-    public void tick() {
+    public void tick(Avatar<?> self) {
         justChanged = false; // Set to false at the beginning
         if (entity == null || entity.isRemoved() || entity.level() != Minecraft.getInstance().level) { // If we don't have the entity...
             // Then search for it!

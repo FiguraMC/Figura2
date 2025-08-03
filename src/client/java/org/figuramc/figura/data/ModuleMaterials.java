@@ -11,7 +11,10 @@ import org.joml.Vector4i;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.EnumMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.TreeMap;
 
 /**
  * Contains various types which are used for constructing modules, but can also be serialized.

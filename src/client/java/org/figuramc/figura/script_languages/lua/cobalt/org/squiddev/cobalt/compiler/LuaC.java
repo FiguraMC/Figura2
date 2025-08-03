@@ -25,7 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -145,11 +145,11 @@ public class LuaC {
 	 * @return The compiled code
 	 * @throws CompileException If there is a syntax error.
 	 */
-	public static Prototype compile(LuaState state, InputStream stream, String name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+	public static Prototype compile(LuaState state, InputStream stream, String name) throws CompileException, LuaError, AvatarError {
 		return compile(state, stream, LuaString.valueOf(state.allocationTracker, name));
 	}
 
-	public static Prototype compile(LuaState state, InputStream stream, LuaString name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+	public static Prototype compile(LuaState state, InputStream stream, LuaString name) throws CompileException, LuaError, AvatarError {
 		Object result = SuspendedAction.noYield(() -> {
 			try {
 				return compile(state, new InputStreamReader(stream), name, null);
@@ -163,7 +163,7 @@ public class LuaC {
 	}
 
 	@AutoUnwind
-	public static Prototype compile(LuaState state, InputReader stream, LuaString name, LuaString mode) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	public static Prototype compile(LuaState state, InputReader stream, LuaString name, LuaString mode) throws CompileException, LuaError, AvatarError, UnwindThrowable {
 		int firstByte = stream.read();
 		if (firstByte == '\033') {
 			checkMode(mode, "binary");
@@ -181,7 +181,7 @@ public class LuaC {
 	 * Parse the input
 	 */
 	@AutoUnwind
-	private static Prototype loadTextChunk(LuaState state, int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Prototype loadTextChunk(LuaState state, int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, AvatarError, UnwindThrowable {
 		Parser parser = new Parser(state, stream, firstByte, name, LoadState.getShortName(name, state.allocationTracker));
 		parser.lexer.skipShebang();
 		return parser.mainFunction();

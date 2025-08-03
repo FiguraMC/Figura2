@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_hooks.callback;
 
+import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 
 /**
@@ -22,8 +23,15 @@ public interface ScriptCallback<I extends CallbackItem, O extends CallbackItem> 
     CallbackType.Func<I, O> type();
 
     /**
+     * Get the Avatar which owns this Callback.
+     * After calling a callback, the avatar which owns it might be errored.
+     * If so, the caller should possibly handle this?
+     */
+    Avatar<?> getOwningAvatar();
+
+    /**
      * Invoke the callback, applying translations, with the given arg. (Arg may be a tuple to simulate multiple args).
-     * This should not throw errors like ScriptError or AvatarError, because those would be propagated to the CALLER!
+     * This should not throw errors like AvatarError, because those would be propagated to the CALLER!
      * This stage occurs AFTER the caller has already turned their items into CallbackItem. Any errors on the caller's
      * side would have already happened by this point. Any errors that occur inside the call are the fault of the CALLEE.
      * So these issues should be caught there, and they'll have their Avatar errored out.

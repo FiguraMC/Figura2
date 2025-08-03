@@ -1,7 +1,7 @@
 package org.figuramc.figura.model.renderers;
 
-import org.figuramc.figura.config.ConfigManager;
 import net.fabricmc.loader.api.FabricLoader;
+import org.figuramc.figura.config.ConfigManager;
 import org.figuramc.figura.model.renderers.compatible.CompatibleBackend;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

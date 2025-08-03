@@ -48,9 +48,9 @@ public class LuaListView<T extends CallbackItem> extends ListView<T> {
         if (index < 0 || index >= length) throw new UnsupportedOperationException("TODO error on list out of bounds");
         try {
             backingTable.rawset(index + 1, elementType.fromItem(owningState.callbackItemToLua, item));
-        } catch (AllocationTracker.AvatarOOMException outOfMemory) {
+        } catch (AvatarError avatarError) {
             // If this happens it's the callee's fault
-            throw new UnsupportedOperationException("TODO Error the LuaListView callee on OOM", outOfMemory);
+            throw new UnsupportedOperationException("TODO Error the LuaListView callee on OOM", avatarError);
         }
     }
 

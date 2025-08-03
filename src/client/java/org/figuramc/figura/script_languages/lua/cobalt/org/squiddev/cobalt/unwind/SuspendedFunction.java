@@ -1,6 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.unwind;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
@@ -11,5 +11,5 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Unwin
  * @param <T> The result type of this function.
  */
 public interface SuspendedFunction<T> extends SuspendedTask<T> {
-	T call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	T call(LuaState state) throws LuaError, AvatarError, UnwindThrowable;
 }

@@ -1,5 +1,6 @@
 package org.figuramc.figura.avatars.components;
 
+import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.manage.AvatarManager;
 
@@ -23,7 +24,7 @@ public class CemSelfDeleter implements AvatarComponent<CemSelfDeleter> {
     }
 
     @Override
-    public void tick() {
+    public void tick(Avatar<?> self) {
         // If entity is gone, unload this avatar.
         if (entityUser.getEntity() == null)
             AvatarManager.ENTITY_AVATARS.unload(this.key);

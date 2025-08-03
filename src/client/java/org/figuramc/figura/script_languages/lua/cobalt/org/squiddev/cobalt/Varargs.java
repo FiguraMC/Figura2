@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.Nullable;
 
@@ -95,7 +96,7 @@ public abstract class Varargs {
 	 * @return LuaValue value if the argument exists
 	 * @throws LuaError if the argument does not exist.
 	 */
-	public LuaValue checkValue(@Nullable AllocationTracker allocTracker, int i) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaValue checkValue(@Nullable AllocationTracker allocTracker, int i) throws LuaError, AvatarError {
 		if (i <= count()) {
 			return arg(i);
 		} else {

@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_hooks;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
@@ -31,8 +32,14 @@ public class EventListener<Args extends CallbackItem> {
     }
 
     // Invoke the event listener with the given args.
-    public void invoke(Args args) {
+    public void invoke(Args args) throws AvatarError {
         // Any callback returning true will be removed.
-        callbacks.removeIf(callback -> callback.call(args).value());
+        for (int i = 0; i < callbacks.size(); i++) {
+            ScriptCallback<Args, CallbackItem.Bool> callback = callbacks.get(i);
+            boolean remove = callback.call(args).value();
+            if (callback.getOwningAvatar().isErrored())
+                throw new AvatarError.Escaper();
+            if (remove) { callbacks.remove(i); i--; }
+        }
     }
 }

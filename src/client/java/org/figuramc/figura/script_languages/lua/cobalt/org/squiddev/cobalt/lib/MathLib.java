@@ -25,7 +25,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.RegisteredFunction;
@@ -50,7 +50,7 @@ public final class MathLib {
 	private MathLib() {
 	}
 
-	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws LuaError, AvatarError {
 		var self = new MathLib();
 		final RegisteredFunction[] functions = new RegisteredFunction[]{
 			RegisteredFunction.of("abs", (s, arg) -> LuaDouble.valueOf(Math.abs(arg.checkDouble(s)))),
@@ -93,7 +93,7 @@ public final class MathLib {
 		LibFunction.setGlobalLibrary(state, "math", t);
 	}
 
-	private static LuaValue fmod(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue fmod(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		double x = arg1.checkDouble(state);
 		double y = arg2.checkDouble(state);
 		double q = x / y;
@@ -101,14 +101,14 @@ public final class MathLib {
 		return LuaDouble.valueOf(f);
 	}
 
-	private static LuaValue ldexp(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue ldexp(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		double x = arg1.checkDouble(state);
 		double y = arg2.checkDouble(state) + 1023.5;
 		long e = (long) ((0 != (1 & ((int) y))) ? Math.floor(y) : Math.ceil(y - 1));
 		return LuaDouble.valueOf(x * Double.longBitsToDouble(e << 52));
 	}
 
-	private static LuaValue log(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue log(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		if (arg2.isNil()) {
 			return LuaDouble.valueOf(Math.log(arg1.checkDouble(state)));
 		} else {
@@ -116,7 +116,7 @@ public final class MathLib {
 		}
 	}
 
-	private static LuaValue atan(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue atan(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError {
 		if (arg2.isNil()) {
 			return LuaDouble.valueOf(Math.atan(arg1.checkDouble(state)));
 		} else {
@@ -124,7 +124,7 @@ public final class MathLib {
 		}
 	}
 
-	private static Varargs frexp(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs frexp(LuaState state, Varargs args) throws LuaError, AvatarError {
 		double x = args.arg(1).checkDouble(state);
 		if (x == 0) return varargsOf(Constants.ZERO, Constants.ZERO);
 		long bits = Double.doubleToLongBits(x);
@@ -133,7 +133,7 @@ public final class MathLib {
 		return varargsOf(LuaDouble.valueOf(m), LuaDouble.valueOf(e));
 	}
 
-	private static LuaValue max(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue max(LuaState state, Varargs args) throws LuaError, AvatarError {
 		double m = args.arg(1).checkDouble(state);
 		for (int i = 2, n = args.count(); i <= n; ++i) {
 			m = Math.max(m, args.arg(i).checkDouble(state));
@@ -141,7 +141,7 @@ public final class MathLib {
 		return LuaDouble.valueOf(m);
 	}
 
-	private static LuaValue min(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue min(LuaState state, Varargs args) throws LuaError, AvatarError {
 		double m = args.arg(1).checkDouble(state);
 		for (int i = 2, n = args.count(); i <= n; ++i) {
 			m = Math.min(m, args.arg(i).checkDouble(state));
@@ -149,7 +149,7 @@ public final class MathLib {
 		return LuaDouble.valueOf(m);
 	}
 
-	private static Varargs modf(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs modf(LuaState state, Varargs args) throws LuaError, AvatarError {
 		double x = args.arg(1).checkDouble(state);
 		double intPart = (x > 0) ? Math.floor(x) : Math.ceil(x);
 		double fracPart = x - intPart;
@@ -160,7 +160,7 @@ public final class MathLib {
 		return random != null ? random : (random = new RandomState());
 	}
 
-	private Varargs randomseed(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private Varargs randomseed(LuaState state, Varargs args) throws LuaError, AvatarError {
 		var random = getRandom();
 		long part1, part2;
 		if (args.count() == 0) {
@@ -175,7 +175,7 @@ public final class MathLib {
 		return varargsOf(LuaDouble.valueOf(part1), LuaDouble.valueOf(part2));
 	}
 
-	private LuaValue random(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	private LuaValue random(LuaState state, Varargs args) throws LuaError, AvatarError {
 		if (random == null) random = new RandomState();
 
 		switch (args.count()) {

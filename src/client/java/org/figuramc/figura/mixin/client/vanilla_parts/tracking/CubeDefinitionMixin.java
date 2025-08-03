@@ -1,9 +1,9 @@
 package org.figuramc.figura.mixin.client.vanilla_parts.tracking;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
-import org.figuramc.figura.ducks.client.CubeTrackingAccess;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.CubeDefinition;
+import org.figuramc.figura.ducks.client.CubeTrackingAccess;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 

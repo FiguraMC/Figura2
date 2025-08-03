@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.BooleanSupplier;
@@ -55,7 +56,7 @@ public class ClientLevelMixin {
             AvatarManager.ENTITY_AVATARS.load(ClientUtils.getLocalUUID(), CompletableFuture.supplyAsync(ExceptionUtils.wrapChecked(() -> {
                 Path avatarPath = FiguraDir.AVATARS.get().resolve("test_avatar");
                 ModuleMaterials materials = ModuleImporter.importPath(avatarPath);
-                AvatarModules modules = new AvatarModules(materials);
+                List<AvatarModules.LoadTimeModule> modules = AvatarModules.loadModules(materials);
                 return AvatarTemplates.localPlayer(ClientUtils.getLocalUUID(), RenderUtils.getRenderer(Minecraft.getInstance().player), modules);
             }, CompletionException::new), Runnable::run)); // TODO: Fix texture loading so this can work on an off-thread instead of render thread
 

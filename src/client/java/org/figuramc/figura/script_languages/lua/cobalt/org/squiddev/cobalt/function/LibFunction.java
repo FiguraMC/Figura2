@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
@@ -169,7 +169,7 @@ public sealed abstract class LibFunction extends LuaFunction
 	 * @see #call(LuaState, LuaValue, LuaValue, LuaValue)
 	 * @see #invoke(LuaState, Varargs)
 	 */
-	protected abstract LuaValue call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	protected abstract LuaValue call(LuaState state) throws LuaError, AvatarError, UnwindThrowable;
 
 	/**
 	 * Call {@code this} with 1 argument, including metatag processing,
@@ -192,7 +192,7 @@ public sealed abstract class LibFunction extends LuaFunction
 	 * @see #call(LuaState, LuaValue, LuaValue, LuaValue)
 	 * @see #invoke(LuaState, Varargs)
 	 */
-	protected abstract LuaValue call(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	protected abstract LuaValue call(LuaState state, LuaValue arg) throws LuaError, AvatarError, UnwindThrowable;
 
 	/**
 	 * Call {@code this} with 2 arguments, including metatag processing,
@@ -215,7 +215,7 @@ public sealed abstract class LibFunction extends LuaFunction
 	 * @see #call(LuaState, LuaValue)
 	 * @see #call(LuaState, LuaValue, LuaValue, LuaValue)
 	 */
-	protected abstract LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	protected abstract LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError, UnwindThrowable;
 
 	/**
 	 * Call {@code this} with 3 arguments, including metatag processing,
@@ -239,7 +239,7 @@ public sealed abstract class LibFunction extends LuaFunction
 	 * @see #call(LuaState, LuaValue)
 	 * @see #call(LuaState, LuaValue, LuaValue)
 	 */
-	protected abstract LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	protected abstract LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AvatarError, UnwindThrowable;
 
 	/**
 	 * Call {@code this} with variable arguments, including metatag processing,
@@ -258,9 +258,9 @@ public sealed abstract class LibFunction extends LuaFunction
 	 * @see ValueFactory#varargsOf(LuaValue[])
 	 * @see #call(LuaState, LuaValue)
 	 */
-	protected abstract Varargs invoke(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+	protected abstract Varargs invoke(LuaState state, Varargs args) throws LuaError, AvatarError, UnwindThrowable;
 
-	public static void setGlobalLibrary(LuaState state, String name, LuaValue library) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void setGlobalLibrary(LuaState state, String name, LuaValue library) throws LuaError, AvatarError {
 		state.globals().rawset(name, library);
 		state.registry().getSubTable(Constants.LOADED).rawset(name, library);
 	}
@@ -285,7 +285,7 @@ public sealed abstract class LibFunction extends LuaFunction
 	public static LibFunction createV(ManyArgs fn) {
 		return new VarArgFunction() {
 			@Override
-			protected Varargs invoke(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+			protected Varargs invoke(LuaState state, Varargs args) throws LuaError, AvatarError {
 				return fn.invoke(state, args);
 			}
 		};
@@ -294,42 +294,42 @@ public sealed abstract class LibFunction extends LuaFunction
 	public static LibFunction createS(Suspended fn) {
 		return new ResumableVarArgFunction<SuspendedTask<Varargs>>() {
 			@Override
-			protected Varargs invoke(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+			protected Varargs invoke(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 				return fn.invoke(state, DebugState.get(state).getStackUnsafe(), args);
 			}
 
 			@Override
-			public Varargs resume(LuaState state, SuspendedTask<Varargs> object, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+			public Varargs resume(LuaState state, SuspendedTask<Varargs> object, Varargs value) throws LuaError, AvatarError, UnwindThrowable {
 				return object.resume(value);
 			}
 		};
 	}
 
 	public interface ZeroArg {
-		LuaValue call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException;
+		LuaValue call(LuaState state) throws LuaError, AvatarError;
 	}
 
 	public interface OneArg {
-		LuaValue call(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException;
+		LuaValue call(LuaState state, LuaValue arg) throws LuaError, AvatarError;
 	}
 
 	public interface TwoArg {
-		LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException;
+		LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError;
 	}
 
 	public interface ThreeArg {
-		LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException;
+		LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AvatarError;
 	}
 
 	public interface ManyArgs {
-		Varargs invoke(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException;
+		Varargs invoke(LuaState state, Varargs args) throws LuaError, AvatarError;
 	}
 
 	/**
 	 * A {@link ResumableVarArgFunction} implementation which works with {@link SuspendedTask}/{@link SuspendedFunction}.
 	 */
 	public interface Suspended {
-		Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
+		Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable;
 	}
 	// endregion
 

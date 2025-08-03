@@ -9,6 +9,7 @@ import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.Renderable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,9 +29,9 @@ public class CustomItems implements AvatarComponent<CustomItems> {
      */
     private final List<PartEntry> customItems;
 
-    public CustomItems(AvatarModules modules, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
+    public CustomItems(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
         // Create the custom items
-        customItems = modules.modules.stream().flatMap(mod -> mod.materials.customItemRoots().entrySet().stream().map(entry -> {
+        customItems = modules.stream().flatMap(mod -> mod.materials.customItemRoots().entrySet().stream().map(entry -> {
             // Convert the String pattern to a Matcher:
             String pattern = entry.getKey();
             if (pattern.isEmpty()) return null;

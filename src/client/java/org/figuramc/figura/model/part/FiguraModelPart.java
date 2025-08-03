@@ -10,7 +10,6 @@ import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
-import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.util.MapUtils;
@@ -19,7 +18,10 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.*;
 
 import java.lang.Math;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Corresponds to a Group in Blockbench.

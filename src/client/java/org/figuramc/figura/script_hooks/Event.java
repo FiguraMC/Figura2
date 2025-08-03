@@ -5,7 +5,6 @@ import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.util.enumlike.EnumLike;
 
 import java.util.LinkedHashMap;
-import java.util.List;
 
 /**
  * Contains all events recognized by the Figura mod.

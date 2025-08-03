@@ -8,8 +8,8 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NIL;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NONE;
 
 /**
  * Adds some functional operations to the table library for fast iteration on lists.
@@ -216,7 +216,7 @@ public class FiguraTable {
 
     }
 
-    private static LuaTable range(LuaState state, double start, double end, double step) throws LuaError, AllocationTracker.AvatarOOMException {
+    private static LuaTable range(LuaState state, double start, double end, double step) throws LuaError, AvatarError {
         // Validate args
         if (step == 0) throw new LuaError("Invalid step argument to table.range(): 0", state.allocationTracker);
         if ((start != end) && ((start > end) != (step < 0))) throw new LuaError("table.range() will never terminate with args " + start + ", " + end + ", " + step, state.allocationTracker);

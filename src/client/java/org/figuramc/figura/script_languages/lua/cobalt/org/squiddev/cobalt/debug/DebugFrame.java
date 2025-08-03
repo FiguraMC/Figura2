@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
@@ -231,7 +231,7 @@ public final class DebugFrame {
 	 *
 	 * @return This function's kind
 	 */
-	public @Nullable ObjectName getFuncKind() throws AllocationTracker.AvatarOOMException {
+	public @Nullable ObjectName getFuncKind() throws AvatarError {
 		DebugFrame previous = this.previous;
 		if ((flags & FLAG_TAIL) != 0) return null;
 

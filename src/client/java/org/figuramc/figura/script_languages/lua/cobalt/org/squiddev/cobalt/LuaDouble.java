@@ -24,9 +24,8 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.FormatDesc;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Extension of {@link LuaNumber} which can hold a Java double as its value.
@@ -134,11 +133,11 @@ public final class LuaDouble extends LuaNumber {
 			Buffer buffer = new Buffer(16, null);
 			NUMBER_FORMAT.format(buffer, v);
 			return buffer.toJavaString();
-		} catch (AllocationTracker.AvatarOOMException impossible) {throw new IllegalStateException("Should never happen. Contact Figura devs", impossible); }
+		} catch (AvatarError impossible) {throw new IllegalStateException("Should never happen. Contact Figura devs", impossible); }
 	}
 
 	@Override
-	public LuaString checkLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public LuaString checkLuaString(LuaState state) throws AvatarError {
 		if (Double.isNaN(v)) return STR_NAN;
 		if (Double.isInfinite(v)) return v < 0 ? STR_NEGINF : STR_POSINF;
 
@@ -148,7 +147,7 @@ public final class LuaDouble extends LuaNumber {
 	}
 
 	@Override
-	public LuaValue toLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public LuaValue toLuaString(LuaState state) throws AvatarError {
 		return checkLuaString(state);
 	}
 
@@ -168,12 +167,12 @@ public final class LuaDouble extends LuaNumber {
 	}
 
 	@Override
-	public String checkString(LuaState state) throws AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state) throws AvatarError {
 		return toJavaString(state.allocationTracker);
 	}
 
 	@Override
-	public String checkString(LuaState state, String message) throws AllocationTracker.AvatarOOMException {
+	public String checkString(LuaState state, String message) throws AvatarError {
 		return toJavaString(state.allocationTracker);
 	}
 

@@ -60,25 +60,25 @@ public class AllocationTracker {
         this.gracePeriodBegan = -1;
     }
 
-    public void track(byte[] byteArray) throws AvatarOOMException {
+    public void track(byte[] byteArray) throws AvatarError {
         track(byteArray, OBJECT_SIZE + byteArray.length * BYTE_SIZE);
     }
 
-    public void track(int[] intArray) throws AvatarOOMException {
+    public void track(int[] intArray) throws AvatarError {
         track(intArray, OBJECT_SIZE + intArray.length * INT_SIZE);
     }
 
-    public void track(Object[] objectArray) throws AvatarOOMException {
+    public void track(Object[] objectArray) throws AvatarError {
         track(objectArray, OBJECT_SIZE + objectArray.length * REFERENCE_SIZE);
     }
 
-    public void track(String string) throws AvatarOOMException {
+    public void track(String string) throws AvatarError {
         track(string, OBJECT_SIZE + REFERENCE_SIZE + BYTE_SIZE + INT_SIZE + BOOLEAN_SIZE + string.length() * CHAR_SIZE); // Assume 2 bytes per char (non-compressed String)
     }
 
     // Allocate the given amount for the given Object.
     // Returns a State object, which can optionally be increased/decreased in size.
-    public State track(Object obj, int amount) throws AvatarOOMException {
+    public State track(Object obj, int amount) throws AvatarError {
         State state = new State(amount);
         incrementMemory(amount);
         ALLOC_CLEANER.register(obj, state);
@@ -86,7 +86,7 @@ public class AllocationTracker {
     }
 
     // Increment memory by the given amount, and prepare to error if we're beyond our cap.
-    private void incrementMemory(int amount) throws AvatarOOMException {
+    private void incrementMemory(int amount) throws AvatarError {
         // Get the new amount allocated:
         long newAmountAllocated = totalAllocated.addAndGet(amount);
         FiguraMod.LOGGER.info("Allocated {} bytes. Current usage: {} bytes", amount, newAmountAllocated);
@@ -94,14 +94,14 @@ public class AllocationTracker {
         if (newAmountAllocated > maxAllocation) {
             // If we're above the true cap, error right away.
             if (newAmountAllocated > trueMaxAllocation) {
-                throw new AvatarOOMException();
+                throw new AvatarError("figura.error.out_of_memory");
             } else if (gracePeriodBegan == -1) {
                 // If we're not currently in the grace period, begin the grace period.
                 System.gc(); // Trigger a System.gc()
                 gracePeriodBegan = System.nanoTime();
             } else if (System.nanoTime() - gracePeriodBegan >= gracePeriodNanos) {
                 // If the grace period has ended, but we're still above the max allocation, error out.
-                throw new AvatarOOMException();
+                throw new AvatarError("figura.error.out_of_memory");
             }
         } else {
             // If we're not above the cap, reset the grace period.
@@ -122,7 +122,7 @@ public class AllocationTracker {
         }
 
         // Modify the amount of memory used by this allocation.
-        public void changeSize(int change) throws AvatarOOMException {
+        public void changeSize(int change) throws AvatarError {
             if (change > 0) {
                 // The allocation got bigger, increment memory
                 memoryReserved += change;
@@ -138,12 +138,6 @@ public class AllocationTracker {
         @Override
         public void run() {
             AllocationTracker.this.totalAllocated.getAndAdd(-memoryReserved);
-        }
-    }
-
-    public static class AvatarOOMException extends AvatarError {
-        public AvatarOOMException() {
-            super("figura.error.out_of_memory");
         }
     }
 

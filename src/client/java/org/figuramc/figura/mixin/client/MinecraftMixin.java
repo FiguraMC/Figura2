@@ -1,7 +1,7 @@
 package org.figuramc.figura.mixin.client;
 
-import org.figuramc.figura.manage.AvatarManager;
 import net.minecraft.client.Minecraft;
+import org.figuramc.figura.manage.AvatarManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

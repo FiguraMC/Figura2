@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 
 public class LuaUserdata extends LuaValue {
 
@@ -53,7 +53,7 @@ public class LuaUserdata extends LuaValue {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AllocationTracker.AvatarOOMException {
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AvatarError {
 		if (targetClass.isInstance(instance))
 			return (T) instance;
 		return super.checkUserdata(state, targetClass);

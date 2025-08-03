@@ -24,12 +24,12 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.doubles.DoubleToStringConverter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.CharProperties;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Buffer;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,7 +63,7 @@ public class FormatDesc {
 
 	private final @Nullable AllocationTracker allocTracker;
 
-	FormatDesc(@Nullable AllocationTracker allocTracker, LuaString format, final int start) throws LuaError, AllocationTracker.AvatarOOMException {
+	FormatDesc(@Nullable AllocationTracker allocTracker, LuaString format, final int start) throws LuaError, AvatarError {
 		this.format = format;
 		this.start = start;
 		this.allocTracker = allocTracker;
@@ -150,12 +150,12 @@ public class FormatDesc {
 	public static FormatDesc ofUnsafe(String format) {
 		try {
 			return new FormatDesc(null, LuaString.valueOfNoAlloc(format), 0);
-		} catch (LuaError | AllocationTracker.AvatarOOMException e) {
+		} catch (LuaError | AvatarError e) {
 			throw new IllegalStateException(e);
 		}
 	}
 
-	void checkFlags(int flags) throws LuaError, AllocationTracker.AvatarOOMException {
+	void checkFlags(int flags) throws LuaError, AvatarError {
 		if ((this.flags & ~flags) == 0) return;
 
 		var buffer = new Buffer(allocTracker);
@@ -165,14 +165,14 @@ public class FormatDesc {
 		throw new LuaError(buffer.toLuaString());
 	}
 
-	void format(Buffer buf, byte c) throws AllocationTracker.AvatarOOMException {
+	void format(Buffer buf, byte c) throws AvatarError {
 		int nSpaces = width > 1 ? width - 1 : 0;
 		if (!leftAdjust()) pad(buf, ' ', nSpaces);
 		buf.append(c);
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	public void format(Buffer buf, long number) throws AllocationTracker.AvatarOOMException {
+	public void format(Buffer buf, long number) throws AvatarError {
 		String digits;
 		boolean hasSign = false;
 
@@ -252,7 +252,7 @@ public class FormatDesc {
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	public void format(Buffer buf, double number) throws AllocationTracker.AvatarOOMException {
+	public void format(Buffer buf, double number) throws AvatarError {
 		int prec = precision;
 		switch (conversion) {
 			case 'g', 'G' -> {
@@ -270,7 +270,7 @@ public class FormatDesc {
 		}
 	}
 
-	void format(Buffer buf, LuaString s) throws AllocationTracker.AvatarOOMException {
+	void format(Buffer buf, LuaString s) throws AvatarError {
 		if (precision == -1 && s.length() >= 100) {
 			buf.append(s);
 			return;
@@ -293,7 +293,7 @@ public class FormatDesc {
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	private static void pad(Buffer buf, char c, int n) throws AllocationTracker.AvatarOOMException {
+	private static void pad(Buffer buf, char c, int n) throws AvatarError {
 		byte b = (byte) c;
 		while (n-- > 0) buf.append(b);
 	}

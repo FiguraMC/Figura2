@@ -5,12 +5,14 @@ import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.animation.Animation;
 import org.figuramc.figura.animation.AnimationInstance;
 import org.figuramc.figura.animation.Vec3Keyframe;
+import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.avatars.components.Scripts;
 import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.animations.AnimationInstanceAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
@@ -25,6 +27,7 @@ import org.figuramc.figura.script_languages.lua.events.EventsTable;
 import org.figuramc.figura.script_languages.lua.math.FiguraMath;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
 import org.figuramc.figura.script_languages.lua.vanilla.VanillaTable;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -39,25 +42,25 @@ public class LuaRuntime implements ScriptRuntime {
     // Lua State
     public final LuaState state;
 
-    // Map each module to its environment, so we can initialize them
-    private final Map<AvatarModules.Module, LuaTable> moduleEnvironments = new IdentityHashMap<>();
+    // Map each module index to its environment, so we can initialize them
+    private final Map<Integer, LuaTable> moduleEnvironments = new IdentityHashMap<>();
 
     /**
      * Create a Lua runtime, but do not run any user code yet. This requires:
      * - A Scripts component (through which we fetch the avatar)
      * - AvatarModules
      */
-    public LuaRuntime(Scripts scriptsComponent, AvatarModules allModules) throws AvatarError {
+    public LuaRuntime(Scripts scriptsComponent, List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker) throws AvatarError {
 
         // LuaError can happen at basically any time, so wrap the whole thing :P
         try {
             // Create the LuaState.
-            this.state = LuaState.builder(scriptsComponent.getAvatar())
+            this.state = LuaState.builder()
                     .interruptHandler(() -> {
                         // TODO throw an uncatchable error for timeout
                         return InterruptAction.CONTINUE;
                     })
-                    .allocationTracker(scriptsComponent.getAllocationTracker()) // Pass the allocation tracker
+                    .allocationTracker(allocationTracker) // Pass the allocation tracker
                     .build();
 
             // Add basic globals
@@ -111,8 +114,8 @@ public class LuaRuntime implements ScriptRuntime {
             if (scriptsComponent.vanillaRendering != null)
                 state.globals().rawset("vanilla", VanillaTable.create(state, scriptsComponent.vanillaRendering));
 
-            // Set up separate env for each lua module:
-            for (AvatarModules.Module module : allModules.modules) {
+            // Set up a separate env for each lua module:
+            for (AvatarModules.LoadTimeModule module : modules) {
                 // Ensure this module uses Lua before setting it up here
                 if (!"lua".equals(module.materials.metadata().language())) continue;
                 // Create an _ENV for this module with its stuff
@@ -120,7 +123,7 @@ public class LuaRuntime implements ScriptRuntime {
                 // Set _ENV's metatable to have __index = globals, so things in state.globals() are shared across allModules
                 _ENV.setMetatable(state, ValueFactory.tableOf(state.allocationTracker, Constants.INDEX, state.globals()));
                 // Save the environment so we can initialize
-                moduleEnvironments.put(module, _ENV);
+                moduleEnvironments.put(module.index, _ENV);
                 // Create globals unique to this module:
 
                 // models:
@@ -142,9 +145,14 @@ public class LuaRuntime implements ScriptRuntime {
     }
 
     @Override
-    public void initModule(AvatarModules.Module module) throws AvatarError {
+    public void mainThreadInitialize(Avatar<?> self) throws AvatarError {
+        state.avatar = self;
+    }
+
+    @Override
+    public void initModule(AvatarModules.RuntimeModule module) throws AvatarError {
         try {
-            LuaTable env = moduleEnvironments.get(module);
+            LuaTable env = moduleEnvironments.get(module.index);
             if (env == null) throw new AvatarError("figura.error.internal.general", "Attempt to initialize non-Lua module with Lua runtime?");
             // Compile and run entrypoint, which is just "require 'main'"
             LuaClosure entrypoint = LoadState.load(state, new ByteArrayInputStream("return require 'main'".getBytes(StandardCharsets.UTF_8)), "=ENTRYPOINT", env);

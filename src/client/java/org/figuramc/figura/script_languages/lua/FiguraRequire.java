@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua;
 
+import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
@@ -13,6 +14,8 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.util.IOUtils;
 
 import java.io.ByteArrayInputStream;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Class for setup of require() function, given the provided scripts map
@@ -23,7 +26,7 @@ public class FiguraRequire {
     public static final LuaString REQUIRE_KEY = LuaString.valueOfNoAlloc("figura_require");
     public static final LuaString LOADED_KEY = LuaString.valueOfNoAlloc("figura_loaded");
 
-    public static LuaValue createRequire(LuaState state, LuaTable _ENV, AvatarModules.Module module) throws LuaError, AvatarError {
+    public static LuaValue createRequire(LuaState state, LuaTable _ENV, AvatarModules.LoadTimeModule module) throws LuaError, AvatarError {
 
         int index = module.index;
 
@@ -46,23 +49,23 @@ public class FiguraRequire {
                 throw new AvatarError("figura.error.loading.script.lua.compile_error", ex, name, ex.getMessage());
             }
         }
-        for (var entry : module.dependencies().entrySet()) {
+        for (var entry : module.dependencyIndices.entrySet()) {
             String name = entry.getKey();
-            AvatarModules.Module dependency = entry.getValue();
+            int dependencyIndex = entry.getValue();
             functionStorage.rawset("@" + name, LibFunction.create(s -> {
-                // Wrap script errors into lua errors and rethrow? (Unlikely to be the best way, but can be improved)
-                try {
-                    // Initialize the dependency. If it was already initialized, which it would be by default, this will do nothing.
-                    dependency.initScript();
-                    // Fetch API functions and return them in a table.
-                    LuaTable tab = new LuaTable(s.allocationTracker);
-                    for (var apiEntry : dependency.callbacks.entrySet()) {
-                        tab.rawset(apiEntry.getKey(), CallbackAPI.wrap(apiEntry.getValue(), state));
-                    }
-                    return tab;
-                } catch (Throwable t) {
-                    throw new LuaError(t.getMessage(), s.allocationTracker);
+                // Fetch the list of runtime modules
+                Avatar<?> avatar = Objects.requireNonNull(s.avatar, "Attempt to require inside state not yet initialized? Bug in Figura, please report!");
+                List<AvatarModules.RuntimeModule> runtimeModules = avatar.modules;
+                // Create a table to hold API functions
+                LuaTable tab = new LuaTable(s.allocationTracker);
+                // Fetch the dependency at runtime given its index, and initialize it
+                AvatarModules.RuntimeModule dependency = runtimeModules.get(dependencyIndex);
+                dependency.initialize(runtimeModules);
+                // Grab its callbacks, put them in the table
+                for (var apiEntry : dependency.callbacks.entrySet()) {
+                    tab.rawset(apiEntry.getKey(), CallbackAPI.wrap(apiEntry.getValue(), state));
                 }
+                return tab;
             }));
         }
 

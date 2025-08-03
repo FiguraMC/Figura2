@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -58,7 +58,7 @@ public final class TableLib {
 	private TableLib() {
 	}
 
-	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void add(LuaState state) throws LuaError, AvatarError {
 		LuaTable t = RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.of("getn", TableLib::getn),
 			RegisteredFunction.of("maxn", TableLib::maxn),
@@ -78,7 +78,7 @@ public final class TableLib {
 		LibFunction.setGlobalLibrary(state, "table", t);
 	}
 
-	private static LuaValue checkTableLike(LuaState state, Varargs args, int index, int flags) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue checkTableLike(LuaState state, Varargs args, int index, int flags) throws LuaError, AvatarError {
 		LuaValue value = args.arg(index);
 		if (!(value instanceof LuaTable)) {
 			LuaTable metatable = value.getMetatable(state);
@@ -95,12 +95,12 @@ public final class TableLib {
 		return value.checkTable(state);
 	}
 
-	private static LuaValue getn(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue getn(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		// getn(table) -> number
 		return LuaInteger.valueOf(arg.checkTable(state).length());
 	}
 
-	private static LuaValue maxn(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static LuaValue maxn(LuaState state, LuaValue arg) throws LuaError, AvatarError {
 		// maxn(table) -> number
 		LuaTable table = arg.checkTable(state);
 		double max = 0;
@@ -114,7 +114,7 @@ public final class TableLib {
 		return LuaDouble.valueOf(max);
 	}
 
-	private static Varargs remove(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs remove(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		// remove (table [, pos]) -> removed-ele
 		LuaValue table = checkTableLike(state, args, 1, TABLE_READ | TABLE_WRITE | TABLE_LEN);
 
@@ -147,7 +147,7 @@ public final class TableLib {
 	/**
 	 * Concatenate the contents of a table efficiently.
 	 */
-	private static Varargs concat(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs concat(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		return SuspendedAction.run(di, () -> {
 			LuaValue table = checkTableLike(state, args, 1, TABLE_READ | TABLE_LEN);
 			int length = OperationHelper.intLength(state, table);
@@ -161,7 +161,7 @@ public final class TableLib {
 	}
 
 	@AutoUnwind
-	private static LuaValue concatImpl(LuaState state, LuaValue table, LuaString sep, int i, int j) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static LuaValue concatImpl(LuaState state, LuaValue table, LuaString sep, int i, int j) throws LuaError, AvatarError, UnwindThrowable {
 		Buffer sb = new Buffer(state.allocationTracker);
 		if (i <= j) {
 			sb.append(OperationHelper.getTable(state, table, i).checkLuaString(state));
@@ -173,7 +173,7 @@ public final class TableLib {
 		return sb.toLuaString();
 	}
 
-	private static Varargs insert(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs insert(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		LuaValue table = checkTableLike(state, args, 1, TABLE_READ | TABLE_WRITE | TABLE_LEN);
 		switch (args.count()) {
 			case 2 -> {
@@ -218,7 +218,7 @@ public final class TableLib {
 		}
 	}
 
-	private static Varargs move(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs move(LuaState state, DebugFrame frame, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		int from = args.arg(2).checkInteger(state);
 		int end = args.arg(3).checkInteger(state);
 		int to = args.arg(4).checkInteger(state);
@@ -261,7 +261,7 @@ public final class TableLib {
 		});
 	}
 
-	public static LuaValue pack(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static LuaValue pack(LuaState state, Varargs args) throws LuaError, AvatarError {
 		int count = args.count();
 		LuaTable table = new LuaTable(count, 1, state.allocationTracker);
 		for (int i = 1; i <= count; i++) table.rawset(i, args.arg(i));
@@ -271,7 +271,7 @@ public final class TableLib {
 
 	// "sort" (table [, comp]) -> void
 	private static class Sort {
-		private static Varargs sort(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		private static Varargs sort(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue table = checkTableLike(state, args, 1, TABLE_LEN | TABLE_READ | TABLE_WRITE);
 			return SuspendedAction.run(di, () -> {
 				int n = OperationHelper.intLength(state, table);
@@ -283,7 +283,7 @@ public final class TableLib {
 		}
 
 		@AutoUnwind
-		private static void heapSort(LuaState state, LuaValue table, int count, @Nullable LuaFunction compare) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		private static void heapSort(LuaState state, LuaValue table, int count, @Nullable LuaFunction compare) throws LuaError, AvatarError, UnwindThrowable {
 			for (int start = count / 2 - 1; start >= 0; start--) {
 				siftDown(state, table, start, count - 1, compare);
 			}
@@ -299,7 +299,7 @@ public final class TableLib {
 		}
 
 		@AutoUnwind
-		private static void siftDown(LuaState state, LuaValue table, int start, int end, @Nullable LuaFunction compare) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		private static void siftDown(LuaState state, LuaValue table, int start, int end, @Nullable LuaFunction compare) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue rootValue = OperationHelper.getTable(state, table, start + 1);
 
 			for (int root = start; root * 2 + 1 <= end; ) {
@@ -326,7 +326,7 @@ public final class TableLib {
 		}
 
 		@AutoUnwind
-		private static boolean compare(LuaState state, @Nullable LuaFunction compare, LuaValue a, LuaValue b) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		private static boolean compare(LuaState state, @Nullable LuaFunction compare, LuaValue a, LuaValue b) throws LuaError, AvatarError, UnwindThrowable {
 			return compare == null
 				? OperationHelper.lt(state, a, b)
 				: Dispatch.call(state, compare, a, b).toBoolean();
@@ -337,7 +337,7 @@ public final class TableLib {
 	/**
 	 * {@code foreach(table, func) -> void}: Call the supplied function once for each key-value pair
 	 */
-	private static Varargs foreach(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs foreach(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		LuaTable table = args.arg(1).checkTable(state);
 		LuaFunction function = args.arg(2).checkFunction(state);
 
@@ -356,7 +356,7 @@ public final class TableLib {
 	 * {@code foreachi(table, func) -> void}: Call the supplied function once for each key-value pair in the contiguous
 	 * array part
 	 */
-	private static Varargs foreachi(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs foreachi(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		LuaTable table = args.arg(1).checkTable(state);
 		LuaFunction function = args.arg(2).checkFunction(state);
 
@@ -374,7 +374,7 @@ public final class TableLib {
 	/**
 	 * {@code unpack(table[, start[, stop]])}
 	 */
-	private static Varargs unpack(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	private static Varargs unpack(LuaState state, DebugFrame di, Varargs args) throws LuaError, AvatarError, UnwindThrowable {
 		LuaValue table = args.arg(1);
 		int start = args.arg(2).optInteger(state, 1);
 		LuaValue endValue = args.arg(3);

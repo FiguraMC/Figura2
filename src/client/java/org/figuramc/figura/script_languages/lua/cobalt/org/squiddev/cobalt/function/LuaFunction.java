@@ -24,7 +24,10 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
+import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
 
 /**
  * Base class for functions implemented in Java.

@@ -1,6 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.CharProperties;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
@@ -71,7 +71,7 @@ class StringMatch {
 	 *
 	 * @throws LuaError On invalid arguments.
 	 */
-	static Varargs find(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	static Varargs find(LuaState state, Varargs args) throws LuaError, AvatarError {
 		return str_find_aux(state, args, true);
 	}
 
@@ -99,7 +99,7 @@ class StringMatch {
 	 * For this function, a '^' at the start of a pattern does not work as an anchor,
 	 * as this would prevent the iteration.
 	 */
-	static Varargs gmatch(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	static Varargs gmatch(LuaState state, Varargs args) throws LuaError, AvatarError {
 		LuaString src = args.arg(1).checkLuaString(state);
 		LuaString pat = args.arg(2).checkLuaString(state);
 		return new GMatchAux(state, src, pat);
@@ -150,7 +150,7 @@ class StringMatch {
 	 * x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
 	 * --> x="lua-5.1.tar.gz"
 	 */
-	static Varargs gsubRun(LuaState state, GSubState gsub, Varargs result) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	static Varargs gsubRun(LuaState state, GSubState gsub, Varargs result) throws LuaError, AvatarError, UnwindThrowable {
 		LuaString src = gsub.string;
 		final int srclen = src.length();
 		LuaString p = gsub.pattern;
@@ -207,14 +207,14 @@ class StringMatch {
 	 * A third, optional numerical argument init specifies where to start the
 	 * search; its default value is 1 and may be negative.
 	 */
-	static Varargs match(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+	static Varargs match(LuaState state, Varargs args) throws LuaError, AvatarError {
 		return str_find_aux(state, args, false);
 	}
 
 	/**
 	 * This utility method implements both string.find and string.match.
 	 */
-	private static Varargs str_find_aux(LuaState state, Varargs args, boolean find) throws LuaError, AllocationTracker.AvatarOOMException {
+	private static Varargs str_find_aux(LuaState state, Varargs args, boolean find) throws LuaError, AvatarError {
 		LuaString s = args.arg(1).checkLuaString(state);
 		LuaString pat = args.arg(2).checkLuaString(state);
 		int init = args.arg(3).optInteger(state, 1);
@@ -270,7 +270,7 @@ class StringMatch {
 		}
 
 		@Override
-		protected Varargs invoke(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+		protected Varargs invoke(LuaState state, Varargs args) throws LuaError, AvatarError {
 			for (; soffset < srclen; soffset++) {
 				ms.reset();
 				int res = ms.match(soffset, 0);
@@ -298,7 +298,7 @@ class StringMatch {
 		MatchState ms;
 		int count;
 
-		GSubState(LuaState state, LuaString src, LuaString pattern, LuaValue replace, int maxS) throws AllocationTracker.AvatarOOMException {
+		GSubState(LuaState state, LuaString src, LuaString pattern, LuaValue replace, int maxS) throws AvatarError {
 			this.buffer = new Buffer(src.length(), state.allocationTracker);
 			this.string = src;
 			this.pattern = pattern;
@@ -331,7 +331,7 @@ class StringMatch {
 			level = 0;
 		}
 
-		private void add_s(Buffer lbuf, LuaString news, int soff, int e) throws LuaError, AllocationTracker.AvatarOOMException {
+		private void add_s(Buffer lbuf, LuaString news, int soff, int e) throws LuaError, AvatarError {
 			int l = news.length();
 			for (int i = 0; i < l; ++i) {
 				byte b = (byte) news.charAt(i);
@@ -352,7 +352,7 @@ class StringMatch {
 			}
 		}
 
-		public void add_value(LuaState state, Buffer lbuf, int soffset, int end, LuaValue repl) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+		public void add_value(LuaState state, Buffer lbuf, int soffset, int end, LuaValue repl) throws LuaError, AvatarError, UnwindThrowable {
 			LuaValue replace;
 			switch (repl.type()) {
 				case TSTRING, TNUMBER -> {
@@ -372,7 +372,7 @@ class StringMatch {
 			finishAddValue(lbuf, soffset, end, replace);
 		}
 
-		public void finishAddValue(Buffer lbuf, int soffset, int end, LuaValue repl) throws LuaError, AllocationTracker.AvatarOOMException {
+		public void finishAddValue(Buffer lbuf, int soffset, int end, LuaValue repl) throws LuaError, AvatarError {
 			if (!repl.toBoolean()) {
 				repl = s.substringOfEnd(soffset, end);
 			} else if (!repl.isString()) {
@@ -381,7 +381,7 @@ class StringMatch {
 			lbuf.append(repl.checkLuaString(state));
 		}
 
-		Varargs push_captures(boolean wholeMatch, int soff, int end) throws LuaError, AllocationTracker.AvatarOOMException {
+		Varargs push_captures(boolean wholeMatch, int soff, int end) throws LuaError, AvatarError {
 			int nlevels = (this.level == 0 && wholeMatch) ? 1 : this.level;
 			switch (nlevels) {
 				case 0 -> {
@@ -398,7 +398,7 @@ class StringMatch {
 			return varargsOf(v);
 		}
 
-		private LuaValue push_onecapture(int i, int soff, int end) throws LuaError, AllocationTracker.AvatarOOMException {
+		private LuaValue push_onecapture(int i, int soff, int end) throws LuaError, AvatarError {
 			if (i >= this.level) {
 				if (i == 0) {
 					return s.substringOfEnd(soff, end);
@@ -419,7 +419,7 @@ class StringMatch {
 			}
 		}
 
-		private int check_capture(int l) throws LuaError, AllocationTracker.AvatarOOMException {
+		private int check_capture(int l) throws LuaError, AvatarError {
 			l -= '1';
 			if (l < 0 || l >= level || this.clen[l] == CAP_UNFINISHED) {
 				throw new LuaError("invalid capture index", state.allocationTracker);
@@ -427,7 +427,7 @@ class StringMatch {
 			return l;
 		}
 
-		private int capture_to_close() throws LuaError, AllocationTracker.AvatarOOMException {
+		private int capture_to_close() throws LuaError, AvatarError {
 			int level = this.level;
 			for (level--; level >= 0; level--) {
 				if (clen[level] == CAP_UNFINISHED) {
@@ -437,7 +437,7 @@ class StringMatch {
 			throw new LuaError("invalid pattern capture", state.allocationTracker);
 		}
 
-		int classend(int poffset) throws LuaError, AllocationTracker.AvatarOOMException {
+		int classend(int poffset) throws LuaError, AvatarError {
 			switch (p.charAt(poffset++)) {
 				case L_ESC -> {
 					if (poffset == p.length()) {
@@ -522,7 +522,7 @@ class StringMatch {
 		 * Perform pattern matching. If there is a match, returns offset into s
 		 * where match ends, otherwise returns -1.
 		 */
-		int match(int soffset, int poffset) throws LuaError, AllocationTracker.AvatarOOMException {
+		int match(int soffset, int poffset) throws LuaError, AvatarError {
 			while (true) {
 				if (state.isInterrupted()) state.handleInterruptWithoutYield();
 
@@ -617,7 +617,7 @@ class StringMatch {
 			}
 		}
 
-		int max_expand(int soff, int poff, int ep) throws LuaError, AllocationTracker.AvatarOOMException {
+		int max_expand(int soff, int poff, int ep) throws LuaError, AvatarError {
 			int i = 0;
 			while (soff + i < s.length() &&
 				singlematch(s.charAt(soff + i), poff, ep)) {
@@ -633,7 +633,7 @@ class StringMatch {
 			return -1;
 		}
 
-		int min_expand(int soff, int poff, int ep) throws LuaError, AllocationTracker.AvatarOOMException {
+		int min_expand(int soff, int poff, int ep) throws LuaError, AvatarError {
 			for (; ; ) {
 				int res = match(soff, ep + 1);
 				if (res != -1) {
@@ -646,7 +646,7 @@ class StringMatch {
 			}
 		}
 
-		int start_capture(int soff, int poff, int what) throws LuaError, AllocationTracker.AvatarOOMException {
+		int start_capture(int soff, int poff, int what) throws LuaError, AvatarError {
 			int res;
 			int level = this.level;
 			if (level >= MAX_CAPTURES) {
@@ -661,7 +661,7 @@ class StringMatch {
 			return res;
 		}
 
-		int end_capture(int soff, int poff) throws LuaError, AllocationTracker.AvatarOOMException {
+		int end_capture(int soff, int poff) throws LuaError, AvatarError {
 			int l = capture_to_close();
 			int res;
 			clen[l] = soff - cinit[l];
@@ -671,7 +671,7 @@ class StringMatch {
 			return res;
 		}
 
-		int match_capture(int soff, int l) throws LuaError, AllocationTracker.AvatarOOMException {
+		int match_capture(int soff, int l) throws LuaError, AvatarError {
 			l = check_capture(l);
 			int len = clen[l];
 			if (len >= 0 && (s.length() - soff) >= len &&
@@ -682,7 +682,7 @@ class StringMatch {
 			}
 		}
 
-		int matchbalance(int soff, int poff) throws LuaError, AllocationTracker.AvatarOOMException {
+		int matchbalance(int soff, int poff) throws LuaError, AvatarError {
 			final int plen = p.length();
 			if (poff == plen || poff + 1 == plen) {
 				throw new LuaError("unbalanced pattern", state.allocationTracker);

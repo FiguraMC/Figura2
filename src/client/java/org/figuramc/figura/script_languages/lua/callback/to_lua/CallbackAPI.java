@@ -4,12 +4,13 @@ import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.LuaCallback;
 import org.figuramc.figura.script_languages.lua.callback.CallbackTypeAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
+
+import java.util.Objects;
 
 /**
  * Wraps a Callback created elsewhere, passed **TO LUA**
@@ -31,11 +32,15 @@ public class CallbackAPI {
             // Fetch callback from userdata
             ScriptCallback<?, ?> callback = args.first().checkUserdata(s, ScriptCallback.class);
             // Fast track. If it's a LuaCallback and it uses the same LuaState, we can go faster with localCall.
+            Varargs result;
             if (callback instanceof LuaCallback<?,?> luaCallback && luaCallback.state == s) {
-                return luaCallback.localCall(args.subargs(2));
+                result = luaCallback.localCall(args.subargs(2));
             } else {
-                return callImpl(s, callback, args.subargs(2));
+                result = callImpl(s, callback, args.subargs(2));
             }
+            // If our avatar is errored, throw an escaper so we can get out of Lua
+            if (Objects.requireNonNull(s.avatar).isErrored()) throw new AvatarError.Escaper();
+            return result;
         }));
 
         metatable.rawset(Constants.NAME, LuaString.valueOfNoAlloc("Callback"));
@@ -46,7 +51,7 @@ public class CallbackAPI {
     }
 
     // Separate into its own method so we can use generics properly
-    private static <I extends CallbackItem, O extends CallbackItem> Varargs callImpl(LuaState s, ScriptCallback<I, O> callback, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+    private static <I extends CallbackItem, O extends CallbackItem> Varargs callImpl(LuaState s, ScriptCallback<I, O> callback, Varargs args) throws LuaError, AvatarError {
         // Handle tuple args specially. We treat tuples as lua varargs at top level for convenience
         CallbackType.Func<I, O> ty = callback.type();
         // Typecheck (and count-check) the provided args against the expected args

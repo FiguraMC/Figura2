@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,7 +13,7 @@ public final class GlobalRegistry {
 
 	private final LuaTable table;
 
-	GlobalRegistry(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+	GlobalRegistry(@Nullable AllocationTracker allocTracker) throws AvatarError {
 		this.allocTracker = allocTracker;
 		this.table = new LuaTable(allocTracker);
 	}
@@ -33,7 +34,7 @@ public final class GlobalRegistry {
 	 * @param name The name of the registry table.
 	 * @return The subentry.
 	 */
-	public LuaTable getSubTable(LuaString name) throws LuaError, AllocationTracker.AvatarOOMException {
+	public LuaTable getSubTable(LuaString name) throws LuaError, AvatarError {
 		LuaValue value = table.rawget(name);
 		if (value instanceof LuaTable table) return table;
 

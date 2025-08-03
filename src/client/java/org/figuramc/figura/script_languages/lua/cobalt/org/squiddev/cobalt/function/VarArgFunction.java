@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 
 /**
@@ -52,22 +52,22 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
  */
 public non-sealed abstract class VarArgFunction extends LibFunction {
 	@Override
-	protected final LuaValue call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	protected final LuaValue call(LuaState state) throws LuaError, AvatarError, UnwindThrowable {
 		return invoke(state, Constants.NONE).first();
 	}
 
 	@Override
-	protected final LuaValue call(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	protected final LuaValue call(LuaState state, LuaValue arg) throws LuaError, AvatarError, UnwindThrowable {
 		return invoke(state, arg).first();
 	}
 
 	@Override
-	protected final LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	protected final LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AvatarError, UnwindThrowable {
 		return invoke(state, ValueFactory.varargsOf(arg1, arg2)).first();
 	}
 
 	@Override
-	protected final LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
+	protected final LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AvatarError, UnwindThrowable {
 		return invoke(state, ValueFactory.varargsOf(arg1, arg2, arg3)).first();
 	}
 

@@ -24,7 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.Parser.ExpDesc;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
@@ -91,7 +91,7 @@ final class FuncState {
 		this.firstLabel = firstLabel;
 	}
 
-	Prototype toPrototype() throws AllocationTracker.AvatarOOMException {
+	Prototype toPrototype() throws AvatarError {
 		return new Prototype(
 			lexer.state,
 			lexer.source, lexer.shortSource,
@@ -106,7 +106,7 @@ final class FuncState {
 	}
 
 
-	void setMultiRet(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void setMultiRet(ExpDesc e) throws CompileException, AvatarError {
 		setReturns(e, LUA_MULTRET);
 	}
 
@@ -114,7 +114,7 @@ final class FuncState {
 	// from lcode.c
 	// =============================================================
 
-	void nil(int from, int n) throws CompileException, AllocationTracker.AvatarOOMException {
+	void nil(int from, int n) throws CompileException, AvatarError {
 		int to = from + n - 1;
 		if (pc > lastTarget) { /* no jumps to current position? */
 			int previous = code[pc - 1];
@@ -145,7 +145,7 @@ final class FuncState {
 		}
 	}
 
-	private void fixJump(int pc, int dest) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void fixJump(int pc, int dest) throws CompileException, AvatarError {
 		int offset = dest - (pc + 1);
 		assert dest != NO_JUMP;
 		if (Math.abs(offset) > MAXARG_sBx) throw lexer.syntaxError("control structure too long");
@@ -155,7 +155,7 @@ final class FuncState {
 	/**
 	 * Concatenate jump list {@code l2} into jump-list {@code l1}
 	 */
-	void concat(IntPtr l1, int l2) throws CompileException, AllocationTracker.AvatarOOMException {
+	void concat(IntPtr l1, int l2) throws CompileException, AvatarError {
 		if (l2 == NO_JUMP) return;
 		if (l1.value == NO_JUMP) {
 			l1.value = l2;
@@ -174,7 +174,7 @@ final class FuncState {
 	 * If there are jumps to this position (kept in {@link #jpc}) link them together so that
 	 * {@link #patchListAux(int, int, int, int)} will fix them to their final destination.
 	 */
-	int jump() throws CompileException, AllocationTracker.AvatarOOMException {
+	int jump() throws CompileException, AvatarError {
 		int jpc = this.jpc.value; /* save list of jumps to here */
 		this.jpc.value = NO_JUMP;
 		IntPtr j = new IntPtr(codeAsBx(OP_JMP, 0, NO_JUMP));
@@ -185,14 +185,14 @@ final class FuncState {
 	/**
 	 * Code a {@link Lua#OP_RETURN} instruction.
 	 */
-	void ret(int first, int nret) throws CompileException, AllocationTracker.AvatarOOMException {
+	void ret(int first, int nret) throws CompileException, AvatarError {
 		codeABC(OP_RETURN, first, nret + 1, 0);
 	}
 
 	/**
 	 * Code a conditional jump namely {@link Lua#OP_TEST}/{@link Lua#OP_TESTSET}.
 	 */
-	private int condJump(int op, int A, int B, int C, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private int condJump(int op, int A, int B, int C, long position) throws CompileException, AvatarError {
 		codeABCAt(op, A, B, C, position);
 		return jump();
 	}
@@ -258,7 +258,7 @@ final class FuncState {
 	 * Traverse a list of tests, patching their destination address and registers: tests producing values jump to
 	 * 'vtarget' (and put their values in 'reg'), other tests jump to 'dtarget'.
 	 */
-	private void patchListAux(int list, int vtarget, int reg, int dtarget) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void patchListAux(int list, int vtarget, int reg, int dtarget) throws CompileException, AvatarError {
 		while (list != NO_JUMP) {
 			int next = getJump(list);
 			if (patchTestReg(list, reg)) {
@@ -274,7 +274,7 @@ final class FuncState {
 	 * Ensure all pending jumps to current position are fixed (jumping to current position with no values) and reset
 	 * list of pending jumps
 	 */
-	private void dischargeJumpPc() throws CompileException, AllocationTracker.AvatarOOMException {
+	private void dischargeJumpPc() throws CompileException, AvatarError {
 		patchListAux(jpc.value, pc, NO_REG, pc);
 		jpc.value = NO_JUMP;
 	}
@@ -282,7 +282,7 @@ final class FuncState {
 	/**
 	 * Add elements in 'list' to list of pending jumps to "here" (current position)
 	 */
-	void patchToHere(int list) throws CompileException, AllocationTracker.AvatarOOMException {
+	void patchToHere(int list) throws CompileException, AvatarError {
 		getLabel(); // Mark here as a target
 		concat(jpc, list);
 	}
@@ -291,7 +291,7 @@ final class FuncState {
 	 * Path all jumps in 'list' to jump to 'target'. (The assert means that we cannot fix a jump to a forward address
 	 * because we only know addresses once code is generated.)
 	 */
-	void patchList(int list, int target) throws CompileException, AllocationTracker.AvatarOOMException {
+	void patchList(int list, int target) throws CompileException, AvatarError {
 		if (target == pc) {
 			patchToHere(list);
 		} else {
@@ -319,7 +319,7 @@ final class FuncState {
 	 * @param position    The packed position of this instruction.
 	 * @return The position of this instruction.
 	 */
-	private int code(int instruction, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private int code(int instruction, long position) throws CompileException, AvatarError {
 		assert position > 0;
 
 		dischargeJumpPc(); /* `pc' will change */
@@ -339,37 +339,37 @@ final class FuncState {
 		return pc++;
 	}
 
-	int codeABCAt(int o, int a, int b, int c, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeABCAt(int o, int a, int b, int c, long position) throws CompileException, AvatarError {
 		assert getOpMode(o) == iABC;
 		assert getBMode(o) != OpArgN || b == 0;
 		assert getCMode(o) != OpArgN || c == 0;
 		return code(CREATE_ABC(o, a, b, c), position);
 	}
 
-	int codeABC(int o, int a, int b, int c) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeABC(int o, int a, int b, int c) throws CompileException, AvatarError {
 		return codeABCAt(o, a, b, c, lexer.lastPosition());
 	}
 
-	int codeABxAt(int o, int a, int bc, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeABxAt(int o, int a, int bc, long position) throws CompileException, AvatarError {
 		assert getOpMode(o) == iABx || getOpMode(o) == iAsBx;
 		assert getCMode(o) == OpArgN;
 		assert position > 0;
 		return code(CREATE_ABx(o, a, bc), position);
 	}
 
-	int codeABx(int o, int a, int bc) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeABx(int o, int a, int bc) throws CompileException, AvatarError {
 		return codeABxAt(o, a, bc, lexer.lastPosition());
 	}
 
-	int codeAsBxAt(int o, int A, int sBx, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeAsBxAt(int o, int A, int sBx, long position) throws CompileException, AvatarError {
 		return codeABxAt(o, A, sBx + MAXARG_sBx, position);
 	}
 
-	int codeAsBx(int o, int A, int sBx) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeAsBx(int o, int A, int sBx) throws CompileException, AvatarError {
 		return codeABx(o, A, sBx + MAXARG_sBx);
 	}
 
-	int codeK(int reg, int k) throws CompileException, AllocationTracker.AvatarOOMException {
+	int codeK(int reg, int k) throws CompileException, AvatarError {
 		if (k <= MAXARG_Bx) {
 			return codeABx(OP_LOADK, reg, k);
 		} else {
@@ -382,7 +382,7 @@ final class FuncState {
 	/**
 	 * Check register stack level, keeping track of its maximum size.
 	 */
-	void checkStack(int n) throws CompileException, AllocationTracker.AvatarOOMException {
+	void checkStack(int n) throws CompileException, AvatarError {
 		int newStack = freeReg + n;
 		if (newStack > maxStackSize) {
 			if (newStack >= MAXSTACK) throw lexer.syntaxError("function or expression too complex");
@@ -393,7 +393,7 @@ final class FuncState {
 	/**
 	 * Reserve {@code n} registers.
 	 */
-	void reserveRegs(int n) throws CompileException, AllocationTracker.AvatarOOMException {
+	void reserveRegs(int n) throws CompileException, AvatarError {
 		checkStack(n);
 		freeReg += n;
 	}
@@ -468,7 +468,7 @@ final class FuncState {
 	 * Either 'e' is a multi-ret expression (function call or vararg) 'nresults' is LUA_MULTRET (as any expression can
 	 * satisfy that).
 	 */
-	void setReturns(ExpDesc e, int nresults) throws CompileException, AllocationTracker.AvatarOOMException {
+	void setReturns(ExpDesc e, int nresults) throws CompileException, AvatarError {
 		if (e.kind == ExpKind.VCALL) { /* expression is an open function call? */
 			code[e.info] = SETARG_C(code[e.info], nresults + 1);
 		} else if (e.kind == ExpKind.VVARARG) {
@@ -502,7 +502,7 @@ final class FuncState {
 	/**
 	 * Ensure that expression 'e' is not a variable.
 	 */
-	void dischargeVars(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void dischargeVars(ExpDesc e) throws CompileException, AvatarError {
 		switch (e.kind) {
 			case VLOCAL -> e.kind = ExpKind.VNONRELOC;
 			case VUPVAL -> {
@@ -532,7 +532,7 @@ final class FuncState {
 	/**
 	 * Ensures expression value is in register 'reg' (and therefore 'e' will become a non-relocatable expression).
 	 */
-	private void discharge2Reg(ExpDesc e, int reg) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void discharge2Reg(ExpDesc e, int reg) throws CompileException, AvatarError {
 		dischargeVars(e);
 		switch (e.kind) {
 			case VNIL -> nil(reg, 1);
@@ -555,14 +555,14 @@ final class FuncState {
 	/**
 	 * Ensures expression is in a register.
 	 */
-	private void discharge2AnyReg(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void discharge2AnyReg(ExpDesc e) throws CompileException, AvatarError {
 		if (e.kind != ExpKind.VNONRELOC) {
 			reserveRegs(1);
 			discharge2Reg(e, freeReg - 1);
 		}
 	}
 
-	private int codeLoadBool(int A, int b, int jump) throws CompileException, AllocationTracker.AvatarOOMException {
+	private int codeLoadBool(int A, int b, int jump) throws CompileException, AvatarError {
 		getLabel(); // those instructions may be jump targets
 		return codeABC(OP_LOADBOOL, A, b, jump);
 	}
@@ -581,7 +581,7 @@ final class FuncState {
 	 * its final position or to "load" instructions (for those tests
 	 * that do not produce values).
 	 */
-	private void exp2reg(ExpDesc e, int reg) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void exp2reg(ExpDesc e, int reg) throws CompileException, AvatarError {
 		discharge2Reg(e, reg);
 		if (e.kind == ExpKind.VJMP) concat(e.t, e.info); /* put this jump in `t' list */
 		if (e.hasjumps()) {
@@ -605,7 +605,7 @@ final class FuncState {
 	/**
 	 * Ensures final expression result (including results from its jump lists) is in next available register.
 	 */
-	void exp2NextReg(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void exp2NextReg(ExpDesc e) throws CompileException, AvatarError {
 		dischargeVars(e);
 		freeExp(e);
 		reserveRegs(1);
@@ -616,7 +616,7 @@ final class FuncState {
 	 * Ensures final expression result (including results from its jump lists) is in some (any) register and return
 	 * that register.
 	 */
-	int exp2AnyReg(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	int exp2AnyReg(ExpDesc e) throws CompileException, AvatarError {
 		dischargeVars(e);
 		if (e.kind == ExpKind.VNONRELOC) {
 			if (!e.hasjumps()) return e.info; /* exp is already in a register */
@@ -632,14 +632,14 @@ final class FuncState {
 	/**
 	 * Ensures final expression result is either in a register or in an upvalue.
 	 */
-	void exp2AnyRegUp(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void exp2AnyRegUp(ExpDesc e) throws CompileException, AvatarError {
 		if (e.kind != ExpKind.VUPVAL || e.hasjumps()) exp2AnyReg(e);
 	}
 
 	/**
 	 * Ensures final expression result is either in a register or it is a constant.
 	 */
-	void exp2Val(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void exp2Val(ExpDesc e) throws CompileException, AvatarError {
 		if (e.hasjumps()) {
 			exp2AnyReg(e);
 		} else {
@@ -651,7 +651,7 @@ final class FuncState {
 	 * Ensures final expression result is in a valid R/K index (that is, it is either in a register or in 'k' with an
 	 * index in the range of R/K indices). Returns R/K index.
 	 */
-	int exp2RK(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	int exp2RK(ExpDesc e) throws CompileException, AvatarError {
 		exp2Val(e);
 
 		// Promote constants to VK.
@@ -669,7 +669,7 @@ final class FuncState {
 		return exp2AnyReg(e);
 	}
 
-	void storeVar(ExpDesc var, ExpDesc ex) throws CompileException, AllocationTracker.AvatarOOMException {
+	void storeVar(ExpDesc var, ExpDesc ex) throws CompileException, AvatarError {
 		switch (var.kind) {
 			case VLOCAL -> {
 				freeExp(ex);
@@ -690,7 +690,7 @@ final class FuncState {
 		freeExp(ex);
 	}
 
-	void self(ExpDesc e, ExpDesc key) throws CompileException, AllocationTracker.AvatarOOMException {
+	void self(ExpDesc e, ExpDesc key) throws CompileException, AvatarError {
 		exp2AnyReg(e);
 		int eReg = e.info;
 		freeExp(e);
@@ -715,7 +715,7 @@ final class FuncState {
 	 * Optimize when 'e' is 'not' something, inverting the condition
 	 * and removing the 'not'.
 	 */
-	private int jumpOnCond(ExpDesc e, int cond) throws CompileException, AllocationTracker.AvatarOOMException {
+	private int jumpOnCond(ExpDesc e, int cond) throws CompileException, AvatarError {
 		if (e.kind == ExpKind.VRELOCABLE) {
 			int ie = code[e.info];
 			if (GET_OPCODE(ie) == OP_NOT) {
@@ -732,7 +732,7 @@ final class FuncState {
 	/**
 	 * Emit code to go through if 'e' is true, jump otherwise.
 	 */
-	void goIfTrue(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void goIfTrue(ExpDesc e) throws CompileException, AvatarError {
 		dischargeVars(e);
 		int pc = switch (e.kind) {  /* pc of last jump */
 			case VK, VKNUM, VTRUE -> NO_JUMP; /* always true; do nothing */
@@ -750,7 +750,7 @@ final class FuncState {
 	/**
 	 * Emit code to go through if 'e' is false, jump otherwise.
 	 */
-	void goIfFalse(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	void goIfFalse(ExpDesc e) throws CompileException, AvatarError {
 		dischargeVars(e);
 		int pc = switch (e.kind) { /* pc of last jump */
 			case VNIL, VFALSE -> NO_JUMP; /* always false; do nothing */
@@ -762,7 +762,7 @@ final class FuncState {
 		e.f.value = NO_JUMP;
 	}
 
-	private void codeNot(ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void codeNot(ExpDesc e) throws CompileException, AvatarError {
 		dischargeVars(e);
 		switch (e.kind) {
 			case VNIL, VFALSE -> e.kind = ExpKind.VTRUE;
@@ -786,7 +786,7 @@ final class FuncState {
 		removeValues(e.t.value);
 	}
 
-	void indexed(ExpDesc t, ExpDesc k, long pos) throws CompileException, AllocationTracker.AvatarOOMException {
+	void indexed(ExpDesc t, ExpDesc k, long pos) throws CompileException, AvatarError {
 		assert !t.hasjumps() && (t.kind.isInRegister() || t.kind == ExpKind.VUPVAL);
 		t.aux = exp2RK(k);
 		t.tableType = t.kind == ExpKind.VUPVAL ? ExpKind.VUPVAL : ExpKind.VLOCAL;
@@ -830,7 +830,7 @@ final class FuncState {
 	 * <p>
 	 * Expression to produce final result will be encoded in 'e'.
 	 */
-	private void codeUnaryExpression(int opcode, ExpDesc e, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void codeUnaryExpression(int opcode, ExpDesc e, long position) throws CompileException, AvatarError {
 		int r = exp2AnyReg(e);
 		freeExp(e);
 		e.info = codeABCAt(opcode, 0, r, 0, position);
@@ -844,7 +844,7 @@ final class FuncState {
 	 * Expression to produce final result will be encoded in 'e1'. Because 'luaK_exp2RK' can free registers, its calls
 	 * must be in "stack order" (that is, first on 'e2', which may have more recent registers to be released).
 	 */
-	private void codeBinaryExpression(int opcode, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void codeBinaryExpression(int opcode, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AvatarError {
 		int rk2 = exp2RK(e2);
 		int rk1 = exp2RK(e1);
 		freeExp(e1, e2);
@@ -852,11 +852,11 @@ final class FuncState {
 		e1.kind = ExpKind.VRELOCABLE;
 	}
 
-	private void codeArith(int op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void codeArith(int op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AvatarError {
 		if (!constFolding(op, e1, e2)) codeBinaryExpression(op, e1, e2, position);
 	}
 
-	private void codeComparison(BinOpr op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	private void codeComparison(BinOpr op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AvatarError {
 		int rk1 = switch (e1.kind) {
 			case VK -> RKASK(e1.info);
 			case VNONRELOC -> e1.info;
@@ -877,7 +877,7 @@ final class FuncState {
 		e1.kind = ExpKind.VJMP;
 	}
 
-	void prefix(UnOpr op, ExpDesc e, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	void prefix(UnOpr op, ExpDesc e, long position) throws CompileException, AvatarError {
 		switch (op) {
 			case MINUS -> {
 				if (!constFolding(OP_UNM, e, e)) codeUnaryExpression(OP_UNM, e, position);
@@ -887,7 +887,7 @@ final class FuncState {
 		}
 	}
 
-	void infix(BinOpr op, ExpDesc v) throws CompileException, AllocationTracker.AvatarOOMException {
+	void infix(BinOpr op, ExpDesc v) throws CompileException, AvatarError {
 		switch (op) {
 			case AND -> goIfTrue(v);
 			case OR -> goIfFalse(v);
@@ -899,7 +899,7 @@ final class FuncState {
 		}
 	}
 
-	void posfix(BinOpr op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AllocationTracker.AvatarOOMException {
+	void posfix(BinOpr op, ExpDesc e1, ExpDesc e2, long position) throws CompileException, AvatarError {
 		switch (op) {
 			case AND -> {
 				assert e1.t.value == NO_JUMP; /* list must be closed */
@@ -943,7 +943,7 @@ final class FuncState {
 	}
 
 
-	void setList(int base, int nelems, int tostore) throws CompileException, AllocationTracker.AvatarOOMException {
+	void setList(int base, int nelems, int tostore) throws CompileException, AvatarError {
 		int c = (nelems - 1) / LFIELDS_PER_FLUSH + 1;
 		int b = tostore == LUA_MULTRET ? 0 : tostore;
 		assert tostore != 0;

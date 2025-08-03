@@ -24,10 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 
 /**
  * Set up an environment with all core/safe globals installed.
@@ -44,7 +43,7 @@ public final class CoreLibraries {
 	 * @see #debugGlobals(LuaState)
 	 * @see CoreLibraries
 	 */
-	public static void standardGlobals(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void standardGlobals(LuaState state) throws LuaError, AvatarError {
 		BaseLib.add(state);
 		TableLib.add(state);
 		StringLib.add(state);
@@ -62,7 +61,7 @@ public final class CoreLibraries {
 	 * @see CoreLibraries
 	 * @see DebugLib
 	 */
-	public static void debugGlobals(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+	public static void debugGlobals(LuaState state) throws LuaError, AvatarError {
 		standardGlobals(state);
 		DebugLib.add(state);
 	}

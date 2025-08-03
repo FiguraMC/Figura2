@@ -1,15 +1,12 @@
 package org.figuramc.figura.data;
 
 import org.figuramc.figura.util.IOUtils;
-import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.MapUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
