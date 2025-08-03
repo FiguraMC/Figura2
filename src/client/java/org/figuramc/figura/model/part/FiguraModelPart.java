@@ -10,9 +10,9 @@ import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
+import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.util.MapUtils;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
@@ -31,7 +31,7 @@ import java.util.*;
  * - This can be more efficient rendering-wise, because most of the time individual cubes are not articulated, allowing
  *   for less unneeded computation. When they do need to be articulated, one can simply add a group for said cube.
  */
-public class FiguraModelPart extends MarkedObjectBase implements PartLike<FiguraModelPart> {
+public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
 
     // General info
     // Storing the parent is dubious... might be some edge cases that could warrant removal?
@@ -43,7 +43,6 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
 
 //    private  animators; // The animators which affect this model part
     public final LinkedHashMap<String, FiguraModelPart> children; // The children of this model part in the hierarchy tree. Ordered, so we don't use a regular hashmap.
-    private long childrenNamesSize; // Updated with the cumulative size of the names of children, for memory counting.
 
     // Rendering
     public final float[] vertices; // The vertices making up the cubes and meshes of the model part
@@ -51,7 +50,8 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
     public int renderTypePriority; // If the render type priority is higher than the parent's, renderType can replace the current render types.
 
     // Callbacks which are run during various stages of the rendering process.
-    public final ArrayList<ScriptCallback>
+    // TODO finalize the arg/return types for this!
+    public final ArrayList<ScriptCallback<CallbackItem.F32, CallbackItem.Unit>>
             preRenderCallbacks = new ArrayList<>(0), // Zero sized at first, since most parts will not have callbacks
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
@@ -60,7 +60,6 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
     public FiguraModelPart(@Nullable FiguraModelPart parent, Map<String, FiguraModelPart> children) {
         this.parent = parent;
         this.children = new LinkedHashMap<>(children);
-        this.childrenNamesSize = children.keySet().stream().mapToInt(String::length).sum() * CHAR_SIZE;
         for (FiguraModelPart child : children.values()) {
             if (child.parent != null)
                 throw new IllegalStateException("When constructing a wrapper part, the childrens' parent must be null!");
@@ -106,7 +105,6 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
             case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(figmodelMaterials, this, moduleIndex, texturesComponent, vanillaComponent);
             default -> new FiguraModelPart(mat, this, moduleIndex, texturesComponent, vanillaComponent);
         }, LinkedHashMap::new);
-        childrenNamesSize = children.keySet().stream().mapToInt(String::length).sum() * CHAR_SIZE;
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
@@ -141,7 +139,6 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
         this.renderType = new FiguraRenderType.Basic(texture.getLocation(), null);
         Vector4f uvModifier = texture.getUvValues();
         this.children = new LinkedHashMap<>();
-        childrenNamesSize = 0;
         FloatArrayList vertexData = new FloatArrayList();
         // Iterate in each direction!
         byte[] opacityStates = new byte[Math.max(texture.getWidth(), texture.getHeight()) + 2]; // +2 because of 1 pixel padding on each side
@@ -418,7 +415,7 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
         if (normalMat != null) norm.mul(normalMat);
         norm.normalize();
         arr.add(norm.x); arr.add(norm.y); arr.add(norm.z);
-        // UV
+        // UV, modified by the modifier
         arr.add(u * uvModifier.z + uvModifier.x); arr.add(v * uvModifier.w + uvModifier.y);
         // Mesh skinning
         arr.add(skinningOffset0); arr.add(skinningOffset1); arr.add(skinningOffset2); arr.add(skinningOffset3);
@@ -441,29 +438,6 @@ public class FiguraModelPart extends MarkedObjectBase implements PartLike<Figura
     @Override
     public @Nullable FiguraModelPart getChildByName(String name) {
         return children.get(name);
-    }
-
-    // // // // // // MEMORY LIMITING // // // // // //
-
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        // Trace other reachable objects
-        counter.trace(transform, depth);
-        for (FiguraModelPart child : children.values())
-            counter.trace(child, depth);
-        counter.trace(parent, depth);
-        for (ScriptCallback callback : preRenderCallbacks) counter.trace(callback, depth);
-        for (ScriptCallback callback : midRenderCallbacks) counter.trace(callback, depth);
-        for (ScriptCallback callback : postRenderCallbacks) counter.trace(callback, depth);
-        // TODO make our own FiguraRenderType which is traceable, instead of Minecraft RenderType.
-        // Textures are reachable through render types, so this could be a memory exploit if we don't
-        // trace them.
-
-        // Random guess around 60 bytes for the constant sized stuff, don't feel like counting all that
-        return 60
-                + childrenNamesSize
-                + FLOAT_SIZE * vertices.length
-                + POINTER_SIZE * (preRenderCallbacks.size() + midRenderCallbacks.size() + postRenderCallbacks.size());
     }
 
 

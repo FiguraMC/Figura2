@@ -54,7 +54,7 @@ dependencies {
 		include(modImplementation(fabricApi.module(it, "${property("fabric_api_version")}"))!!)
 	}
 
-	// Cobalt (lua) dependencies:
+	// Cobalt (lua) dependencies and stuff
 	compileOnly("org.checkerframework:checker-qual:3.36.0")
 	cobaltBuildTools(project(":cobalt-build-tools"))
 

@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.math.vector;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
@@ -16,12 +17,12 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 public class Vector4API {
 
     // Wrap a Vector4d into a userdata given the metatables
-    public static LuaUserdata wrap(Vector4d vec, FiguraMetatables metatables) {
-        return userdataOf(vec, metatables.vec4);
+    public static LuaUserdata wrap(Vector4d vec, LuaState state) {
+        return new LuaUserdata(vec, state.figuraMetatables.vec4);
     }
 
     // Return a LuaTable which acts as the metatable for this type
-    public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables) throws LuaError {
+    public static LuaTable createMetatable(LuaState state) throws LuaError, AvatarError {
         AllocationTracker t = state.allocationTracker;
         LuaTable metatable = tableOf(t);
 
@@ -198,42 +199,42 @@ public class Vector4API {
 
         // Dot product of this vector with another
         metatable.rawset("dot", LibFunction.create((s, v1, v2) ->
-                valueOf(v1.checkUserdata(s, Vector4d.class).dot(v2.checkUserdata(s, Vector4d.class)))
+                LuaDouble.valueOf(v1.checkUserdata(s, Vector4d.class).dot(v2.checkUserdata(s, Vector4d.class)))
         ));
         // Copy this vector
         metatable.rawset("copy", LibFunction.create((s, v) ->
-                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)), metatables)
+                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)), s)
         ));
         // Get a normalized copy of this vector
         metatable.rawset("unit", LibFunction.create((s, v) ->
-                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), metatables)
+                wrap(new Vector4d(v.checkUserdata(s, Vector4d.class)).normalize(), s)
         ));
         // Length (or use the # operator!)
         metatable.rawset("len", LibFunction.create((s, v) ->
-                valueOf(v.checkUserdata(s, Vector4d.class).length())
+                LuaDouble.valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
         // Length squared
         metatable.rawset("len2", LibFunction.create((s, v) ->
-                valueOf(v.checkUserdata(s, Vector4d.class).lengthSquared())
+                LuaDouble.valueOf(v.checkUserdata(s, Vector4d.class).lengthSquared())
         ));
         // Get a copy with length clamped between min and max. Both args are optional.
         metatable.rawset("clamped", LibFunction.create((s, v, optmin, optmax) -> {
             Vector4d vec = v.checkUserdata(s, Vector4d.class);
             double min = optmin.optDouble(s, Double.NaN);
             double len2 = vec.lengthSquared();
-            if (len2 < min*min) return wrap(new Vector4d(vec).normalize(min), metatables);
+            if (len2 < min*min) return wrap(new Vector4d(vec).normalize(min), s);
             else {
                 double max = optmax.optDouble(s, Double.NaN);
-                if (len2 > max*max) return wrap(new Vector4d(vec).normalize(max), metatables);
+                if (len2 > max*max) return wrap(new Vector4d(vec).normalize(max), s);
             }
             return v;
         }));
         // Return the number of elements in the vector.
-        metatable.rawset("count", LibFunction.create(s -> valueOf(4)));
+        metatable.rawset("count", LibFunction.create(s -> LuaDouble.valueOf(4)));
         // Unpack the elements of the vector into Lua varargs.
         metatable.rawset("unpack", LibFunction.createV((s, args) -> {
             Vector4d vec = args.first().checkUserdata(s, Vector4d.class);
-            return varargsOf(valueOf(vec.x), valueOf(vec.y), valueOf(vec.z), valueOf(vec.w));
+            return varargsOf(LuaDouble.valueOf(vec.x), LuaDouble.valueOf(vec.y), LuaDouble.valueOf(vec.z), LuaDouble.valueOf(vec.w));
         }));
 
         // Operators:
@@ -244,28 +245,28 @@ public class Vector4API {
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return wrap(new Vector4d(a).add(b), metatables);
+            return wrap(new Vector4d(a).add(b), s);
         }));
         metatable.rawset(SUB, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return wrap(new Vector4d(a).sub(b), metatables);
+            return wrap(new Vector4d(a).sub(b), s);
         }));
         metatable.rawset(MUL, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return wrap(new Vector4d(a).mul(b), metatables);
+            return wrap(new Vector4d(a).mul(b), s);
         }));
         metatable.rawset(DIV, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
             Vector4d b = v2.optUserdata(s, Vector4d.class, null);
             if (a == null) a = new Vector4d(v1.checkDouble(s));
             if (b == null) b = new Vector4d(v2.checkDouble(s));
-            return wrap(new Vector4d(a).div(b), metatables);
+            return wrap(new Vector4d(a).div(b), s);
         }));
         metatable.rawset(MOD, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.optUserdata(s, Vector4d.class, null);
@@ -277,35 +278,35 @@ public class Vector4API {
                     OperationHelper.mod(a.y, b.y),
                     OperationHelper.mod(a.z, b.z),
                     OperationHelper.mod(a.w, b.w)
-            ), metatables);
+            ), s);
         }));
         metatable.rawset(UNM, LibFunction.create((s, v) -> {
             Vector4d a = v.checkUserdata(s, Vector4d.class);
-            return wrap(new Vector4d(a).negate(), metatables);
+            return wrap(new Vector4d(a).negate(), s);
         }));
 
         // # operator can also be used for vector length.
         metatable.rawset(LEN, LibFunction.create((s, v) ->
-                valueOf(v.checkUserdata(s, Vector4d.class).length())
+                LuaDouble.valueOf(v.checkUserdata(s, Vector4d.class).length())
         ));
         // Type name, used in error messages
-        metatable.rawset(NAME, valueOf("Vec4", t));
+        metatable.rawset(NAME, LuaString.valueOf(t, "Vec4"));
 
         // Returns whether all components are less than or equal to the other. (<= and >= operators)
         metatable.rawset(LE, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.checkUserdata(s, Vector4d.class);
             Vector4d b = v2.checkUserdata(s, Vector4d.class);
-            return valueOf(a.x <= b.x && a.y <= b.y && a.z <= b.z && a.w <= b.w);
+            return LuaBoolean.valueOf(a.x <= b.x && a.y <= b.y && a.z <= b.z && a.w <= b.w);
         }));
         // Returns whether all components are strictly less than the other. (< and > operators)
         metatable.rawset(LT, LibFunction.create((s, v1, v2) -> {
             Vector4d a = v1.checkUserdata(s, Vector4d.class);
             Vector4d b = v2.checkUserdata(s, Vector4d.class);
-            return valueOf(a.x < b.x && a.y < b.y && a.z < b.z && a.w < b.w);
+            return LuaBoolean.valueOf(a.x < b.x && a.y < b.y && a.z < b.z && a.w < b.w);
         }));
         // Returns whether the vectors are equal. (== and ~= operators)
         metatable.rawset(EQ, LibFunction.create((s, v1, v2) ->
-                valueOf(v1.checkUserdata(s, Vector4d.class).equals(v2.checkUserdata(s, Vector4d.class)))
+                LuaBoolean.valueOf(v1.checkUserdata(s, Vector4d.class).equals(v2.checkUserdata(s, Vector4d.class)))
         ));
 
         // Newindex, always swizzle.
@@ -350,43 +351,44 @@ public class Vector4API {
         }));
 
         // Custom indexing for swizzle
-        FiguraMetatables.setupIndexing(state, metatable, null, LibFunction.create((s, v, k) -> {
+        FiguraMetatables.setupIndexingWithCustomIndexer(state, metatable, LibFunction.create((s, v, k) -> {
             Vector4d self = v.checkUserdata(s, Vector4d.class);
             // Numeric key, index it like an array
             if (k.type() == TNUMBER) {
-                return valueOf(switch (k.toInteger()) {
-                    case 1 -> self.x;
-                    case 2 -> self.y;
-                    case 3 -> self.z;
-                    case 4 -> self.w;
-                    default -> throw ErrorFactory.argError(s, k, "integer 1 to 4");
-                });
+                return switch (k.toInteger()) {
+                    case 1 -> LuaDouble.valueOf(self.x);
+                    case 2 -> LuaDouble.valueOf(self.y);
+                    case 3 -> LuaDouble.valueOf(self.z);
+                    case 4 -> LuaDouble.valueOf(self.w);
+                    default -> NIL;
+                };
             }
             // Key should be a string then
             LuaString key = k.checkLuaString(s);
-            // Otherwise, get the swizzle going
+            // Get the swizzle going
             try {
                 return switch (key.length()) {
-                    case 1 -> valueOf(getSwizzle(self, (char) key.charAt(0)));
+                    case 1 -> LuaDouble.valueOf(getSwizzle(self, (char) key.charAt(0)));
                     case 2 -> Vector2API.wrap(new Vector2d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1))
-                    ), metatables);
+                    ), s);
                     case 3 -> Vector3API.wrap(new Vector3d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1)),
                             getSwizzle(self, (char) key.charAt(2))
-                    ), metatables);
+                    ), s);
                     case 4 -> Vector4API.wrap(new Vector4d(
                             getSwizzle(self, (char) key.charAt(0)),
                             getSwizzle(self, (char) key.charAt(1)),
                             getSwizzle(self, (char) key.charAt(2)),
                             getSwizzle(self, (char) key.charAt(3))
-                    ), metatables);
+                    ), s);
                     default -> NIL; // Not a swizzle, return nil
                 };
             } catch (InvalidSwizzleException ex) {
                 // If swizzle failed, just return nil
+                // This path should be uncommon, so using exceptions for control flow should be okay
                 return NIL;
             }
         }));
@@ -419,7 +421,7 @@ public class Vector4API {
             default -> throw new InvalidSwizzleException(); // Signal to caller to return nil
         };
     }
-    private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError {
+    private static void setSwizzle(Vector4d v, char c, double num, @Nullable AllocationTracker tracker) throws LuaError, AllocationTracker.AvatarOOMException {
         switch (c) {
             case '_' -> {}
             case 'x', 'r', 'u' -> v.x = num;

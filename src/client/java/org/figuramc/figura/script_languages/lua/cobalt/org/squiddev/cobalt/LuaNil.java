@@ -24,8 +24,6 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-
 /**
  * Class to encapsulate behavior of the singleton instance {@code nil}
  * <p>
@@ -68,10 +66,5 @@ public final class LuaNil extends LuaValue {
 	@Override
 	public int hashCode() {
 		return 0;
-	}
-
-	@Override
-	public long count(MemoryCounter counter, int depth) {
-		return 0; // 1 instance, it's chill
 	}
 }

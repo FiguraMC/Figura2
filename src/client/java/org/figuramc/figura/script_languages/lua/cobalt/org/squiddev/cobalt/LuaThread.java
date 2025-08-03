@@ -24,10 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
-import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.FunctionDebugHook;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoroutineLib;
@@ -45,7 +44,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see LuaValue
  * @see CoroutineLib
  */
-public final class LuaThread extends MarkedLuaValue {
+public final class LuaThread extends LuaValue {
 	public enum Status {
 		/**
 		 * A coroutine which has been run at all.
@@ -77,7 +76,7 @@ public final class LuaThread extends MarkedLuaValue {
 
 		Status(String name) {
 			this.name = name;
-			nameValue = ValueFactory.valueOf(name, null);
+			nameValue = LuaString.valueOfNoAlloc(name);
 		}
 
 		public String getDisplayName() {
@@ -112,7 +111,7 @@ public final class LuaThread extends MarkedLuaValue {
 	/**
 	 * The main function for this thread
 	 */
-	private LuaValue function;
+	private final LuaValue function;
 
 	/**
 	 * The thread which resumed this one, and so should be resumed back into.
@@ -147,7 +146,7 @@ public final class LuaThread extends MarkedLuaValue {
 
 		status = Status.INITIAL;
 		luaState = state;
-		debugState = new DebugState(state);
+		debugState = new DebugState(state); // TODO memcount this stuff :P
 		function = func;
 
 		LuaThread current = state.getCurrentThread();
@@ -244,7 +243,7 @@ public final class LuaThread extends MarkedLuaValue {
 	 * @throws LuaError        If attempting to yield the main thread.
 	 * @throws UnwindThrowable If we can yield this stack with an exception.
 	 */
-	public static <T> T yield(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+	public static <T> T yield(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		Objects.requireNonNull(args, "args cannot be null");
 
 		LuaThread thread = state.currentThread;
@@ -266,7 +265,7 @@ public final class LuaThread extends MarkedLuaValue {
 	 * @throws LuaError        If this coroutine cannot resume another.
 	 * @throws UnwindThrowable If we can yield this stack with an exception
 	 */
-	public static <T> T resume(LuaState state, LuaThread thread, Varargs args) throws LuaError, UnwindThrowable {
+	public static <T> T resume(LuaState state, LuaThread thread, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaThread current = state.currentThread;
 		if (current.status != Status.RUNNING) {
 			throw new LuaError("cannot resume from a " + current.status.getDisplayName() + " thread", state.allocationTracker);
@@ -296,15 +295,15 @@ public final class LuaThread extends MarkedLuaValue {
 	 * @return {@link Varargs} provided as arguments to {@link #yield(LuaState, Varargs)}
 	 * @throws LuaError If the current function threw an exception.
 	 */
-	public static Varargs run(LuaThread thread, Varargs args) throws LuaError {
+	public static Varargs run(LuaThread thread, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		return run(thread.luaState, thread, null, args);
 	}
 
-	private static Varargs run(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError {
+	private static Varargs run(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		return loop(state, thread, function, args);
 	}
 
-	private static Varargs loop(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError {
+	private static Varargs loop(final LuaState state, LuaThread thread, LuaValue function, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaError le = null;
 		do {
 			final DebugState ds = thread.debugState;
@@ -408,22 +407,4 @@ public final class LuaThread extends MarkedLuaValue {
 		}
 	}
 
-	@Override
-	protected long traceNoMark(MemoryCounter counter, int depth) {
-		counter.trace(errFunc, depth);
-		counter.trace(function, depth);
-		counter.trace(previousThread, depth);
-		if (debugState.getHook() instanceof FunctionDebugHook(LuaFunction f)) counter.trace(f, depth);
-		for (int i = 0; ; i++) {
-			DebugFrame frame = debugState.getFrame(i);
-			if (frame == null) break;
-			counter.trace(frame.func, depth);
-			// counter.trace(frame.state, depth); // TODO figure this out...
-			LuaValue[] stack = frame.stack;
-			if (stack != null)
-				for (LuaValue value : stack)
-					counter.trace(value, depth);
-		}
-		return OBJECT_SIZE;
-	}
 }

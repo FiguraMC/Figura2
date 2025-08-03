@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Varargs;
@@ -27,7 +28,7 @@ public interface SuspendedAction<T> {
 	 * @throws UnwindThrowable If the function yielded.
 	 */
 	@Contract("_, _ -> _")
-	static Varargs run(DebugFrame frame, SuspendedAction<Varargs> action) throws LuaError, UnwindThrowable {
+	static Varargs run(DebugFrame frame, SuspendedAction<Varargs> action) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}
 
@@ -43,7 +44,7 @@ public interface SuspendedAction<T> {
 	 * @throws LuaError If the function threw a runtime error.
 	 */
 	@Contract("_ -> _")
-	static <T> T noYield(SuspendedAction<T> action) throws LuaError {
+	static <T> T noYield(SuspendedAction<T> action) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}
 
@@ -63,5 +64,5 @@ public interface SuspendedAction<T> {
 		throw new AssertionError("Calls to this method should not appear in transformed code.");
 	}
 
-	T run() throws LuaError, UnwindThrowable;
+	T run() throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
 }

@@ -1,17 +1,15 @@
 package org.figuramc.figura.animation;
 
-import org.figuramc.figura.model.part.PartLike;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.model.part.RiggedHierarchy;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Tracks current time, speed, etc. of an animation occurring.
- * Created by binding an Animation to a PartLike.
+ * Created by binding an Animation to a RiggedHierarchy.
  */
-public class AnimationInstance extends MarkedObjectBase {
+public class AnimationInstance {
 
     // Time in seconds since the start of the animation
     private float time = 0.0f;
@@ -21,12 +19,12 @@ public class AnimationInstance extends MarkedObjectBase {
     // List of animators, to mark as dirty when this changes
     private final List<Animator> animators;
 
-    // Bind the Animation to a PartLike, within an Animations component
-    public AnimationInstance(Animation animation, PartLike<?> root) {
+    // Bind the Animation to a RiggedHierarchy, within an Animations component
+    public AnimationInstance(Animation animation, RiggedHierarchy<?> root) {
         animators = new ArrayList<>();
         for (var entry : animation.keyframesByPartPath.entrySet()) {
             String partPath = entry.getKey();
-            PartLike<?> descendant = root.getDescendantWithPath(partPath);
+            RiggedHierarchy<?> descendant = root.getDescendantWithPath(partPath);
             if (descendant == null) continue; // TODO some kind of warning when the instance doesn't fully bind?
             Animation.TransformKeyframes keyframes = entry.getValue();
             Animator animator = new Animator(this, keyframes);
@@ -63,9 +61,4 @@ public class AnimationInstance extends MarkedObjectBase {
         }
     }
 
-
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        throw new UnsupportedOperationException("TODO");
-    }
 }

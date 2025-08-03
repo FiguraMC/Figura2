@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 
 /**
@@ -38,27 +39,27 @@ final class ZeroArgFunction extends LibFunction {
 	}
 
 	@Override
-	protected LuaValue call(LuaState state) throws LuaError {
+	protected LuaValue call(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		return function.call(state);
 	}
 
 	@Override
-	protected LuaValue call(LuaState state, LuaValue arg) throws LuaError {
+	protected LuaValue call(LuaState state, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException {
 		return function.call(state);
 	}
 
 	@Override
-	protected LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+	protected LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException {
 		return function.call(state);
 	}
 
 	@Override
-	protected LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
+	protected LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException {
 		return function.call(state);
 	}
 
 	@Override
-	protected Varargs invoke(LuaState state, Varargs varargs) throws LuaError, UnwindThrowable {
+	protected Varargs invoke(LuaState state, Varargs varargs) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function.call(state);
 	}
 

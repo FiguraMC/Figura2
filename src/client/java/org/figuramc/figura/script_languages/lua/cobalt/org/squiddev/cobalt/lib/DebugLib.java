@@ -25,13 +25,13 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.LegacyEnv;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.*;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 /**
@@ -47,35 +47,35 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see <a href="http://www.lua.org/manual/5.1/manual.html#5.9">http://www.lua.org/manual/5.1/manual.html#5.9</a>
  */
 public final class DebugLib {
-	private static final LuaString MAIN = valueOf("main", null);
-	private static final LuaString LUA = valueOf("Lua", null);
-	private static final LuaString C = valueOf("C", null);
-	private static final LuaString C_SHORT_SOURCE = valueOf("[C]", null);
-	private static final LuaString C_SOURCE = valueOf("=[C]", null);
-	public static final LuaString QMARK = valueOf("?", null);
-	private static final LuaString EXTERNAL_HOOK = valueOf("external hook", null);
+	private static final LuaString MAIN = LuaString.valueOfNoAlloc("main");
+	private static final LuaString LUA = LuaString.valueOfNoAlloc("Lua");
+	private static final LuaString C = LuaString.valueOfNoAlloc("C");
+	private static final LuaString C_SHORT_SOURCE = LuaString.valueOfNoAlloc("[C]");
+	private static final LuaString C_SOURCE = LuaString.valueOfNoAlloc("=[C]");
+	public static final LuaString QMARK = LuaString.valueOfNoAlloc("?");
+	private static final LuaString EXTERNAL_HOOK = LuaString.valueOfNoAlloc("external hook");
 
-	private static final LuaString FUNC = valueOf("func", null);
-	private static final LuaString NUPS = valueOf("nups", null);
-	private static final LuaString NAME = valueOf("name", null);
-	private static final LuaString NAMEWHAT = valueOf("namewhat", null);
-	private static final LuaString WHAT = valueOf("what", null);
-	private static final LuaString SOURCE = valueOf("source", null);
-	private static final LuaString SHORT_SRC = valueOf("short_src", null);
-	private static final LuaString LINEDEFINED = valueOf("linedefined", null);
-	private static final LuaString LASTLINEDEFINED = valueOf("lastlinedefined", null);
-	private static final LuaString CURRENTLINE = valueOf("currentline", null);
-	private static final LuaString CURRENTCOLUMN = valueOf("currentcolumn", null);
-	private static final LuaString ACTIVELINES = valueOf("activelines", null);
-	private static final LuaString NPARAMS = valueOf("nparams", null);
-	private static final LuaString ISVARARG = valueOf("isvararg", null);
-	private static final LuaString ISTAILCALL = valueOf("istailcall", null);
+	private static final LuaString FUNC = LuaString.valueOfNoAlloc("func");
+	private static final LuaString NUPS = LuaString.valueOfNoAlloc("nups");
+	private static final LuaString NAME = LuaString.valueOfNoAlloc("name");
+	private static final LuaString NAMEWHAT = LuaString.valueOfNoAlloc("namewhat");
+	private static final LuaString WHAT = LuaString.valueOfNoAlloc("what");
+	private static final LuaString SOURCE = LuaString.valueOfNoAlloc("source");
+	private static final LuaString SHORT_SRC = LuaString.valueOfNoAlloc("short_src");
+	private static final LuaString LINEDEFINED = LuaString.valueOfNoAlloc("linedefined");
+	private static final LuaString LASTLINEDEFINED = LuaString.valueOfNoAlloc("lastlinedefined");
+	private static final LuaString CURRENTLINE = LuaString.valueOfNoAlloc("currentline");
+	private static final LuaString CURRENTCOLUMN = LuaString.valueOfNoAlloc("currentcolumn");
+	private static final LuaString ACTIVELINES = LuaString.valueOfNoAlloc("activelines");
+	private static final LuaString NPARAMS = LuaString.valueOfNoAlloc("nparams");
+	private static final LuaString ISVARARG = LuaString.valueOfNoAlloc("isvararg");
+	private static final LuaString ISTAILCALL = LuaString.valueOfNoAlloc("istailcall");
 
 	private DebugLib() {
 	}
 
-	public static void add(LuaState state, LuaTable env) throws LuaError {
-		LibFunction.setGlobalLibrary(state, env, "debug", RegisteredFunction.bind(state, new RegisteredFunction[]{
+	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+		LibFunction.setGlobalLibrary(state, "debug", RegisteredFunction.bind(state, new RegisteredFunction[]{
 			RegisteredFunction.ofV("debug", DebugLib::debug),
 			RegisteredFunction.ofV("getfenv", DebugLib::getfenv),
 			RegisteredFunction.ofV("gethook", DebugLib::gethook),
@@ -101,7 +101,7 @@ public final class DebugLib {
 		return NONE;
 	}
 
-	private static Varargs gethook(LuaState state, Varargs args) throws LuaError {
+	private static Varargs gethook(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int a = 1;
 		LuaThread thread = args.arg(a).isThread() ? args.arg(a++).checkThread(state) : state.getCurrentThread();
 		DebugState ds = thread.getDebugState();
@@ -116,11 +116,12 @@ public final class DebugLib {
 		}
 		return varargsOf(
 			hook,
-			valueOf((ds.hasCallHook() ? "c" : "") + (ds.hasReturnHook() ? "r" : "") + (ds.hasLineHook() ? "l" : ""), null),
-			valueOf(ds.hookCount));
+			LuaString.valueOfNoAlloc((ds.hasCallHook() ? "c" : "") + (ds.hasReturnHook() ? "r" : "") + (ds.hasLineHook() ? "l" : "")),
+			LuaInteger.valueOf(ds.hookCount)
+		);
 	}
 
-	private static Varargs sethook(LuaState state, Varargs args) throws LuaError {
+	private static Varargs sethook(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int a = 1;
 		LuaThread thread = args.arg(a).isThread() ? args.arg(a++).checkThread(state) : state.getCurrentThread();
 		int i1 = a++;
@@ -152,14 +153,14 @@ public final class DebugLib {
 		return env != null ? env : NIL;
 	}
 
-	private static Varargs setfenv(LuaState state, Varargs args) throws LuaError {
+	private static Varargs setfenv(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue object = args.first();
 		LuaTable env = args.arg(2).checkTable(state);
 		if (!LegacyEnv.setEnv(object, env)) throw new LuaError("'setfenv' cannot change environment of given object", state.allocationTracker);
 		return object;
 	}
 
-	private static Varargs getinfo(LuaState state, Varargs args) throws LuaError {
+	private static Varargs getinfo(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int arg = 1;
 		LuaThread thread = args.arg(arg).isThread() ? args.arg(arg++).checkThread(state) : state.getCurrentThread();
 		LuaValue funcArg = args.arg(arg);
@@ -189,8 +190,8 @@ public final class DebugLib {
 						info.rawset(WHAT, p.lineDefined == 0 ? MAIN : LUA);
 						info.rawset(SOURCE, p.source);
 						info.rawset(SHORT_SRC, p.shortSource());
-						info.rawset(LINEDEFINED, valueOf(p.lineDefined));
-						info.rawset(LASTLINEDEFINED, valueOf(p.lastLineDefined));
+						info.rawset(LINEDEFINED, LuaInteger.valueOf(p.lineDefined));
+						info.rawset(LASTLINEDEFINED, LuaInteger.valueOf(p.lastLineDefined));
 					} else {
 						info.rawset(WHAT, C);
 						info.rawset(SOURCE, C_SOURCE);
@@ -201,20 +202,20 @@ public final class DebugLib {
 				}
 				case 'l' -> {
 					if (callInfo == null || closure == null) {
-						info.rawset(CURRENTLINE, valueOf(-1));
+						info.rawset(CURRENTLINE, LuaInteger.valueOf(-1));
 						continue;
 					}
 
 					Prototype p = closure.getPrototype();
 					int line = p.lineAt(callInfo.pc);
 					int column = p.columnAt(callInfo.pc);
-					info.rawset(CURRENTLINE, valueOf(line));
-					if (column > 0) info.rawset(CURRENTCOLUMN, valueOf(column));
+					info.rawset(CURRENTLINE, LuaInteger.valueOf(line));
+					if (column > 0) info.rawset(CURRENTCOLUMN, LuaInteger.valueOf(column));
 				}
 				case 'u' -> {
-					info.rawset(NUPS, valueOf(closure != null ? closure.getPrototype().upvalues() : 0));
-					info.rawset(NPARAMS, valueOf(closure != null ? closure.getPrototype().parameters : 0));
-					info.rawset(ISVARARG, valueOf(closure == null || closure.getPrototype().isVarArg));
+					info.rawset(NUPS, LuaInteger.valueOf(closure != null ? closure.getPrototype().upvalues() : 0));
+					info.rawset(NPARAMS, LuaInteger.valueOf(closure != null ? closure.getPrototype().parameters : 0));
+					info.rawset(ISVARARG, LuaBoolean.valueOf(closure == null || closure.getPrototype().isVarArg));
 				}
 				case 'n' -> {
 					ObjectName kind = callInfo != null ? callInfo.getFuncKind() : null;
@@ -235,7 +236,7 @@ public final class DebugLib {
 					}
 				}
 				case 't' -> {
-					info.rawset(ISTAILCALL, valueOf(callInfo != null && (callInfo.flags & DebugFrame.FLAG_TAIL) != 0));
+					info.rawset(ISTAILCALL, LuaBoolean.valueOf(callInfo != null && (callInfo.flags & DebugFrame.FLAG_TAIL) != 0));
 				}
 				default -> throw ErrorFactory.argError(state.allocationTracker, arg + 1, "invalid option");
 			}
@@ -243,7 +244,7 @@ public final class DebugLib {
 		return info;
 	}
 
-	private static Varargs getlocal(LuaState state, Varargs args) throws LuaError {
+	private static Varargs getlocal(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int arg = 1;
 		LuaThread thread = args.arg(arg).isThread() ? args.arg(arg++).checkThread(state) : state.getCurrentThread();
 
@@ -267,7 +268,7 @@ public final class DebugLib {
 		}
 	}
 
-	private static Varargs setlocal(LuaState state, Varargs args) throws LuaError {
+	private static Varargs setlocal(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int arg = 1;
 		LuaThread thread = args.arg(arg).isThread() ? args.arg(arg++).checkThread(state) : state.getCurrentThread();
 		int level = args.arg(arg).checkInteger(state);
@@ -290,7 +291,7 @@ public final class DebugLib {
 		return mt != null ? mt : NIL;
 	}
 
-	private static Varargs setmetatable(LuaState state, Varargs args) {
+	private static Varargs setmetatable(LuaState state, Varargs args) throws AllocationTracker.AvatarOOMException {
 		LuaValue object = args.arg(1);
 		try {
 			LuaTable mt = args.arg(2).optTable(state, null);
@@ -305,7 +306,7 @@ public final class DebugLib {
 			}
 			return TRUE;
 		} catch (LuaError e) {
-			return varargsOf(FALSE, valueOf(e.toString(), state.allocationTracker));
+			return varargsOf(FALSE, LuaString.valueOf(state.allocationTracker, e.toString()));
 		}
 	}
 
@@ -318,7 +319,7 @@ public final class DebugLib {
 		return p.getUpvalueName(up - 1);
 	}
 
-	private static Varargs getupvalue(LuaState state, Varargs args) throws LuaError {
+	private static Varargs getupvalue(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue func = args.arg(1).checkFunction(state);
 		int up = args.arg(2).checkInteger(state);
 		if (func instanceof LuaClosure c) {
@@ -330,7 +331,7 @@ public final class DebugLib {
 		return NIL;
 	}
 
-	private static Varargs varargs(LuaState state, Varargs args) throws LuaError {
+	private static Varargs varargs(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue func = args.arg(1).checkFunction(state);
 		int up = args.arg(2).checkInteger(state);
 		LuaValue value = args.arg(3);
@@ -344,7 +345,7 @@ public final class DebugLib {
 		return NIL;
 	}
 
-	private static Varargs traceback(LuaState state, Varargs args) throws LuaError {
+	private static Varargs traceback(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int a = 1;
 		LuaThread thread = args.arg(a).isThread() ? args.arg(a++).checkThread(state) : state.getCurrentThread();
 		LuaValue messageValue = args.arg(a++);
@@ -355,10 +356,10 @@ public final class DebugLib {
 
 		Buffer sb = new Buffer(state.allocationTracker);
 		if (message != null) sb.append(message).append('\n');
-		return valueOf(DebugHelpers.traceback(sb, thread, level).toString(), state.allocationTracker);
+		return DebugHelpers.traceback(sb, thread, level).toLuaString();
 	}
 
-	private static LuaClosure getClosureForUpvalue(LuaState state, Varargs args, int offset, int upvalue) throws LuaError {
+	private static LuaClosure getClosureForUpvalue(LuaState state, Varargs args, int offset, int upvalue) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaFunction function = args.arg(offset).checkFunction(state);
 		if (function instanceof LuaClosure closure) {
 			if (upvalue >= 0 && upvalue < closure.getPrototype().upvalues()) return closure;
@@ -367,13 +368,13 @@ public final class DebugLib {
 		throw ErrorFactory.argError(state.allocationTracker, offset, "invalid upvalue index");
 	}
 
-	private static Varargs upvalueId(LuaState state, Varargs args) throws LuaError {
+	private static Varargs upvalueId(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int upvalue = args.arg(2).checkInteger(state) - 1;
 		LuaClosure closure = getClosureForUpvalue(state, args, 1, upvalue);
 		return new LuaUserdata(closure.getUpvalue(upvalue));
 	}
 
-	private static Varargs upvalueJoin(LuaState state, Varargs args) throws LuaError {
+	private static Varargs upvalueJoin(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		int upvalue1 = args.arg(2).checkInteger(state) - 1;
 		LuaClosure closure1 = getClosureForUpvalue(state, args, 1, upvalue1);
 

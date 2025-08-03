@@ -63,7 +63,7 @@ public class FormatDesc {
 
 	private final @Nullable AllocationTracker allocTracker;
 
-	FormatDesc(@Nullable AllocationTracker allocTracker, LuaString format, final int start) throws LuaError {
+	FormatDesc(@Nullable AllocationTracker allocTracker, LuaString format, final int start) throws LuaError, AllocationTracker.AvatarOOMException {
 		this.format = format;
 		this.start = start;
 		this.allocTracker = allocTracker;
@@ -149,13 +149,13 @@ public class FormatDesc {
 	// Not called with user-provided strings
 	public static FormatDesc ofUnsafe(String format) {
 		try {
-			return new FormatDesc(null, LuaString.valueOf(null, format), 0);
-		} catch (LuaError e) {
+			return new FormatDesc(null, LuaString.valueOfNoAlloc(format), 0);
+		} catch (LuaError | AllocationTracker.AvatarOOMException e) {
 			throw new IllegalStateException(e);
 		}
 	}
 
-	void checkFlags(int flags) throws LuaError {
+	void checkFlags(int flags) throws LuaError, AllocationTracker.AvatarOOMException {
 		if ((this.flags & ~flags) == 0) return;
 
 		var buffer = new Buffer(allocTracker);
@@ -165,14 +165,14 @@ public class FormatDesc {
 		throw new LuaError(buffer.toLuaString());
 	}
 
-	void format(Buffer buf, byte c) {
+	void format(Buffer buf, byte c) throws AllocationTracker.AvatarOOMException {
 		int nSpaces = width > 1 ? width - 1 : 0;
 		if (!leftAdjust()) pad(buf, ' ', nSpaces);
 		buf.append(c);
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	public void format(Buffer buf, long number) {
+	public void format(Buffer buf, long number) throws AllocationTracker.AvatarOOMException {
 		String digits;
 		boolean hasSign = false;
 
@@ -252,7 +252,7 @@ public class FormatDesc {
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	public void format(Buffer buf, double number) {
+	public void format(Buffer buf, double number) throws AllocationTracker.AvatarOOMException {
 		int prec = precision;
 		switch (conversion) {
 			case 'g', 'G' -> {
@@ -270,7 +270,7 @@ public class FormatDesc {
 		}
 	}
 
-	void format(Buffer buf, LuaString s) {
+	void format(Buffer buf, LuaString s) throws AllocationTracker.AvatarOOMException {
 		if (precision == -1 && s.length() >= 100) {
 			buf.append(s);
 			return;
@@ -293,7 +293,7 @@ public class FormatDesc {
 		if (leftAdjust()) pad(buf, ' ', nSpaces);
 	}
 
-	private static void pad(Buffer buf, char c, int n) {
+	private static void pad(Buffer buf, char c, int n) throws AllocationTracker.AvatarOOMException {
 		byte b = (byte) c;
 		while (n-- > 0) buf.append(b);
 	}

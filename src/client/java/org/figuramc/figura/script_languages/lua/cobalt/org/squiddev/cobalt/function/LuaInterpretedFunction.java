@@ -24,12 +24,13 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaC;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.Upvalue;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
 
@@ -100,9 +101,15 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 	 *
 	 * @param p The prototype to run
 	 */
-	public LuaInterpretedFunction(Prototype p) {
+	public LuaInterpretedFunction(@Nullable AllocationTracker allocTracker, Prototype p) throws AllocationTracker.AvatarOOMException {
 		this.p = p;
-		this.upvalues = p.upvalues() > 0 ? new Upvalue[p.upvalues()] : NO_UPVALUES;
+		if (p.upvalues() > 0) {
+			this.upvalues = new Upvalue[p.upvalues()];
+			if (allocTracker != null)
+				allocTracker.allocate(upvalues, p.upvalues() * 4);
+		} else {
+			this.upvalues = NO_UPVALUES;
+		}
 	}
 
 	public void nilUpvalues() {
@@ -131,7 +138,7 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 	}
 
 	@Override
-	public Varargs resume(LuaState state, Object object, Varargs value) throws LuaError, UnwindThrowable {
+	public Varargs resume(LuaState state, Object object, Varargs value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		DebugState ds = DebugState.get(state);
 		var frame = ds.getStackUnsafe();
 
@@ -156,11 +163,4 @@ public final class LuaInterpretedFunction extends LuaClosure implements Resumabl
 		return execute(state, frame, this);
 	}
 
-	@Override
-	protected long traceNoMark(MemoryCounter counter, int depth) {
-		counter.trace(p, depth);
-		for (Upvalue upvalue : upvalues)
-			counter.trace(upvalue, depth);
-		return OBJECT_SIZE;
-	}
 }

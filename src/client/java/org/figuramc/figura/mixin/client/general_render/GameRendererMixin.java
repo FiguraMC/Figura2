@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import org.figuramc.figura.avatars.components.Scripts;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.script_hooks.Event;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,7 +21,7 @@ public class GameRendererMixin {
         AvatarManager.forEachAvatar(avatar -> {
             Scripts scripts;
             if ((scripts = avatar.getComponent(Scripts.TYPE)) != null)
-                scripts.runEvent(Event.CLIENT_FRAME, tickDelta);
+                scripts.runEvent(Event.CLIENT_FRAME, new CallbackItem.F32(tickDelta));
         });
     }
 

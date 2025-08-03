@@ -1,9 +1,9 @@
 package org.figuramc.figura.avatars.components;
 
 import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.data.ModuleMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.model.texture.FiguraTextureAtlas;
 import org.figuramc.figura.util.RenderUtils;
@@ -25,7 +25,7 @@ public class Textures implements AvatarComponent<Textures> {
     private final List<AvatarTexture> textures;
     private final int[] indexOffsetsByModule;
 
-    public Textures(AvatarModules modules) throws AvatarLoadingException {
+    public Textures(AvatarModules modules) throws AvatarError {
         FiguraTextureAtlas.Builder atlasBuilder = FiguraTextureAtlas.builder();
         textures = new ArrayList<>();
         indexOffsetsByModule = new int[modules.modules.size()];

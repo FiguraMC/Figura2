@@ -1,12 +1,12 @@
 package org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaTable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Prototype;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.Upvalue;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 

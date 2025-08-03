@@ -69,11 +69,11 @@ public final class LuaError extends Exception {
 	 *
 	 * @param cause the Throwable that caused the error, if known.
 	 */
-	public LuaError(Throwable cause, @Nullable AllocationTracker allocTracker) {
+	public LuaError(Throwable cause, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		super(cause);
 		level = 1;
 		calculateLevel = true;
-		value = ValueFactory.valueOf("vm error: " + cause.toString(), allocTracker);
+		value = LuaString.valueOf(allocTracker, "vm error: " + cause.toString());
 	}
 
 	/**
@@ -81,11 +81,11 @@ public final class LuaError extends Exception {
 	 *
 	 * @param message message to supply
 	 */
-	public LuaError(String message, @Nullable AllocationTracker allocTracker) {
+	public LuaError(String message, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		super(message);
 		level = 1;
 		calculateLevel = true;
-		value = message == null ? Constants.NIL : ValueFactory.valueOf(message, allocTracker);
+		value = message == null ? Constants.NIL : LuaString.valueOf(allocTracker, message);
 	}
 
 	/**
@@ -94,11 +94,11 @@ public final class LuaError extends Exception {
 	 * @param message message to supply
 	 * @param level   where to supply line info from in call stack
 	 */
-	public LuaError(String message, int level, @Nullable AllocationTracker allocTracker) {
+	public LuaError(String message, int level, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		super(message);
 		this.level = level;
 		calculateLevel = false;
-		value = message == null ? Constants.NIL : ValueFactory.valueOf(message, allocTracker);
+		value = message == null ? Constants.NIL : LuaString.valueOf(allocTracker, message);
 	}
 
 	/**
@@ -133,7 +133,7 @@ public final class LuaError extends Exception {
 	 * @param error The error to convert
 	 * @return The converted error
 	 */
-	public static LuaError wrap(Throwable error, @Nullable AllocationTracker allocTracker) {
+	public static LuaError wrap(Throwable error, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		if (error instanceof LuaError) return (LuaError) error;
 		return new LuaError(error, allocTracker);
 	}
@@ -150,7 +150,7 @@ public final class LuaError extends Exception {
 		return value;
 	}
 
-	public void fillTraceback(LuaState state) {
+	public void fillTraceback(LuaState state) throws AllocationTracker.AvatarOOMException {
 		// TODO: Split this into two methods: one which adds the context, and one which computes the traceback.
 
 		if (traceback != null) return;
@@ -164,7 +164,7 @@ public final class LuaError extends Exception {
 			} else {
 				fileLine = DebugHelpers.fileLine(thread, level);
 			}
-			if (fileLine != null) value = ValueFactory.valueOf(fileLine + ": " + value.toString(), state.allocationTracker);
+			if (fileLine != null) value = LuaString.valueOf(state.allocationTracker, fileLine + ": " + value.toJavaString(state.allocationTracker));
 		}
 
 		traceback = getMessage() + "\n" + DebugHelpers.traceback(thread, level);
@@ -174,7 +174,7 @@ public final class LuaError extends Exception {
 		return switch (value.type()) {
 			case Constants.TTABLE, Constants.TUSERDATA, Constants.TLIGHTUSERDATA ->
 				value.typeName() + ": " + Integer.toHexString(value.hashCode());
-			default -> value.toString();
+			default -> value.toJavaStringNoAlloc();
 		};
 	}
 }

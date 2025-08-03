@@ -24,9 +24,10 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.TBOOLEAN;
+import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 
 /**
  * Extension of {@link LuaValue} which can hold a Java boolean as its value.
@@ -68,9 +69,19 @@ public final class LuaBoolean extends LuaValue {
 		value = b;
 	}
 
+	public static LuaBoolean valueOf(boolean b) {
+		return b ? TRUE : FALSE;
+	}
+
 	@Override
+	@Deprecated
 	public String toString() {
 		return value ? "true" : "false";
+	}
+
+	@Override
+	public String toJavaString(@Nullable AllocationTracker allocationTracker) {
+		return value ? "true" : "false"; // Strings interned
 	}
 
 	@Override
@@ -81,11 +92,6 @@ public final class LuaBoolean extends LuaValue {
 	@Override
 	public LuaTable getMetatable(LuaState state) {
 		return state.booleanMetatable;
-	}
-
-	@Override
-	public long count(MemoryCounter counter, int depth) {
-		return 0; // Don't worry about it, only 2 instances
 	}
 
 }

@@ -4,17 +4,15 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import org.figuramc.figura.avatars.AvatarComponent;
 import org.figuramc.figura.model.part.PartTransform;
-import org.figuramc.figura.model.part.PartLike;
+import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -43,7 +41,7 @@ public class VanillaRendering implements AvatarComponent<VanillaRendering> {
     }
 
     // Object accessible by scripts, interface to model part reading/writing.
-    public class VanillaPart extends MarkedObjectBase implements PartLike<VanillaPart> {
+    public class VanillaPart implements RiggedHierarchy<VanillaPart> {
 
         // ModelPart to which this is linked
         public final ModelPart part;
@@ -63,14 +61,14 @@ public class VanillaRendering implements AvatarComponent<VanillaRendering> {
                 storedVanillaPosition = new Vector3f();
 
         // Callbacks which run when the minecraft part is rendered
-        public final ArrayList<ScriptCallback> vanillaRenderCallbacks = new ArrayList<>(0);
+        public final ArrayList<ScriptCallback<CallbackItem.Unit, CallbackItem.Unit>> vanillaRenderCallbacks = new ArrayList<>(0);
 
         // Getter for component
         public VanillaRendering getComponent() {
             return VanillaRendering.this;
         }
 
-        // Implement transformable
+        // Implement RiggedHierarchy
         @Override
         public PartTransform getTransform() {
             return figuraTransform;
@@ -81,16 +79,6 @@ public class VanillaRendering implements AvatarComponent<VanillaRendering> {
             ModelPart vanillaChild = part.children.get(name);
             if (vanillaChild == null) return null;
             return VanillaRendering.this.partMap.get(vanillaChild);
-        }
-
-        // Since ScriptVanillaPart objects just point to Minecraft's ModelPart,
-        // their memory usage is constant aside from the callbacks.
-        @Override
-        protected long traceNoMark(MemoryCounter counter, int depth) {
-            counter.trace(figuraTransform, depth);
-            for (ScriptCallback callback : vanillaRenderCallbacks)
-                counter.trace(callback, depth);
-            return 60 + vanillaRenderCallbacks.size() * POINTER_SIZE;
         }
     }
 

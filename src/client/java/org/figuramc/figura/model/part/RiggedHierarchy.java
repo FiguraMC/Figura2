@@ -3,14 +3,14 @@ package org.figuramc.figura.model.part;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Something that acts somewhat like a model part, including FiguraModelPart and VanillaModel.Part.
- * This allows for code re-use.
+ * A tree of T, where each element can be transformed. This allows animations to bind to it.
+ * This allows for code re-use between FiguraModelPart and VanillaPart.
  * Operations:
  * - The thing must have a transform
  * - It must optionally be able to get its descendants by name (This is for binding animations to it)
  * @param <T> Must be this type itself!
  */
-public interface PartLike<T extends PartLike<T>> {
+public interface RiggedHierarchy<T extends RiggedHierarchy<T>> {
     // The object has a transform
     PartTransform getTransform();
     // Get child with given name, if any
@@ -21,7 +21,7 @@ public interface PartLike<T extends PartLike<T>> {
     // If there is no part at the given path, return null.
     @SuppressWarnings("unchecked") // Cast will succeed if the implementor successfully set T = implementor
     default @Nullable T getDescendantWithPath(String path) {
-        PartLike<T> part = this;
+        RiggedHierarchy<T> part = this;
         // TODO maybe optimize this?
         for (String pathElement : path.split("/")) {
             part = part.getChildByName(pathElement);

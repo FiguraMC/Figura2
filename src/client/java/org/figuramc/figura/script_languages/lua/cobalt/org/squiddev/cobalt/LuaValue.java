@@ -24,11 +24,12 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoreLibraries;
+import org.jetbrains.annotations.Nullable;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.*;
 
@@ -97,7 +98,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * @see LoadState
  * @see Varargs
  */
-public abstract class LuaValue extends Varargs implements MemoryCountable {
+public abstract class LuaValue extends Varargs {
 	private final int type;
 
 	protected LuaValue(int type) {
@@ -257,9 +258,25 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see Constants#TSTRING
 	 */
 	@Override
+	@Deprecated // This can't handle allocation tracking; use a different function that can!
 	public String toString() {
 		return ErrorFactory.typeName(null, this) + ": " + Integer.toHexString(hashCode());
 	}
+
+	public String toJavaString(@Nullable AllocationTracker allocationTracker) throws AllocationTracker.AvatarOOMException {
+		String s = toString();
+		if (allocationTracker != null) allocationTracker.allocate(s, s.length() * Character.BYTES);
+		return s;
+	}
+
+	public String toJavaStringNoAlloc() {
+		try {
+			return toJavaString(null);
+		} catch (AllocationTracker.AvatarOOMException impossible) {
+			throw new IllegalStateException("Should never happen, contact Figura devs!", impossible);
+		}
+	}
+
 
 	/**
 	 * Conditionally convert to lua number without throwing errors.
@@ -305,7 +322,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkLuaString()
 	 * @see #toString()
 	 */
-	public LuaValue toLuaString(LuaState state) {
+	public LuaValue toLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
 		return Constants.NIL;
 	}
 
@@ -320,7 +337,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkBoolean()
 	 * @see Constants#TBOOLEAN
 	 */
-	public final boolean optBoolean(LuaState state, boolean defval) throws LuaError {
+	public final boolean optBoolean(LuaState state, boolean defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkBoolean(state);
 	}
 
@@ -339,7 +356,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final double optDouble(LuaState state, double defval) throws LuaError {
+	public final double optDouble(LuaState state, double defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkDouble(state);
 	}
 
@@ -359,7 +376,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkFunction()
 	 * @see Constants#TFUNCTION
 	 */
-	public final LuaFunction optFunction(LuaState state, LuaFunction defval) throws LuaError {
+	public final LuaFunction optFunction(LuaState state, LuaFunction defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkFunction(state);
 	}
 
@@ -379,7 +396,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final int optInteger(LuaState state, int defval) throws LuaError {
+	public final int optInteger(LuaState state, int defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkInteger(state);
 	}
 
@@ -399,7 +416,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final long optLong(LuaState state, long defval) throws LuaError {
+	public final long optLong(LuaState state, long defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkLong(state);
 	}
 
@@ -420,7 +437,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isNumber()
 	 * @see Constants#TNUMBER
 	 */
-	public final LuaNumber optNumber(LuaState state, LuaNumber defval) throws LuaError {
+	public final LuaNumber optNumber(LuaState state, LuaNumber defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkNumber(state);
 	}
 
@@ -438,7 +455,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final String optString(LuaState state, String defval) throws LuaError {
+	public final String optString(LuaState state, String defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkString(state);
 	}
 
@@ -456,7 +473,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #toString()
 	 * @see Constants#TSTRING
 	 */
-	public final LuaString optLuaString(LuaState state, LuaString defval) throws LuaError {
+	public final LuaString optLuaString(LuaState state, LuaString defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkLuaString(state);
 	}
 
@@ -471,7 +488,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #checkTable()
 	 * @see Constants#TTABLE
 	 */
-	public final LuaTable optTable(LuaState state, LuaTable defval) throws LuaError {
+	public final LuaTable optTable(LuaState state, LuaTable defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkTable(state);
 	}
 
@@ -487,11 +504,11 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isThread()
 	 * @see Constants#TTHREAD
 	 */
-	public final LuaThread optThread(LuaState state, LuaThread defval) throws LuaError {
+	public final LuaThread optThread(LuaState state, LuaThread defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkThread(state);
 	}
 
-	public final <T> T optUserdata(LuaState state, Class<T> targetClass, T defval) throws LuaError {
+	public final <T> T optUserdata(LuaState state, Class<T> targetClass, T defval) throws LuaError, AllocationTracker.AvatarOOMException {
 		return this == NIL ? defval : checkUserdata(state, targetClass);
 	}
 
@@ -519,7 +536,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optBoolean(boolean)
 	 * @see Constants#TBOOLEAN
 	 */
-	public boolean checkBoolean(LuaState state) throws LuaError {
+	public boolean checkBoolean(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "boolean");
 	}
 
@@ -537,7 +554,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optDouble(double)
 	 * @see Constants#TNUMBER
 	 */
-	public double checkDouble(LuaState state) throws LuaError {
+	public double checkDouble(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -552,11 +569,11 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @return {@code this} if if a lua function or closure
 	 * @throws LuaError if not a function
 	 */
-	public LuaFunction checkFunction(LuaState state) throws LuaError {
+	public LuaFunction checkFunction(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "function");
 	}
 
-	public LuaFunction checkFunction(LuaState state, String message) throws LuaError {
+	public LuaFunction checkFunction(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -574,7 +591,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optInteger(int)
 	 * @see Constants#TNUMBER
 	 */
-	public int checkInteger(LuaState state) throws LuaError {
+	public int checkInteger(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -592,7 +609,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optLong(long)
 	 * @see Constants#TNUMBER
 	 */
-	public long checkLong(LuaState state) throws LuaError {
+	public long checkLong(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -609,7 +626,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber(LuaState state) throws LuaError {
+	public LuaNumber checkNumber(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "number");
 	}
 
@@ -627,7 +644,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optNumber(LuaNumber)
 	 * @see Constants#TNUMBER
 	 */
-	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError {
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw new LuaError(msg, state.allocationTracker);
 	}
 
@@ -646,10 +663,10 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isString
 	 * @see Constants#TSTRING
 	 */
-	public String checkString(LuaState state) throws LuaError {
+	public String checkString(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "string");
 	}
-	public String checkString(LuaState state, String message) throws LuaError {
+	public String checkString(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -668,7 +685,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #isString()
 	 * @see Constants#TSTRING
 	 */
-	public LuaString checkLuaString(LuaState state) throws LuaError {
+	public LuaString checkLuaString(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "string");
 	}
 
@@ -680,11 +697,11 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optTable(LuaTable)
 	 * @see Constants#TTABLE
 	 */
-	public LuaTable checkTable(LuaState state) throws LuaError {
+	public LuaTable checkTable(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "table");
 	}
 
-	public LuaTable checkTable(LuaState state, String message) throws LuaError {
+	public LuaTable checkTable(LuaState state, String message) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw new LuaError(message, state.allocationTracker);
 	}
 
@@ -697,12 +714,12 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @see #optThread(LuaThread)
 	 * @see Constants#TTHREAD
 	 */
-	public LuaThread checkThread(LuaState state) throws LuaError {
+	public LuaThread checkThread(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "thread");
 	}
 
 	// Check that this is a userdata wrapping a T, and return that T.
-	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError {
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "userdata(" + targetClass.getSimpleName() + ")");
 	}
 
@@ -754,7 +771,7 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 	 * @param metatable {@link LuaValue} instance to serve as the metatable, or null to reset it.
 	 * @throws LuaError If the metatable cannot be set.
 	 */
-	public void setMetatable(LuaState state, LuaTable metatable) throws LuaError {
+	public void setMetatable(LuaState state, LuaTable metatable) throws LuaError, AllocationTracker.AvatarOOMException {
 		throw ErrorFactory.argError(state, this, "table");
 	}
 
@@ -831,6 +848,11 @@ public abstract class LuaValue extends Varargs implements MemoryCountable {
 		public void fill(LuaValue[] array, int offset) {
 			System.arraycopy(v, 0, array, offset, v.length);
 			r.fill(array, offset + v.length);
+		}
+
+		@Override
+		public LuaValue[] toArray() {
+			return v;
 		}
 	}
 

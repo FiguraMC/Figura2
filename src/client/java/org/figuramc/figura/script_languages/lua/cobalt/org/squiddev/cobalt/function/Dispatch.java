@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
@@ -13,58 +14,58 @@ public final class Dispatch {
 	private Dispatch() {
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return call(state, function, -1);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, int stack) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function instanceof LuaFunction func
 			? callImpl(state, func)
 			: callImpl(state, getCallMetamethod(state, function, stack), function);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return call(state, function, arg, -1);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg, int stack) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function instanceof LuaFunction func
 			? callImpl(state, func, arg)
 			: callImpl(state, getCallMetamethod(state, function, stack), function, arg);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return call(state, function, arg1, arg2, -1);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, int stack) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function instanceof LuaFunction func
 			? callImpl(state, func, arg1, arg2)
 			: callImpl(state, getCallMetamethod(state, function, stack), function, arg1, arg2);
 
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return call(state, function, arg1, arg2, arg3, -1);
 	}
 
-	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, LuaValue arg3, int stack) throws LuaError, UnwindThrowable {
+	public static LuaValue call(LuaState state, LuaValue function, LuaValue arg1, LuaValue arg2, LuaValue arg3, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function instanceof LuaFunction func
 			? callImpl(state, func, arg1, arg2, arg3)
 			: invokeImpl(state, getCallMetamethod(state, function, stack), ValueFactory.varargsOf(function, arg1, arg2, arg3)).first();
 	}
 
-	public static Varargs invoke(LuaState state, LuaValue function, Varargs args) throws LuaError, UnwindThrowable {
+	public static Varargs invoke(LuaState state, LuaValue function, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return invoke(state, function, args, -1);
 	}
 
-	public static Varargs invoke(LuaState state, LuaValue function, Varargs args, int stack) throws LuaError, UnwindThrowable {
+	public static Varargs invoke(LuaState state, LuaValue function, Varargs args, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return function instanceof LuaFunction func
 			? invokeImpl(state, func, args)
 			: invokeImpl(state, getCallMetamethod(state, function, stack), ValueFactory.varargsOf(function, args));
 	}
 
-	private static LuaValue callImpl(LuaState state, LuaFunction function) throws UnwindThrowable, LuaError {
+	private static LuaValue callImpl(LuaState state, LuaFunction function) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		DebugState ds = DebugState.get(state);
 		DebugFrame di = ds.pushJavaInfo();
 
@@ -87,7 +88,7 @@ public final class Dispatch {
 		return result;
 	}
 
-	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1) throws UnwindThrowable, LuaError {
+	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		DebugState ds = DebugState.get(state);
 		DebugFrame di = ds.pushJavaInfo();
 
@@ -110,7 +111,7 @@ public final class Dispatch {
 		return result;
 	}
 
-	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1, LuaValue arg2) throws UnwindThrowable, LuaError {
+	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1, LuaValue arg2) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		DebugState ds = DebugState.get(state);
 		DebugFrame di = ds.pushJavaInfo();
 
@@ -133,7 +134,7 @@ public final class Dispatch {
 		return result;
 	}
 
-	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws UnwindThrowable, LuaError {
+	private static LuaValue callImpl(LuaState state, LuaFunction function, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		DebugState ds = DebugState.get(state);
 		DebugFrame di = ds.pushJavaInfo();
 
@@ -156,7 +157,7 @@ public final class Dispatch {
 		return result;
 	}
 
-	private static Varargs invokeImpl(LuaState state, LuaFunction function, Varargs args) throws UnwindThrowable, LuaError {
+	private static Varargs invokeImpl(LuaState state, LuaFunction function, Varargs args) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		DebugState ds = DebugState.get(state);
 		DebugFrame di = ds.pushJavaInfo();
 
@@ -179,7 +180,7 @@ public final class Dispatch {
 		return result;
 	}
 
-	public static Varargs invokeFrame(LuaState state, DebugFrame frame) throws UnwindThrowable, LuaError {
+	public static Varargs invokeFrame(LuaState state, DebugFrame frame) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		var function = frame.func;
 		return function instanceof LuaInterpretedFunction c
 			? LuaInterpreter.execute(state, frame, c)
@@ -195,7 +196,7 @@ public final class Dispatch {
 	 * @return The function to invoke.
 	 * @throws LuaError If there is no metamethod.
 	 */
-	public static LuaFunction getCallMetamethod(LuaState state, LuaValue value, int stack) throws LuaError {
+	public static LuaFunction getCallMetamethod(LuaState state, LuaValue value, int stack) throws LuaError, AllocationTracker.AvatarOOMException {
 		assert !(value instanceof LuaFunction);
 
 		LuaValue func = value.metatag(state, Constants.CALL);

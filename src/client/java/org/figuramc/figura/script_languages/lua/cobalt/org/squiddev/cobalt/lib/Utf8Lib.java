@@ -1,12 +1,12 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.RegisteredFunction;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NIL;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NONE;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 public final class Utf8Lib {
@@ -16,7 +16,7 @@ public final class Utf8Lib {
 	/**
 	 * [\0-\x7F\xC2-\xF4][\x80-\xBF]*
 	 */
-	private static final LuaString PATTERN = valueOf(new byte[]{
+	private static final LuaString PATTERN = LuaString.valueOfNoCopy(new byte[]{
 		'[', 0x00, '-', 0x7f, (byte) 0xc2, '-', (byte) 0xf4, ']', '[', (byte) 0x80, '-', (byte) 0xbf, ']', '*',
 	});
 
@@ -29,7 +29,7 @@ public final class Utf8Lib {
 	private Utf8Lib() {
 	}
 
-	public static void add(LuaState state, LuaTable env) throws LuaError {
+	public static void add(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		var self = new Utf8Lib();
 		self.codesIter = RegisteredFunction.ofV("utf8.codesIter", Utf8Lib::codesIter).create();
 
@@ -43,7 +43,7 @@ public final class Utf8Lib {
 		});
 		t.rawset("charpattern", PATTERN);
 
-		LibFunction.setGlobalLibrary(state, env, "utf8", t);
+		LibFunction.setGlobalLibrary(state, "utf8", t);
 	}
 
 	public static int buildCharacter(byte[] buffer, long codepoint) {
@@ -58,7 +58,7 @@ public final class Utf8Lib {
 		return j;
 	}
 
-	private static LuaValue char$(LuaState state, Varargs args) throws LuaError {
+	private static LuaValue char$(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		Buffer sb = new Buffer(args.count(), state.allocationTracker);
 		byte[] buffer = null;
 		for (int i = 1, n = args.count(); i <= n; i++) {
@@ -79,11 +79,11 @@ public final class Utf8Lib {
 		return sb.toLuaString();
 	}
 
-	private Varargs codes(LuaState state, Varargs args) throws LuaError {
-		return varargsOf(codesIter, args.arg(1).checkLuaString(state), valueOf(0));
+	private Varargs codes(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
+		return varargsOf(codesIter, args.arg(1).checkLuaString(state), LuaInteger.valueOf(0));
 	}
 
-	private static Varargs codepoint(LuaState state, Varargs args) throws LuaError {
+	private static Varargs codepoint(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaString s = args.arg(1).checkLuaString(state);
 		int length = s.length();
 		int i = posRelative(args.arg(2).optInteger(state, 1), length);
@@ -106,7 +106,7 @@ public final class Utf8Lib {
 		return ValueFactory.varargsOfCopy(codepoints, 0, n);
 	}
 
-	private static Varargs len(LuaState state, Varargs args) throws LuaError {
+	private static Varargs len(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaString s = args.arg(1).checkLuaString(state);
 		int len = s.length();
 		int i = posRelative(args.arg(2).optInteger(state, 1), len) - 1;
@@ -119,16 +119,16 @@ public final class Utf8Lib {
 		IntBuffer offset = new IntBuffer();
 		while (i <= j) {
 			long codepoint = decodeUtf8(s, i, offset);
-			if (codepoint < 0) return varargsOf(NIL, valueOf(i + 1));
+			if (codepoint < 0) return varargsOf(NIL, LuaInteger.valueOf(i + 1));
 
 			n++;
 			i += offset.value;
 		}
 
-		return valueOf(n);
+		return LuaInteger.valueOf(n);
 	}
 
-	private static LuaValue offset(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
+	private static LuaValue offset(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaString s = arg1.checkLuaString(state);
 		int n = arg2.checkInteger(state);
 
@@ -160,7 +160,7 @@ public final class Utf8Lib {
 			}
 		}
 
-		return n == 0 ? valueOf(position + 1) : NIL;
+		return n == 0 ? LuaInteger.valueOf(position + 1) : NIL;
 	}
 
 	private static long decodeUtf8(LuaString str, int index, IntBuffer offset) {
@@ -205,7 +205,7 @@ public final class Utf8Lib {
 	/*
 	 * An iterator for use in implementing utf8.codes.
 	 */
-	private static Varargs codesIter(LuaState state, Varargs args) throws LuaError {
+	private static Varargs codesIter(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		// Arg 1: invariant state (the string)
 		// Arg 2: byte offset + 1
 		// Returns: byte offset + 1, code point
@@ -223,7 +223,7 @@ public final class Utf8Lib {
 		} else {
 			long codepoint = decodeUtf8(s, idx, off);
 			if (codepoint == -1 || isCont(s, idx + off.value)) throw new LuaError("invalid UTF-8 code", state.allocationTracker);
-			return varargsOf(valueOf(idx + 1), LuaInteger.valueOf(codepoint));
+			return varargsOf(LuaInteger.valueOf(idx + 1), LuaInteger.valueOf(codepoint));
 		}
 	}
 

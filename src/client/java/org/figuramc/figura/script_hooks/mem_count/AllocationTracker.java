@@ -1,58 +1,127 @@
 package org.figuramc.figura.script_hooks.mem_count;
 
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
+import org.figuramc.figura.FiguraMod;
+import org.figuramc.figura.avatars.AvatarError;
+
+import java.lang.ref.Cleaner;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A class which tracks allocations made by an Avatar, and keeps an eye on memory usage.
  * An instance of this will be known by a lot of locations, and nullable.
  * If the AllocationTracker is null, that indicates the allocation should not be tracked.
+ * <p>
+ * Because GC is unpredictable, we can't be exactly sure how much memory is used/reachable
+ * at any given time. Instead, we'll use a "grace period" to reduce the likelihood of scripts
+ * being punished wrongly.
+ * Each AllocationTracker has a maximum allowed amount, but it also has two grace values.
+ * Say that we give our tracker 500 MB, but also a grace period of 3 seconds and 100 MB.
+ * In this case, when memory goes above 500, we'll run System.gc().
+ * This *should* cause references to be cleared/enqueued soon, on most popular JVMs, making them eligible for cleaning.
+ * Then, we'll wait 3 seconds, for the phantom references to hopefully be processed in the off-thread.
+ * If, after 3 seconds, we're still above 500, we'll error out.
+ * To prevent people from overallocating and abusing the grace period, if at any point memory goes above 600, we immediately error.
+ * The grace period parameters, particularly the time, may need to be tuned.
  */
 public class AllocationTracker {
 
-    // The current amount of memory thought to be allocated
-    private long totalAllocated;
+    // The cleaner used for tracking allocation amounts.
+    private static final Cleaner ALLOC_CLEANER = Cleaner.create();
+
+    // The current amount of memory thought to be reachable by the tracker.
+    // This is atomic, because many threads can mess with it at once, including allocators incrementing it through the tracker,
+    // and objects being cleaned clearing it as well.
+    // Calling System.gc() *should* update this value and decrease it, if any unreachable objects are GC'ed by that call.
+    private final AtomicLong totalAllocated;
     // The maximum allocation before an error (or trace) occurs
-    private long maxAllocation;
+    private final long maxAllocation;
+    // Grace period time in nanoseconds
+    private final long gracePeriodNanos;
+    // Max allocation, plus the grace period extra memory
+    private final long trueMaxAllocation;
+    // Timestamp when the grace period began, or -1 if the grace period is not active.
+    private long gracePeriodBegan;
 
-    // The roots which will be traced when memory fills up.
-    private final Set<MemoryCountable> roots = Collections.newSetFromMap(new IdentityHashMap<>());
-
-    // Create a new tracker with the given maximum bytes.
-    public AllocationTracker(long maxAllocation) {
+    // Create a new tracker with the given maximum bytes and grace period stats.
+    // To have a tracker with no grace, set gracePeriodExtraSpace to 0 (the nanos won't matter in this case)
+    public AllocationTracker(int maxAllocation, long gracePeriodNanos, int gracePeriodExtraSpace) {
+        this.totalAllocated = new AtomicLong(0);
         this.maxAllocation = maxAllocation;
+        this.gracePeriodNanos = gracePeriodNanos;
+        this.trueMaxAllocation = (long) maxAllocation + (long) gracePeriodExtraSpace;
+        this.gracePeriodBegan = -1;
     }
 
-    // Set the maximum allocation, and re-trace if necessary.
-    public void setMaxAllocation(long maxAllocation) {
-        this.maxAllocation = maxAllocation;
-        if (maxAllocation < totalAllocated) trace(0);
+    // Allocate the given amount for the given Object.
+    // Returns a State object, which can optionally be increased/decreased in size.
+    public State allocate(Object obj, int amount) throws AvatarOOMException {
+        State state = new State(amount);
+        incrementMemory(amount);
+        ALLOC_CLEANER.register(obj, state);
+        return state;
     }
 
-    // Add a new object as a root.
-    // TODO, maybe trace object and verify below max?
-    public void addRoot(MemoryCountable countable) {
-        this.roots.add(countable);
+    // Increment memory by the given amount, and prepare to error if we're beyond our cap.
+    private void incrementMemory(int amount) throws AvatarOOMException {
+        // Get the new amount allocated:
+        long newAmountAllocated = totalAllocated.addAndGet(amount);
+        FiguraMod.LOGGER.info("Allocated {} bytes. Current usage: {} bytes", amount, newAmountAllocated);
+        // If we're above the regular cap:
+        if (newAmountAllocated > maxAllocation) {
+            // If we're above the true cap, error right away.
+            if (newAmountAllocated > trueMaxAllocation) {
+                throw new AvatarOOMException();
+            } else if (gracePeriodBegan == -1) {
+                // If we're not currently in the grace period, begin the grace period.
+                System.gc(); // Trigger a System.gc()
+                gracePeriodBegan = System.nanoTime();
+            } else if (System.nanoTime() - gracePeriodBegan >= gracePeriodNanos) {
+                // If the grace period has ended, but we're still above the max allocation, error out.
+                throw new AvatarOOMException();
+            }
+        } else {
+            // If we're not above the cap, reset the grace period.
+            gracePeriodBegan = -1;
+        }
     }
 
-    // Allocates the given amount of memory, incrementing totalAllocated.
-    // If totalAllocated goes beyond maxAllocated, trace roots.
-    public void allocate(long amount) {
-        totalAllocated += amount;
-        if (totalAllocated > maxAllocation) trace(amount);
+    // Cleaner state object.
+    // When allocating an object with a particular known size, create a State with that size, and register it.
+    // When creating the state, we increment the current amount of memory allocated.
+    // When the state is run (the object is cleaned), we decrement the amount of memory allocated.
+    public class State implements Runnable {
+
+        private int memoryReserved; // The amount of memory reserved by this
+
+        public State(int memoryReserved) {
+            this.memoryReserved = memoryReserved;
+        }
+
+        // Modify the amount of memory used by this allocation.
+        public void changeSize(int change) throws AvatarOOMException {
+            if (change > 0) {
+                // The allocation got bigger, increment memory
+                memoryReserved += change;
+                AllocationTracker.this.incrementMemory(change);
+            } else if (change < 0) {
+                // The allocation got smaller, decrement memory
+                memoryReserved += change;
+                // Decrementing memory can't cause a problem, so do it directly
+                AllocationTracker.this.totalAllocated.getAndAdd(change);
+            }
+        }
+
+        @Override
+        public void run() {
+            AllocationTracker.this.totalAllocated.getAndAdd(-memoryReserved);
+        }
     }
 
-    // Trace roots to find the actual amount of allocation.
-    // If the result of tracing roots is beyond maxAllocated, error.
-    // Otherwise, reset totalAllocated down to the actual allocated amount.
-    // TODO... maybe handle overflows? Overflows should never happen in this
-    //         case with a long, though, and we need this to be FAST.
-    private void trace(long newAllocation) {
-        long actualAllocated = MemoryCounter.countBytes(this.roots) + newAllocation;
-        if (actualAllocated > maxAllocation)
-            throw new RuntimeException("Allocation limit of " + maxAllocation + " bytes exceeded"); // TODO better error
-        totalAllocated = actualAllocated;
+    public static class AvatarOOMException extends AvatarError {
+        public AvatarOOMException() {
+            super("figura.error.out_of_memory");
+        }
     }
+
 
 }

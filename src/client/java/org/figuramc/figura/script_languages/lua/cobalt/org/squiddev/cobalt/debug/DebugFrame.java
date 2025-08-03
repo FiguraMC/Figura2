@@ -24,10 +24,11 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Each thread will get a DebugState attached to it by the debug library
@@ -151,7 +152,7 @@ public final class DebugFrame {
 
 	public final DebugFrame previous;
 
-	private static final LuaString TEMPORARY = ValueFactory.valueOf("(*temporary)", null);
+	private static final LuaString TEMPORARY = LuaString.valueOfNoAlloc("(*temporary)");
 
 	public Varargs varargs, extras;
 	public int pc = -1, oldPc = -1, top = -1;
@@ -230,7 +231,7 @@ public final class DebugFrame {
 	 *
 	 * @return This function's kind
 	 */
-	public @Nullable ObjectName getFuncKind() {
+	public @Nullable ObjectName getFuncKind() throws AllocationTracker.AvatarOOMException {
 		DebugFrame previous = this.previous;
 		if ((flags & FLAG_TAIL) != 0) return null;
 

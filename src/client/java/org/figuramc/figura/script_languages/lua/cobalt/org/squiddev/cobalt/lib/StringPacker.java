@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.varargsOf;
 
 class StringPacker {
@@ -28,15 +27,15 @@ class StringPacker {
 			this.allocTracker = allocTracker;
 		}
 
-		void ensure(int bytes) {
+		void ensure(int bytes) throws AllocationTracker.AvatarOOMException {
 			if (output == null) {
 				int len = Math.max(32, bytes);
-				if (allocTracker != null) allocTracker.allocate(len);
 				output = new byte[len];
+				if (allocTracker != null) allocTracker.allocate(output, len);
 			} else if (offset + bytes > output.length) {
 				int len = Math.max(output.length * 2, offset + bytes);
-				if (allocTracker != null) allocTracker.allocate(len);
 				output = Arrays.copyOf(output, len);
+				if (allocTracker != null) allocTracker.allocate(output, output.length);
 			}
 		}
 
@@ -104,7 +103,7 @@ class StringPacker {
 		return result;
 	}
 
-	public static int getNumLimit(Info info, int def) throws LuaError {
+	public static int getNumLimit(Info info, int def) throws LuaError, AllocationTracker.AvatarOOMException {
 		int size = getNum(info, def);
 		if (size <= 0 || size > 16) {
 			throw new LuaError(String.format("integral size (%d) out of limits [1,16]", size), info.allocTracker);
@@ -113,7 +112,7 @@ class StringPacker {
 		return size;
 	}
 
-	public static Mode getOption(Info info) throws LuaError {
+	public static Mode getOption(Info info) throws LuaError, AllocationTracker.AvatarOOMException {
 		byte c = info.string.byteAt(info.position++);
 		return switch (c) {
 			case 'b' -> info.setup(1, Mode.INT);
@@ -156,7 +155,7 @@ class StringPacker {
 		};
 	}
 
-	public static Mode getDetails(Info info, int outPosition) throws LuaError {
+	public static Mode getDetails(Info info, int outPosition) throws LuaError, AllocationTracker.AvatarOOMException {
 		Mode mode = getOption(info);
 		int align = info.size;
 		if (mode == Mode.PADD_ALIGN) {
@@ -182,7 +181,7 @@ class StringPacker {
 		return mode;
 	}
 
-	private static void packInt(Buffer buffer, long num, boolean littleEndian, int size, boolean neg) {
+	private static void packInt(Buffer buffer, long num, boolean littleEndian, int size, boolean neg) throws AllocationTracker.AvatarOOMException {
 		buffer.ensure(size);
 		byte[] output = buffer.output;
 		int offset = buffer.offset;
@@ -205,7 +204,7 @@ class StringPacker {
 	 * Returns a binary string containing the values v1, v2, etc.
 	 * serialized in binary form (packed) according to the format string fmt.
 	 */
-	static LuaValue pack(LuaState state, Varargs args) throws LuaError {
+	static LuaValue pack(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaString fmt = args.arg(1).checkLuaString(state);
 
 		Info info = new Info(fmt, state.allocationTracker);
@@ -305,7 +304,7 @@ class StringPacker {
 	 * Returns the size of a string resulting from string.pack with the given format.
 	 * The format string cannot have the variable-length options 's' or 'z'.
 	 */
-	static long packsize(LuaString fmt, @Nullable AllocationTracker allocTracker) throws LuaError {
+	static long packsize(LuaString fmt, @Nullable AllocationTracker allocTracker) throws LuaError, AllocationTracker.AvatarOOMException {
 		int size = 0;
 		Info info = new Info(fmt, allocTracker);
 		while (info.position < info.end) {
@@ -323,7 +322,7 @@ class StringPacker {
 		return size;
 	}
 
-	private static long unpackInt(LuaString str, int offset, boolean isLittle, int size, boolean signed, @Nullable AllocationTracker allocTracker) throws LuaError {
+	private static long unpackInt(LuaString str, int offset, boolean isLittle, int size, boolean signed, @Nullable AllocationTracker allocTracker) throws LuaError, AllocationTracker.AvatarOOMException {
 		long res = 0;
 		int limit = Math.min(size, SIZE_LONG);
 		for (int i = limit - 1; i >= 0; i--) {
@@ -355,7 +354,7 @@ class StringPacker {
 	 * An optional pos marks where to start reading in s (default is 1).
 	 * After the read values, this function also returns the index of the first unread byte in s.
 	 */
-	static Varargs unpack(LuaState state, Varargs args) throws LuaError {
+	static Varargs unpack(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaString fmt = args.arg(1).checkLuaString(state);
 		LuaString str = args.arg(2).checkLuaString(state);
 		int pos = StringLib.posRelative(args.arg(3).optInteger(state, 1), str.length()) - 1;
@@ -380,19 +379,19 @@ class StringPacker {
 				case INT:
 				case UINT: {
 					long value = unpackInt(str, pos, info.isLittle, info.size, mode == Mode.INT, state.allocationTracker);
-					out.add(valueOf(value));
+					out.add(LuaDouble.valueOf(value));
 					break;
 				}
 				case FLOAT: {
 					long bits = unpackInt(str, pos, info.isLittle, info.size, false, state.allocationTracker);
 					float value = Float.intBitsToFloat((int) bits);
-					out.add(valueOf(value));
+					out.add(LuaDouble.valueOf(value));
 					break;
 				}
 				case DOUBLE: {
 					long bits = unpackInt(str, pos, info.isLittle, info.size, false, state.allocationTracker);
 					double value = Double.longBitsToDouble(bits);
-					out.add(valueOf(value));
+					out.add(LuaDouble.valueOf(value));
 					break;
 				}
 				case CHAR:
@@ -420,7 +419,7 @@ class StringPacker {
 			pos += info.size;
 		}
 
-		out.add(valueOf(pos + 1));
+		out.add(LuaInteger.valueOf(pos + 1));
 		return varargsOf(out);
 	}
 }

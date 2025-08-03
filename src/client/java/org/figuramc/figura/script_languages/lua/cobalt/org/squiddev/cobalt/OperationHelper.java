@@ -46,7 +46,7 @@ public final class OperationHelper {
 	}
 
 	//region Binary
-	public static LuaValue add(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue add(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		double dLeft, dRight;
 		if (checkNumber(left, dLeft = left.toDouble()) && checkNumber(right, dRight = right.toDouble())) {
 			return valueOf(dLeft + dRight);
@@ -55,7 +55,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static LuaValue sub(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue sub(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		double dLeft, dRight;
 		if (checkNumber(left, dLeft = left.toDouble()) && checkNumber(right, dRight = right.toDouble())) {
 			return valueOf(dLeft - dRight);
@@ -64,7 +64,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static LuaValue mul(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue mul(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (left instanceof LuaInteger l && right instanceof LuaInteger r) {
 			return valueOf((long) l.intValue() * (long) r.intValue());
 		}
@@ -77,7 +77,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static LuaValue div(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue div(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		double dLeft, dRight;
 		if (checkNumber(left, dLeft = left.toDouble()) && checkNumber(right, dRight = right.toDouble())) {
 			return valueOf(div(dLeft, dRight));
@@ -86,7 +86,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static LuaValue mod(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue mod(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		double dLeft, dRight;
 		if (checkNumber(left, dLeft = left.toDouble()) && checkNumber(right, dRight = right.toDouble())) {
 			return valueOf(mod(dLeft, dRight));
@@ -95,7 +95,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static LuaValue pow(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static LuaValue pow(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		double dLeft, dRight;
 		if (checkNumber(left, dLeft = left.toDouble()) && checkNumber(right, dRight = right.toDouble())) {
 			return valueOf(Math.pow(dLeft, dRight));
@@ -142,7 +142,7 @@ public final class OperationHelper {
 	 * @throws LuaError        if metatag was not defined for either operand or the underlying operator errored.
 	 * @throws UnwindThrowable If calling the metatable function yielded.
 	 */
-	private static LuaValue arithMetatable(LuaState state, LuaValue tag, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	private static LuaValue arithMetatable(LuaState state, LuaValue tag, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return Dispatch.call(state, getMetatable(state, tag, left, right), left, right);
 	}
 
@@ -159,7 +159,7 @@ public final class OperationHelper {
 	 * @return {@link LuaValue} resulting from metatag processing
 	 * @throws LuaError if metatag was not defined for either operand
 	 */
-	private static LuaValue getMetatable(LuaState state, LuaValue tag, LuaValue left, LuaValue right) throws LuaError {
+	private static LuaValue getMetatable(LuaState state, LuaValue tag, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue h = left.metatag(state, tag);
 		if (!h.isNil()) return h;
 
@@ -170,7 +170,7 @@ public final class OperationHelper {
 		throw createArithmeticError(state, left, right);
 	}
 
-	private static LuaError createArithmeticError(LuaState state, LuaValue left, LuaValue right) {
+	private static LuaError createArithmeticError(LuaState state, LuaValue left, LuaValue right) throws AllocationTracker.AvatarOOMException {
 		// Read the current instruction and try to determine the registers involved. This allows us to avoid passing the
 		// registers from the interpreter to here.
 		// PUC Lua just does this by searching the stack for the given value, but that's not possible for us :(
@@ -202,7 +202,7 @@ public final class OperationHelper {
 		return ErrorFactory.operandError(state, value, "perform arithmetic on", stack);
 	}
 
-	public static LuaValue concatNonStrings(LuaState state, LuaValue left, LuaValue right, int leftStack, int rightStack) throws LuaError, UnwindThrowable {
+	public static LuaValue concatNonStrings(LuaState state, LuaValue left, LuaValue right, int leftStack, int rightStack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaValue h = left.metatag(state, Constants.CONCAT);
 		if (h.isNil() && (h = right.metatag(state, Constants.CONCAT)).isNil()) {
 			if (left.isString()) {
@@ -217,7 +217,7 @@ public final class OperationHelper {
 	//endregion
 
 	//region Compare
-	public static boolean lt(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static boolean lt(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int tLeft = left.type();
 		if (tLeft != right.type()) {
 			throw ErrorFactory.compareError(state, left, right);
@@ -237,7 +237,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static boolean le(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static boolean le(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int tLeft = left.type();
 		if (tLeft != right.type()) {
 			throw ErrorFactory.compareError(state, left, right);
@@ -268,7 +268,7 @@ public final class OperationHelper {
 		}
 	}
 
-	public static boolean eq(LuaState state, LuaValue left, LuaValue right) throws LuaError, UnwindThrowable {
+	public static boolean eq(LuaState state, LuaValue left, LuaValue right) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int tLeft = left.type();
 		if (tLeft != right.type()) return false;
 
@@ -305,7 +305,7 @@ public final class OperationHelper {
 	 * @throws LuaError        If {@code value} is not a table or string, and has no {@link Constants#LEN} metatag
 	 * @throws UnwindThrowable If the {@code __len} metamethod yielded.
 	 */
-	public static LuaValue length(LuaState state, LuaValue value) throws LuaError, UnwindThrowable {
+	public static LuaValue length(LuaState state, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		switch (value.type()) {
 			case Constants.TTABLE: {
 				LuaValue h = value.metatag(state, CachedMetamethod.LEN);
@@ -326,7 +326,7 @@ public final class OperationHelper {
 	}
 
 	@AutoUnwind
-	public static int intLength(LuaState state, LuaValue table) throws LuaError, UnwindThrowable {
+	public static int intLength(LuaState state, LuaValue table) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaValue length = length(state, table);
 		if (length instanceof LuaInteger i) return i.intValue();
 
@@ -347,7 +347,7 @@ public final class OperationHelper {
 	 * @throws LuaError        If {@code value} is not a table or string, and has no {@link Constants#UNM} metatag
 	 * @throws UnwindThrowable If the {@code __unm} metamethod yielded.
 	 */
-	public static LuaValue neg(LuaState state, LuaValue value) throws LuaError, UnwindThrowable {
+	public static LuaValue neg(LuaState state, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int type = value.type();
 		if (type == TNUMBER) {
 			if (value instanceof LuaInteger) {
@@ -371,7 +371,7 @@ public final class OperationHelper {
 		return lua.type() == TNUMBER || !Double.isNaN(value);
 	}
 
-	private static LuaError createUnaryOpError(LuaState state, LuaValue value, String message) {
+	private static LuaError createUnaryOpError(LuaState state, LuaValue value, String message) throws AllocationTracker.AvatarOOMException {
 		// Read the current instruction and try to determine the register involved. This allows us to avoid passing the
 		// registers from the interpreter to here.
 		// PUC Lua just does this by searching the stack for the given value, but that's not possible for us :(
@@ -405,11 +405,11 @@ public final class OperationHelper {
 	 * @throws LuaError        If there is a loop in metatag processing
 	 * @throws UnwindThrowable If the {@code __get} metamethod yielded.
 	 */
-	public static LuaValue getTable(LuaState state, LuaValue t, LuaValue key) throws LuaError, UnwindThrowable {
+	public static LuaValue getTable(LuaState state, LuaValue t, LuaValue key) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return getTable(state, t, key, -1);
 	}
 
-	public static LuaValue getTable(LuaState state, LuaValue t, int key) throws LuaError, UnwindThrowable {
+	public static LuaValue getTable(LuaState state, LuaValue t, int key) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// Optimised case for an integer key.
 		if (t instanceof LuaTable table) {
 			LuaValue value = table.rawget(key);
@@ -420,7 +420,7 @@ public final class OperationHelper {
 		return getTable(state, t, valueOf(key));
 	}
 
-	public static LuaValue getTable(LuaState state, LuaValue t, LuaValue key, int stack) throws LuaError, UnwindThrowable {
+	public static LuaValue getTable(LuaState state, LuaValue t, LuaValue key, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaValue tm;
 		int loop = 0;
 		do {
@@ -452,11 +452,11 @@ public final class OperationHelper {
 	 * @throws LuaError        If there is a loop in metatag processing
 	 * @throws UnwindThrowable If the {@code __set} metamethod yielded.
 	 */
-	public static void setTable(LuaState state, LuaValue t, LuaValue key, LuaValue value) throws LuaError, UnwindThrowable {
+	public static void setTable(LuaState state, LuaValue t, LuaValue key, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		setTable(state, t, key, value, -1);
 	}
 
-	public static void setTable(LuaState state, LuaValue t, int key, LuaValue value) throws LuaError, UnwindThrowable {
+	public static void setTable(LuaState state, LuaValue t, int key, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// Optimised case for an integer key.
 		if (t instanceof LuaTable table && table.trySet(key, value)) return;
 
@@ -464,7 +464,7 @@ public final class OperationHelper {
 		setTable(state, t, valueOf(key), value);
 	}
 
-	public static void setTable(LuaState state, LuaValue t, LuaValue key, LuaValue value, int stack) throws LuaError, UnwindThrowable {
+	public static void setTable(LuaState state, LuaValue t, LuaValue key, LuaValue value, int stack) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int loop = 0;
 		do {
 			LuaValue tm;
@@ -484,12 +484,12 @@ public final class OperationHelper {
 	}
 	//endregion
 
-	public static LuaValue toString(LuaState state, LuaValue value) throws LuaError, UnwindThrowable {
+	public static LuaValue toString(LuaState state, LuaValue value) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaValue h = value.metatag(state, Constants.TOSTRING);
 		return h.isNil() ? toStringDirect(state, value) : Dispatch.call(state, h, value);
 	}
 
-	public static LuaString checkToString(LuaValue value, LuaState state) throws LuaError {
+	public static LuaString checkToString(LuaValue value, LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue asStr = value.toLuaString(state);
 		if (asStr.isNil()) throw new LuaError("'__tostring' must return a string", state.allocationTracker);
 		return (LuaString) asStr;
@@ -505,7 +505,7 @@ public final class OperationHelper {
 	 * @return This value as a string.
 	 * @see <a href="https://www.lua.org/source/5.3/lauxlib.c.html#luaL_tolstring">luaL_tolstring</a>
 	 */
-	public static LuaString toStringDirect(LuaState state, LuaValue value) {
+	public static LuaString toStringDirect(LuaState state, LuaValue value) throws AllocationTracker.AvatarOOMException {
 		LuaValue v = value.toLuaString(state);
 		return v.isNil() ? LuaString.valueOf(state.allocationTracker, value.toString()) : (LuaString) v;
 	}

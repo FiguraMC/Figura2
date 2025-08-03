@@ -1,8 +1,13 @@
 package org.figuramc.figura.script_languages.lua;
 
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.animations.AnimationInstanceAPI;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
+import org.figuramc.figura.script_languages.lua.callback.CallbackTypeAPI;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.ListViewAPI;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.StringViewAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
@@ -12,22 +17,30 @@ import org.figuramc.figura.script_languages.lua.events.EventListenerAPI;
 import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
 import org.figuramc.figura.script_languages.lua.model_parts.FigmodelAPI;
 import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
-import org.figuramc.figura.script_languages.lua.model_parts.PartLikeAPI;
+import org.figuramc.figura.script_languages.lua.model_parts.RiggedHierarchyAPI;
 import org.figuramc.figura.script_languages.lua.vanilla.VanillaPartAPI;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
 
 /**
  * Class where metatables for wrapped java types are stored
  */
-public class FiguraMetatables extends MarkedObjectBase {
+public class FiguraMetatables {
 
     // Fields containing metatables, to access quickly java-side
 
     // General
-    public final LuaTable callback; // ScriptCallback
     public final LuaTable eventListener; // EventListener
+
+    // Callbacks
+    public final LuaTable callback; // ScriptCallback
+    public final LuaTable callbackType; // CallbackType
+    public final LuaTable stringView; // StringView
+    public final LuaTable listView; // ListView
 
     // Math objects
     public final LuaTable vec2;
@@ -35,7 +48,7 @@ public class FiguraMetatables extends MarkedObjectBase {
     public final LuaTable vec4;
 
     // Model parts
-    public final LuaTable transformable;
+    public final LuaTable riggedHierarchy;
     public final LuaTable modelPart;
     public final LuaTable figmodelModelPart;
     public final LuaTable customItemModelPart;
@@ -50,27 +63,32 @@ public class FiguraMetatables extends MarkedObjectBase {
     // Lua-specific
 //    public final LuaTable promise; // Promise
 
-    public FiguraMetatables(LuaState state) throws LuaError {
+    public FiguraMetatables(LuaState state) throws LuaError, AvatarError {
         // General
-        callback = CallbackAPI.createMetatable(state, this);
-        eventListener = EventListenerAPI.createMetatable(state, this);
+        eventListener = EventListenerAPI.createMetatable(state);
+
+        // Callbacks
+        callback = CallbackAPI.createMetatable(state);
+        callbackType = CallbackTypeAPI.createMetatable(state);
+        stringView = StringViewAPI.createMetatable(state);
+        listView = ListViewAPI.createMetatable(state);
 
         // Math objects
         vec2 = null; // TODO
         vec3 = null;
-        vec4 = Vector4API.createMetatable(state, this);
+        vec4 = Vector4API.createMetatable(state);
 
         // Model part
-        transformable = PartLikeAPI.createMetatable(state, this);
-        modelPart = ModelPartAPI.createMetatable(state, this);
-        figmodelModelPart = FigmodelAPI.createMetatable(state, this);
+        riggedHierarchy = RiggedHierarchyAPI.createMetatable(state);
+        modelPart = ModelPartAPI.createMetatable(state, riggedHierarchy);
+        figmodelModelPart = FigmodelAPI.createMetatable(state, modelPart);
         customItemModelPart = modelPart; // TODO
 
         // Vanilla rendering
-        vanillaPart = VanillaPartAPI.createMetatable(state, this);
+        vanillaPart = VanillaPartAPI.createMetatable(state, riggedHierarchy);
 
         // Animations
-        animationInstance = AnimationInstanceAPI.createMetatable(state, this);
+        animationInstance = AnimationInstanceAPI.createMetatable(state);
 
         // Lua-specific
 //        promise = LuaPromise.createMetatable(state, this);
@@ -78,25 +96,49 @@ public class FiguraMetatables extends MarkedObjectBase {
     }
 
     // Add type metatables, with PascalCase keys, to the given table
-    public void addTypesTo(LuaTable table) throws LuaError {
-        table.rawset("Callback", callback);
+    public void addTypesTo(LuaTable table) throws LuaError, AvatarError {
         table.rawset("EventListener", eventListener);
-//        table.rawset("Promise", promise);
+
+        table.rawset("Callback", callback);
+        table.rawset("CallbackType", callbackType);
+        table.rawset("StringView", stringView);
+        table.rawset("ListView", listView);
+
 //        table.rawset("Vec2", vec2);
 //        table.rawset("Vec3", vec3);
         table.rawset("Vec4", vec4);
-        table.rawset("Part", transformable);
-        table.rawset("FiguraPart", modelPart);
+
+        table.rawset("RiggedHierarchy", riggedHierarchy);
+        table.rawset("ModelPart", modelPart);
         table.rawset("Figmodel", figmodelModelPart);
+
         table.rawset("VanillaPart", vanillaPart);
+
         table.rawset("AnimationInstance", animationInstance);
+    }
+
+    // Helpers to ensure safe use
+    public static void setupIndexing(LuaState state, LuaTable metatable) throws LuaError, AvatarError {
+        setupIndexingImpl(state, metatable, null, null);
+    }
+
+    public static void setupIndexingWithSuperclass(LuaState state, LuaTable metatable, @NotNull LuaTable superclassMetatable) throws LuaError, AvatarError {
+        setupIndexingImpl(state, metatable, Objects.requireNonNull(superclassMetatable), null);
+    }
+
+    public static void setupIndexingWithCustomIndexer(LuaState state, LuaTable metatable, @NotNull LuaFunction customIndexer) throws LuaError, AvatarError {
+        setupIndexingImpl(state, metatable, null, Objects.requireNonNull(customIndexer));
+    }
+
+    public static void setupIndexingWithSuperclassAndCustomIndexer(LuaState state, LuaTable metatable, @NotNull LuaTable superclassMetatable, @NotNull LuaFunction customIndexer) throws LuaError, AvatarError {
+        setupIndexingImpl(state, metatable, Objects.requireNonNull(superclassMetatable), Objects.requireNonNull(customIndexer));
     }
 
     // Helper method to set up inheritance relationship between subclass and superclass metatables,
     // and also deals with any custom __index implementations.
     // Make sure to call this on EVERY created metatable, even ones without superclasses, so that indexing works as it should.
     // This should also be the last thing called in the class, I think. (Maybe it doesn't matter...?)
-    public static void setupIndexing(LuaState state, LuaTable thisMetatable, @Nullable LuaTable superclassMetatable, @Nullable LuaFunction customIndexer) throws LuaError {
+    private static void setupIndexingImpl(LuaState state, LuaTable thisMetatable, @Nullable LuaTable superclassMetatable, @Nullable LuaFunction customIndexer) throws LuaError, AvatarError {
         // If there's no superclass metatable, and no custom indexer, just make it simple.
         if (superclassMetatable == null && customIndexer == null) {
             thisMetatable.rawset(INDEX, thisMetatable); // Set __index to itself, and we're done
@@ -106,7 +148,7 @@ public class FiguraMetatables extends MarkedObjectBase {
         if (superclassMetatable != null) {
             // If there's a superclass involved, make sure to copy all metamethods from the superclass
             // (lua doesn't provide a way to do this any better, sadly :/)
-            superclassMetatable.forEach((k, v) -> {
+            superclassMetatable.<LuaError, AllocationTracker.AvatarOOMException>forEach((k, v) -> {
                 if (!k.isString()) return;
                 if (!thisMetatable.rawget(k).isNil()) return; // If subclass overrides this metamethod, ignore
                 String method = k.checkString(state);
@@ -165,21 +207,4 @@ public class FiguraMetatables extends MarkedObjectBase {
         }
     }
 
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        // Trace everything
-        counter.trace(callback, depth);
-        counter.trace(eventListener, depth);
-//        counter.trace(promise, depth);
-        counter.trace(vec2, depth);
-        counter.trace(vec3, depth);
-        counter.trace(vec4, depth);
-        counter.trace(transformable, depth);
-        counter.trace(modelPart, depth);
-        counter.trace(figmodelModelPart, depth);
-        counter.trace(customItemModelPart, depth);
-        counter.trace(vanillaPart, depth);
-        counter.trace(animationInstance, depth);
-        return OBJECT_SIZE + POINTER_SIZE * 32; // Idk guess
-    }
 }

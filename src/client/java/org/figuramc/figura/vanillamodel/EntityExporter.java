@@ -217,7 +217,7 @@ public class EntityExporter {
         try {
             ImageIO.write(image, "png", baos);
         } catch (IOException shouldNotOccur) {
-            ErrorReporting.unexpectedError(shouldNotOccur);
+            throw new IllegalStateException("Failed to convert blank texture? Internal error in Figura, please report!");
         }
         String pngBase64 = Base64.getEncoder().encodeToString(baos.toByteArray());
         // Create json texture.

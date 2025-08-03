@@ -1,7 +1,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.Serial;
 

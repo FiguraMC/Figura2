@@ -6,16 +6,14 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.PngInfo;
 import org.figuramc.figura.FiguraMod;
-import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.util.ListUtils;
-import org.figuramc.figura.util.RenderUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class FiguraTextureAtlas extends StandaloneAvatarTexture {
@@ -29,7 +27,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
     /**
      * Create and upload the atlas.
      */
-    private static FiguraTextureAtlas create(int totalWidth, int totalHeight, List<TextureRectangle> rectangles) throws AvatarLoadingException {
+    private static FiguraTextureAtlas create(int totalWidth, int totalHeight, List<TextureRectangle> rectangles) throws AvatarError {
         // Unique location
         int id = next_id.getAndIncrement();
         ResourceLocation location = FiguraMod.id("figura_atlases/" + id);
@@ -47,7 +45,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
                         false, false // Mirror horizontal/vertical
                 );
             } catch (IOException ex) {
-                throw new AvatarLoadingException("figura.error.loading.invalid_png", ex, false, rectangle.name);
+                throw new AvatarError("figura.error.loading.invalid_png", ex, rectangle.name);
             } finally {
                 // Free rectangle name and data
                 rectangle.name = null;
@@ -74,7 +72,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
         // Get back a TextureRectangle.
         // Later, once you call .build(), the rectangle will be updated to have
         // its "x" and "y" values set.
-        public TextureRectangle insert(String texName, byte[] png) throws AvatarLoadingException {
+        public TextureRectangle insert(String texName, byte[] png) throws AvatarError {
             TextureRectangle rect = new TextureRectangle(texName, png);
             rectangles.add(rect);
             return rect;
@@ -83,7 +81,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
         /**
          * Create and upload the atlas. If there are no textures to atlas, returns null.
          */
-        public @Nullable FiguraTextureAtlas build() throws AvatarLoadingException {
+        public @Nullable FiguraTextureAtlas build() throws AvatarError {
             if (rectangles.isEmpty()) return null;
 
             // Guess a width as sqrt(sum(rectangle areas))
@@ -146,18 +144,18 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
         private int x = -1, y = -1;
         private final int width, height;
 
-        private TextureRectangle(String texName, byte[] png) throws AvatarLoadingException {
+        private TextureRectangle(String texName, byte[] png) throws AvatarError {
             try {
                 this.name = texName;
                 PngInfo info = PngInfo.fromBytes(png);
                 if (info.width() < 1 || info.height() < 1) {
-                    throw new AvatarLoadingException("figura.error.loading.invalid_png", texName);
+                    throw new AvatarError("figura.error.loading.invalid_png", texName);
                 }
                 this.width = info.width();
                 this.height = info.height();
                 this.data = png;
             } catch (IOException ioException) {
-                throw new AvatarLoadingException("figura.error.loading.invalid_png", texName);
+                throw new AvatarError("figura.error.loading.invalid_png", texName);
             }
         }
         public int getX() { return x; }

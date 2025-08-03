@@ -88,7 +88,7 @@ final class BytecodeLoader {
 	 */
 	private byte[] buf = new byte[512];
 
-	private byte readByte() throws CompileException, LuaError, UnwindThrowable {
+	private byte readByte() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int c = is.read();
 		if (c < 0) {
 			throw new CompileException(EOF_ERROR);
@@ -96,7 +96,7 @@ final class BytecodeLoader {
 		return (byte) c;
 	}
 
-	private int readUnsignedByte() throws CompileException, LuaError, UnwindThrowable {
+	private int readUnsignedByte() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int c = is.read();
 		if (c < 0) {
 			throw new CompileException(EOF_ERROR);
@@ -104,7 +104,7 @@ final class BytecodeLoader {
 		return c;
 	}
 
-	private void readFully(byte[] buffer, int start, int size) throws CompileException, LuaError, UnwindThrowable {
+	private void readFully(byte[] buffer, int start, int size) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		for (int i = 0; i < size; i++) {
 			byte b = readByte();
 			buffer[start + i] = b;
@@ -116,7 +116,7 @@ final class BytecodeLoader {
 	 *
 	 * @return the int value laoded.
 	 */
-	private int loadInt() throws CompileException, LuaError, UnwindThrowable {
+	private int loadInt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		readFully(buf, 0, 4);
 		return luacLittleEndian ?
 			(buf[3] << 24) | ((0xff & buf[2]) << 16) | ((0xff & buf[1]) << 8) | (0xff & buf[0]) :
@@ -128,7 +128,7 @@ final class BytecodeLoader {
 	 *
 	 * @return the array of int values laoded.
 	 */
-	private int[] loadIntArray() throws CompileException, LuaError, UnwindThrowable {
+	private int[] loadIntArray() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		if (n == 0) return NOINTS;
 
@@ -151,7 +151,7 @@ final class BytecodeLoader {
 	 *
 	 * @return the long value laoded.
 	 */
-	private long loadInt64() throws CompileException, LuaError, UnwindThrowable {
+	private long loadInt64() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int a, b;
 		if (this.luacLittleEndian) {
 			a = loadInt();
@@ -168,12 +168,12 @@ final class BytecodeLoader {
 	 *
 	 * @return the {@link LuaString} value laoded.
 	 */
-	private LuaString loadString() throws CompileException, LuaError, UnwindThrowable {
+	private LuaString loadString() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int size = luacSizeofSizeT == 8 ? (int) loadInt64() : loadInt();
 		if (size == 0) return null;
 
-		if (state.allocationTracker != null) state.allocationTracker.allocate(size);
 		byte[] bytes = new byte[size];
+		if (state.allocationTracker != null) state.allocationTracker.allocate(bytes, size);
 		readFully(bytes, 0, size);
 		return LuaString.valueOf(null, bytes, 0, bytes.length - 1);
 	}
@@ -185,7 +185,7 @@ final class BytecodeLoader {
 	 * @return {@link LuaInteger} or {@link LuaDouble} whose value corresponds to the bits provided.
 	 */
 	public static LuaValue longBitsToLuaNumber(long bits) {
-		return ValueFactory.valueOf(Double.longBitsToDouble(bits));
+		return LuaDouble.valueOf(Double.longBitsToDouble(bits));
 	}
 
 	/**
@@ -194,7 +194,7 @@ final class BytecodeLoader {
 	 * @return the {@link LuaValue} loaded
 	 * @throws CompileException, LuaError, UnwindThrowable if an i/o exception occurs
 	 */
-	private LuaValue loadNumber() throws CompileException, LuaError, UnwindThrowable {
+	private LuaValue loadNumber() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return longBitsToLuaNumber(loadInt64());
 	}
 
@@ -203,7 +203,7 @@ final class BytecodeLoader {
 	 *
 	 * @throws CompileException, LuaError, UnwindThrowable if an i/o exception occurs
 	 */
-	private LuaValue[] loadConstants() throws CompileException, LuaError, UnwindThrowable {
+	private LuaValue[] loadConstants() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		LuaValue[] values = n > 0 ? new LuaValue[n] : NOVALUES;
 		for (int i = 0; i < n; i++) {
@@ -218,7 +218,7 @@ final class BytecodeLoader {
 		return values;
 	}
 
-	private Prototype[] loadChildren() throws CompileException, LuaError, UnwindThrowable {
+	private Prototype[] loadChildren() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		Prototype[] protos = n > 0 ? new Prototype[n] : NOPROTOS;
 		for (int i = 0; i < n; i++) {
@@ -227,7 +227,7 @@ final class BytecodeLoader {
 		return protos;
 	}
 
-	private LocalVariable[] loadLocals() throws CompileException, LuaError, UnwindThrowable {
+	private LocalVariable[] loadLocals() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		LocalVariable[] locals = n > 0 ? new LocalVariable[n] : NOLOCVARS;
 		for (int i = 0; i < n; i++) {
@@ -239,7 +239,7 @@ final class BytecodeLoader {
 		return locals;
 	}
 
-	private void loadUpvaluesNames(Prototype.UpvalueInfo[] upvalues) throws CompileException, LuaError, UnwindThrowable {
+	private void loadUpvaluesNames(Prototype.UpvalueInfo[] upvalues) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		for (int i = 0; i < n; i++) {
 			var upvalue = upvalues[i];
@@ -248,7 +248,7 @@ final class BytecodeLoader {
 		}
 	}
 
-	private Prototype.UpvalueInfo[] loadUpvalues() throws CompileException, LuaError, UnwindThrowable {
+	private Prototype.UpvalueInfo[] loadUpvalues() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int n = loadInt();
 		var upvalues = n > 0 ? new Prototype.UpvalueInfo[n] : NOUPVALUES;
 		for (int i = 0; i < n; i++) {
@@ -265,7 +265,7 @@ final class BytecodeLoader {
 	 * @return {@link Prototype} instance that was loaded
 	 * @throws CompileException, LuaError, UnwindThrowable On stream read errors
 	 */
-	public Prototype loadFunction() throws CompileException, LuaError, UnwindThrowable {
+	public Prototype loadFunction() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int lineDefined = loadInt();
 		int lastLineDefined = loadInt();
 		int numParams = readUnsignedByte();
@@ -293,7 +293,7 @@ final class BytecodeLoader {
 		);
 	}
 
-	public void checkSignature() throws CompileException, LuaError, UnwindThrowable {
+	public void checkSignature() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// Check rest of signature
 		if (is.read() != LUA_SIGNATURE[1] || is.read() != LUA_SIGNATURE[2] || is.read() != LUA_SIGNATURE[3]) {
 			throw new IllegalArgumentException("bad signature");
@@ -306,7 +306,7 @@ final class BytecodeLoader {
 	 * @throws CompileException, LuaError, UnwindThrowable      if an i/o exception occurs.
 	 * @throws CompileException  If the bytecode is invalid.
 	 */
-	public void loadHeader() throws CompileException, LuaError, UnwindThrowable {
+	public void loadHeader() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int luacVersion = readByte();
 		if (luacVersion != LUAC_VERSION) throw new CompileException("version mismatch");
 

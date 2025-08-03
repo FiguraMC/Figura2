@@ -24,15 +24,16 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugState;
 
 public abstract class ResumableVarArgFunction<T> extends VarArgFunction implements Resumable<T> {
 	@Override
-	protected final Varargs invoke(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+	protected final Varargs invoke(LuaState state, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		return invoke(state, DebugState.get(state).getStackUnsafe(), args);
 	}
 
-	protected abstract Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, UnwindThrowable;
+	protected abstract Varargs invoke(LuaState state, DebugFrame di, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
 }

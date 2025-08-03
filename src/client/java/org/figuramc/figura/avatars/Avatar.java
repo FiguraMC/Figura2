@@ -2,11 +2,8 @@ package org.figuramc.figura.avatars;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.MultiBufferSource;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
-import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
 import org.figuramc.figura.util.ErrorReporting;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.figuramc.figura.util.enumlike.IdMap;
@@ -21,13 +18,17 @@ public class Avatar<K> {
     private final IdMap<AvatarComponent.Type, AvatarComponent<?>> components; // Components, where ID -> component if present, null if not. Requires some unchecked sillies because of generics.
     private final @NotNull AvatarComponent<?>[] presentComponents; // Only the non-null components, used for iteration
 
-    private @Nullable AvatarError error;
+    private @Nullable Throwable error;
 
     // Memory tracker. Null indicates memory shouldn't be tracked,
     // making it faster in cases where full permission is granted.
     private @Nullable AllocationTracker allocationTracker;
 
-    public Avatar(K user, AvatarModules modules, Collection<AvatarComponent<?>> componentSet) throws AvatarLoadingException {
+    public Avatar(K user, AvatarModules modules, Collection<AvatarComponent<?>> componentSet) throws AvatarError {
+        // Let's do some allocation testing, shall we?
+        allocationTracker = new AllocationTracker(Integer.MAX_VALUE, 0, 0);
+
+
         // Init fields
         this.user = user;
         // Add components to ID map
@@ -36,9 +37,10 @@ public class Avatar<K> {
         // Create presentComponents array by removing null elements for faster iteration.
         this.presentComponents = this.components.values().stream().filter(Objects::nonNull).toArray(AvatarComponent[]::new);
         // Initialize each component in order
-        for (AvatarComponent<?> component : presentComponents) {
+        for (AvatarComponent<?> component : presentComponents)
             component.initialize(modules, this);
-        }
+        // Free all the module materials
+        modules.modules.forEach(AvatarModules.Module::freeMaterials);
     }
 
 
@@ -53,11 +55,6 @@ public class Avatar<K> {
         return (T) components.get(type);
     }
 
-    // Track a given object as a memory root.
-    public void addMemoryRoot(MemoryCountable root) {
-        if (allocationTracker != null)
-            allocationTracker.addRoot(root);
-    }
     public @Nullable AllocationTracker getAllocationTracker() {
         return allocationTracker;
     }
@@ -65,11 +62,13 @@ public class Avatar<K> {
     public void error(AvatarError reason) {
         // Mark as errored
         this.error = reason;
-        // Notify components:
-        for (AvatarComponent<?> component : presentComponents)
-            component.onError(reason);
-        // Report the error to user
-        ErrorReporting.avatarRuntimeError(reason);
+        // Report the error to user(?)
+        ErrorReporting.reportError(reason);
+    }
+
+    public void unexpectedError(Throwable reason) {
+        this.error = reason;
+        ErrorReporting.reportError(reason);
     }
 
     // We want to use this function only when strictly necessary; for most usages, the fact
@@ -111,12 +110,10 @@ public class Avatar<K> {
         if (isErrored()) return;
         try {
             partRenderer.render(bufferSource, transformStack, tickDelta, light, overlay);
-        } catch (ScriptError ex) {
-            error(new AvatarError("figura.error.runtime.model_part.callback", ex, true));
         } catch (StackOverflowError ex) {
-            error(new AvatarError("figura.error.runtime.model_part.stack_overflow", ex, false));
-        } catch (Throwable other) {
-            error(new AvatarError("figura.error.runtime.model_part.unexpected", other, true));
+            error(new AvatarError("figura.error.runtime.rendering.stack_overflow", ex));
+        } catch (Throwable unexpected) {
+            unexpectedError(unexpected);
         }
     }
 

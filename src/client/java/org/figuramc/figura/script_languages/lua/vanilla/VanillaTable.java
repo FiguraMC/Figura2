@@ -1,9 +1,9 @@
 package org.figuramc.figura.script_languages.lua.vanilla;
 
 import net.minecraft.client.model.Model;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.vanillamodel.ModelNames;
-import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 
@@ -12,15 +12,15 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
  */
 public class VanillaTable {
 
-    public static LuaTable create(LuaState state, FiguraMetatables metatables, VanillaRendering component) {
-        LuaTable vanilla = ValueFactory.tableOf(state.allocationTracker);
+    public static LuaTable create(LuaState state, VanillaRendering component) throws LuaError, AvatarError {
+        LuaTable vanilla = new LuaTable(state.allocationTracker);
 
         // Simple getter/setter pairs:
 
         // vanilla.hideAllParts(). 0 arg getter, 1 arg setter.
         vanilla.rawset("hideAllParts", LibFunction.createV((s, args) -> {
             switch (args.count()) {
-                case 0 -> { return ValueFactory.valueOf(component.hideAllModelParts); }
+                case 0 -> { return LuaBoolean.valueOf(component.hideAllModelParts); }
                 case 1 -> component.hideAllModelParts = args.first().checkBoolean(s);
                 default -> throw new LuaError("Invalid number of args to cancelAllParts(): expected 0 or 1", s.allocationTracker);
             }
@@ -40,7 +40,7 @@ public class VanillaTable {
             VanillaRendering.VanillaPart scriptRoot = component.partMap.get(model.root());
             if (scriptRoot == null) return Constants.NIL;
             // Save it for later so we don't need to query this again
-            LuaValue wrapped = VanillaPartAPI.wrap(scriptRoot, metatables);
+            LuaValue wrapped = VanillaPartAPI.wrap(scriptRoot, s);
             models.rawset(key, wrapped);
             return wrapped;
         }));

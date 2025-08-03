@@ -6,8 +6,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.FiguraMod;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.ModuleMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.RenderUtils;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
@@ -37,7 +37,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
     }
 
     // Create and upload the texture.
-    public static StandaloneAvatarTexture create(ModuleMaterials.TextureMaterials.OwnedTexture materials) throws AvatarLoadingException {
+    public static StandaloneAvatarTexture create(ModuleMaterials.TextureMaterials.OwnedTexture materials) throws AvatarError {
         int id = next_id.getAndIncrement();
         ResourceLocation location = FiguraMod.id("figura_textures/" + id);
         ByteBuffer buffer = BufferUtils.createByteBuffer(materials.data().length);
@@ -48,7 +48,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
             String debugName = "Figura texture #" + id + ": " + materials.name();
             return new StandaloneAvatarTexture(location, new DynamicTexture(() -> debugName, image));
         } catch (IOException e) {
-            throw new AvatarLoadingException("figura.error.loading.invalid_png", e, false, materials.name());
+            throw new AvatarError("figura.error.loading.invalid_png", e, materials.name());
         }
     }
 

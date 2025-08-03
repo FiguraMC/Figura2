@@ -24,15 +24,15 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.DebugLib;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Lua.*;
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame.FLAG_ANY_HOOK;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame.FLAG_TAIL;
 
@@ -40,17 +40,17 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * Helper methods for the debug library
  */
 public final class DebugHelpers {
-	private static final LuaString GLOBAL = valueOf("global", null);
-	private static final LuaString LOCAL = valueOf("local", null);
-	private static final LuaString METHOD = valueOf("method", null);
-	private static final LuaString UPVALUE = valueOf("upvalue", null);
-	private static final LuaString FIELD = valueOf("field", null);
-	private static final LuaString QUESTION = valueOf("?", null);
-	private static final LuaString HOOK = valueOf("hook", null);
-	private static final LuaString METAMETHOD = valueOf("metamethod", null);
+	private static final LuaString GLOBAL = LuaString.valueOfNoAlloc("global");
+	private static final LuaString LOCAL = LuaString.valueOfNoAlloc("local");
+	private static final LuaString METHOD = LuaString.valueOfNoAlloc("method");
+	private static final LuaString UPVALUE = LuaString.valueOfNoAlloc("upvalue");
+	private static final LuaString FIELD = LuaString.valueOfNoAlloc("field");
+	private static final LuaString QUESTION = LuaString.valueOfNoAlloc("?");
+	private static final LuaString HOOK = LuaString.valueOfNoAlloc("hook");
+	private static final LuaString METAMETHOD = LuaString.valueOfNoAlloc("metamethod");
 
-	private static final LuaString FUNCTION = valueOf("function", null);
-	private static final LuaString C = valueOf("[C]", null);
+	private static final LuaString FUNCTION = LuaString.valueOfNoAlloc("function");
+	private static final LuaString C = LuaString.valueOfNoAlloc("[C]");
 
 	/**
 	 * Size of the first part of the stack
@@ -72,8 +72,8 @@ public final class DebugHelpers {
 	 * @param level  0-based level to start reporting on
 	 * @return String containing the stack trace.
 	 */
-	public static String traceback(LuaThread thread, int level) {
-		return traceback(new Buffer(thread.luaState.allocationTracker), thread, level).toString();
+	public static String traceback(LuaThread thread, int level) throws AllocationTracker.AvatarOOMException {
+		return traceback(new Buffer(thread.luaState.allocationTracker), thread, level).toJavaString();
 	}
 
 	/**
@@ -83,7 +83,7 @@ public final class DebugHelpers {
 	 * @param thread LuaThread to provide stack trace for
 	 * @param level  0-based level to start reporting on
 	 */
-	public static Buffer traceback(Buffer sb, LuaThread thread, int level) {
+	public static Buffer traceback(Buffer sb, LuaThread thread, int level) throws AllocationTracker.AvatarOOMException {
 		sb.append("stack traceback:");
 
 		DebugState state = thread.getDebugState();
@@ -128,7 +128,7 @@ public final class DebugHelpers {
 	 * @return String identifying the file and line of the nearest lua closure,
 	 * or the function name of the Java call if no closure is being called.
 	 */
-	public static String fileLine(LuaThread thread) {
+	public static String fileLine(LuaThread thread) throws AllocationTracker.AvatarOOMException {
 		DebugState ds = thread.getDebugState();
 		DebugFrame di;
 		for (int i = 0, n = ds.top; i <= n; i++) {
@@ -146,11 +146,11 @@ public final class DebugHelpers {
 		return di != null ? di.sourceLine() : null;
 	}
 
-	private static ObjectName fromMetamethod(String name) {
-		return new ObjectName(valueOf("__" + name, null), METAMETHOD);
+	private static ObjectName fromMetamethod(LuaString name) {
+		return new ObjectName(name, METAMETHOD);
 	}
 
-	public static @Nullable ObjectName getFuncName(DebugFrame di, int stackpos) {
+	public static @Nullable ObjectName getFuncName(DebugFrame di, int stackpos) throws AllocationTracker.AvatarOOMException {
 		if (di.closure == null) return null;
 		if ((di.flags & FLAG_ANY_HOOK) != 0) return new ObjectName(QUESTION, HOOK);
 
@@ -159,26 +159,26 @@ public final class DebugHelpers {
 		int i = p.code[pc];
 		return switch (GET_OPCODE(i)) {
 			case OP_CALL, OP_TAILCALL -> getObjectName(di, GETARG_A(i));
-			case OP_SELF, OP_GETTABLE -> fromMetamethod("index");
-			case OP_SETTABLE -> fromMetamethod("newindex");
-			case OP_ADD -> fromMetamethod("add");
-			case OP_SUB -> fromMetamethod("sub");
-			case OP_MUL -> fromMetamethod("mul");
-			case OP_DIV -> fromMetamethod("div");
-			case OP_POW -> fromMetamethod("pow");
-			case OP_MOD -> fromMetamethod("mod");
-			case OP_UNM -> fromMetamethod("unm");
-			case OP_EQ -> fromMetamethod("eq");
-			case OP_LE -> fromMetamethod("le");
-			case OP_LT -> fromMetamethod("lt");
-			case OP_LEN -> fromMetamethod("len");
-			case OP_CONCAT -> fromMetamethod("concat");
+			case OP_SELF, OP_GETTABLE -> fromMetamethod(Constants.INDEX);
+			case OP_SETTABLE -> fromMetamethod(Constants.NEWINDEX);
+			case OP_ADD -> fromMetamethod(Constants.ADD);
+			case OP_SUB -> fromMetamethod(Constants.SUB);
+			case OP_MUL -> fromMetamethod(Constants.MUL);
+			case OP_DIV -> fromMetamethod(Constants.DIV);
+			case OP_POW -> fromMetamethod(Constants.POW);
+			case OP_MOD -> fromMetamethod(Constants.MOD);
+			case OP_UNM -> fromMetamethod(Constants.UNM);
+			case OP_EQ -> fromMetamethod(Constants.EQ);
+			case OP_LE -> fromMetamethod(Constants.LE);
+			case OP_LT -> fromMetamethod(Constants.LT);
+			case OP_LEN -> fromMetamethod(Constants.LEN);
+			case OP_CONCAT -> fromMetamethod(Constants.CONCAT);
 			default -> null;
 		};
 	}
 
 	// return StrValue[] { name, namewhat } if found, null if not
-	public static @Nullable ObjectName getObjectName(DebugFrame di, int stackpos) {
+	public static @Nullable ObjectName getObjectName(DebugFrame di, int stackpos) throws AllocationTracker.AvatarOOMException {
 		if (di.closure == null) return null;
 		if ((di.flags & FLAG_ANY_HOOK) != 0) return new ObjectName(QUESTION, HOOK);
 
@@ -254,7 +254,7 @@ public final class DebugHelpers {
 		return setreg;
 	}
 
-	private static LuaString constantName(Prototype proto, int index) {
+	private static LuaString constantName(Prototype proto, int index) throws AllocationTracker.AvatarOOMException {
 		if (ISK(index) && proto.constants[INDEXK(index)].isString()) {
 			return (LuaString) proto.constants[INDEXK(index)].toLuaString(proto.state);
 		} else {

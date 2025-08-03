@@ -3,6 +3,7 @@ package org.figuramc.figura.data;
 import com.google.gson.*;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
+import org.figuramc.figura.script_hooks.callback.CallbackTypeParser;
 import org.figuramc.figura.util.IOUtils;
 import org.figuramc.figura.util.JsonUtils;
 import org.figuramc.figura.util.ListUtils;
@@ -22,7 +23,13 @@ public class ModuleImporter {
         var metadata = readMetadata(root);
 
         // Find script importer and use it
-        ScriptImporter scriptImporter = metadata.language() != null ? ScriptImporter.IMPORTERS.get(metadata.language()) : null;
+        ScriptImporter scriptImporter;
+        if (metadata.language() != null) {
+            // Error if trying to use an unrecognized language
+            scriptImporter = ScriptImporter.IMPORTERS.get(metadata.language());
+            if (scriptImporter == null) throw new ModuleImportingException("figura.error.importing.scripts.unknown_language", metadata.language());
+        } else scriptImporter = null;
+
         Path scriptsRoot = root.resolve("scripts");
         TreeMap<String, byte[]> scripts;
         if (scriptImporter == null) {
@@ -83,64 +90,24 @@ public class ModuleImporter {
             } else throw new ModuleImportingException("figura.error.importing.metadata.dependency_format");
         }
         // Parse API:
-        LinkedHashMap<String, CallbackType.Func> api;
+        LinkedHashMap<String, CallbackType.Func<?, ?>> api;
         {
             JsonElement e = obj.get("api");
             if (e == null) api = new LinkedHashMap<>();
             else if (e.isJsonObject()) {
                 api = new LinkedHashMap<>();
                 for (var entry : e.getAsJsonObject().entrySet()) {
-                    if (entry.getValue().isJsonObject()) {
-                        // Parse params and return type
-                        CallbackType[] params = JsonUtils.getListOrEmpty(entry.getValue().getAsJsonObject(), "params", ModuleImporter::parseType, () -> new ModuleImportingException("figura.error.importing.metadata.api_format")).toArray(CallbackType[]::new);
-                        JsonElement returnTypeJson = JsonUtils.getElementOrDefault(entry.getValue().getAsJsonObject(), "return", new JsonPrimitive("unit"));
-                        CallbackType returnType = parseType(returnTypeJson);
-                        // Add to map
-                        api.put(entry.getKey(), new CallbackType.Func(returnType, params));
-                    } else throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+                    if (!(entry.getValue() instanceof JsonPrimitive prim && prim.isString()))
+                        throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+                    String s = prim.getAsString();
+                    CallbackType<?> ty = CallbackTypeParser.parse(s);
+                    if (!(ty instanceof CallbackType.Func<?,?> func))
+                        throw new ModuleImportingException("figura.error.importing.metadata.api_format");
+                    api.put(entry.getKey(), func);
                 }
             } else throw new ModuleImportingException("figura.error.importing.metadata.api_format");
         }
         return new ModuleMaterials.MetadataMaterials(language, dependencies, autoRequireDependencies, api);
-    }
-
-    private static CallbackType parseType(JsonElement json) throws ModuleImportingException {
-        return switch (json) {
-            case JsonPrimitive string when string.isString() -> switch (string.getAsString()) {
-                case "unit" -> CallbackType.Unit.INSTANCE;
-                case "bool" -> CallbackType.Bool.INSTANCE;
-                case "f32" -> CallbackType.F32.INSTANCE;
-                case "f64" -> CallbackType.F64.INSTANCE;
-                case "any" -> CallbackType.Any.INSTANCE;
-                case "string" -> CallbackType.Str.INSTANCE;
-                default -> throw new ModuleImportingException("Unexpected type \"" + string.getAsString() + "\" (TODO translate and fix)");
-            };
-            case JsonArray array -> new CallbackType.Tuple(ListUtils.map(array, ModuleImporter::parseType).toArray(CallbackType[]::new));
-            case JsonObject object -> switch (JsonUtils.getStringOrDefault(object, "type", "<no type given>")) {
-                case "list" -> new CallbackType.List(parseType(expect(object, "inner")));
-                case "map" ->
-                        new CallbackType.Map(parseType(expect(object, "key")), parseType(expect(object, "value")));
-                case "nullable" -> new CallbackType.Nullable(parseType(expect(object, "inner")));
-                case "function" -> {
-                    JsonElement retJson = object.get("return");
-                    if (retJson == null) retJson = new JsonPrimitive("unit"); // Unit by default
-                    CallbackType returnType = parseType(retJson);
-                    JsonElement paramsJson = expect(object, "params");
-                    if (!(paramsJson instanceof JsonArray arr))
-                        throw new ModuleImportingException("figura.error.importing.metadata.api_format");
-                    CallbackType[] params = ListUtils.map(arr, ModuleImporter::parseType).toArray(CallbackType[]::new);
-                    yield new CallbackType.Func(returnType, params);
-                }
-                default -> throw new ModuleImportingException("figura.error.importing.metadata.api_format");
-            };
-            case null, default -> throw new ModuleImportingException("figura.error.importing.metadata.api_format");
-        };
-    }
-
-    private static @NotNull JsonElement expect(JsonObject obj, String key) throws ModuleImportingException {
-        JsonElement e = obj.get(key);
-        if (e == null) throw new ModuleImportingException("figura.error.importing.metadata.api_format");
-        return e;
     }
 
     private static ModuleMaterials.TextureMaterials readTexture(Path path, Path texturesRoot) throws IOException {

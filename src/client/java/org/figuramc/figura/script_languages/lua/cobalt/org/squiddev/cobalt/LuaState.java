@@ -24,17 +24,20 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
+import org.figuramc.figura.script_languages.lua.FiguraMetatables;
+import org.figuramc.figura.script_languages.lua.callback.from_lua.LuaToCallbackItem;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackItemToLua;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.BytecodeFormat;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LuaC;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug.DebugFrame;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptHandler;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.function.Supplier;
@@ -42,7 +45,7 @@ import java.util.function.Supplier;
 /**
  * Global lua state
  */
-public final class LuaState extends MarkedObjectBase {
+public final class LuaState {
 	/**
 	 * The metatable for all strings
 	 */
@@ -85,6 +88,13 @@ public final class LuaState extends MarkedObjectBase {
 
 	// Figura: tracker for allocations done in this LuaState.
 	public final @Nullable AllocationTracker allocationTracker;
+	// Figura: metatables for Figura types
+	public final FiguraMetatables figuraMetatables;
+	// Figura: Converters to/from Lua items
+	public final LuaToCallbackItem luaToCallbackItem;
+	public final CallbackItemToLua callbackItemToLua;
+	// Figura: The avatar which this state belongs to
+	public final Avatar<?> avatar;
 
 	/**
 	 * The currently executing thread
@@ -105,16 +115,20 @@ public final class LuaState extends MarkedObjectBase {
 
 	private final GlobalRegistry registry;
 
-	public LuaState() {
-		this(new LuaState.Builder());
+	public LuaState(Avatar<?> avatar) throws LuaError, AvatarError {
+		this(new LuaState.Builder(avatar));
 	}
 
-	private LuaState(Builder builder) {
+	private LuaState(Builder builder) throws LuaError, AvatarError {
 		compiler = builder.compiler;
 		interruptHandler = builder.interruptHandler;
 		reportError = builder.reportError;
 		bytecodeFormat = builder.bytecodeFormat;
 		allocationTracker = builder.allocationTracker;
+		figuraMetatables = new FiguraMetatables(this);
+		luaToCallbackItem = new LuaToCallbackItem(this);
+		callbackItemToLua = new CallbackItemToLua(this);
+		avatar = builder.avatar;
 
 		globals = new LuaTable(allocationTracker);
 		registry = new GlobalRegistry(allocationTracker);
@@ -245,8 +259,8 @@ public final class LuaState extends MarkedObjectBase {
 		if (reportError != null) reportError.report(error, message);
 	}
 
-	public static LuaState.Builder builder() {
-		return new LuaState.Builder();
+	public static LuaState.Builder builder(Avatar<?> avatar) {
+		return new LuaState.Builder(avatar);
 	}
 
 	/**
@@ -258,13 +272,18 @@ public final class LuaState extends MarkedObjectBase {
 		private @Nullable ErrorReporter reportError;
 		private @Nullable BytecodeFormat bytecodeFormat;
 		private @Nullable AllocationTracker allocationTracker;
+		private final Avatar<?> avatar;
+
+		public Builder(@NotNull Avatar<?> avatar) {
+			this.avatar = avatar;
+		}
 
 		/**
 		 * Build a Lua state from this builder
 		 *
 		 * @return The constructed Lua state.
 		 */
-		public LuaState build() {
+		public LuaState build() throws LuaError, AvatarError {
 			return new LuaState(this);
 		}
 
@@ -338,21 +357,5 @@ public final class LuaState extends MarkedObjectBase {
 		 * @param message Additional details about this error.
 		 */
 		void report(Throwable error, Supplier<String> message);
-	}
-
-	@Override
-	public long traceNoMark(MemoryCounter counter, int depth) {
-		counter.trace(stringMetatable, depth);
-		counter.trace(booleanMetatable, depth);
-		counter.trace(numberMetatable, depth);
-		counter.trace(nilMetatable, depth);
-		counter.trace(functionMetatable, depth);
-		counter.trace(threadMetatable, depth);
-
-		counter.trace(globals, depth);
-		counter.trace(registry, depth);
-		counter.trace(currentThread, depth);
-		counter.trace(mainThread, depth);
-		return OBJECT_SIZE;
 	}
 }

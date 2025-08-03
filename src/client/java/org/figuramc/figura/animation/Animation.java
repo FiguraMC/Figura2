@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * An Animation is a mapping from (part path) to (keyframe info).
- * An Animation can be BOUND to a PartLike to create an AnimationInstance.
+ * An Animation can be BOUND to a RiggedHierarchy to create an AnimationInstance.
  * An AnimationInstance tracks a timer, speed, etc, and updates its Animators.
  * An Animator is placed on a PartTransform, and modifies it.
  * - When an Animator is updated, mark transforms' fields as dirty!

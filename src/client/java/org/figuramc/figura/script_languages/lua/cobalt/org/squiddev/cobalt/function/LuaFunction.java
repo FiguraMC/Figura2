@@ -38,7 +38,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
  * @see LibFunction
  * @see LuaInterpretedFunction
  */
-public abstract sealed class LuaFunction extends MarkedLuaValue permits LibFunction, LuaClosure {
+public abstract sealed class LuaFunction extends LuaValue permits LibFunction, LuaClosure {
 	LuaFunction() {
 		super(Constants.TFUNCTION);
 	}

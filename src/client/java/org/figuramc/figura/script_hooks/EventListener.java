@@ -2,9 +2,7 @@ package org.figuramc.figura.script_hooks;
 
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
-import org.figuramc.figura.util.ListUtils;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 
 import java.util.ArrayList;
 
@@ -16,30 +14,25 @@ import java.util.ArrayList;
  *
  * The Java side maintains a collection of built-in EventListeners, which it can invoke when an event occurs.
  */
-public class EventListener extends MarkedObjectBase {
+public class EventListener<Args extends CallbackItem> {
 
-    public final CallbackType.Func funcType; // Type for callbacks
-    private final ArrayList<ScriptCallback> callbacks = new ArrayList<>();
+    public final CallbackType.Func<Args, CallbackItem.Bool> funcType; // Type for callbacks
+    private final ArrayList<ScriptCallback<Args, CallbackItem.Bool>> callbacks = new ArrayList<>();
 
     // Requires static param types on creation
-    public EventListener(CallbackType... paramTypes) {
-        this.funcType = new CallbackType.Func(CallbackType.Bool.INSTANCE, paramTypes);
+    public EventListener(CallbackType.Func<Args, CallbackItem.Bool> funcType) {
+        this.funcType = funcType;
     }
 
     // Only allow appending to the list at the end.
     // This is because of the potential for a callback to register additional callbacks.
-    public void registerCallback(ScriptCallback callback) {
+    public void registerCallback(ScriptCallback<Args, CallbackItem.Bool> callback) {
         this.callbacks.add(callback);
     }
 
     // Invoke the event listener with the given args.
-    public void invoke(Object... args) throws ScriptError {
+    public void invoke(Args args) {
         // Any callback returning true will be removed.
-        ListUtils.filterMut(callbacks, callback -> !(callback.call(args) instanceof Boolean b) || !b);
-    }
-
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        throw new UnsupportedOperationException("TODO");
+        callbacks.removeIf(callback -> callback.call(args).value());
     }
 }

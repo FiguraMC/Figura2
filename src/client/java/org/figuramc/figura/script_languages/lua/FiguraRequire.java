@@ -1,8 +1,8 @@
 package org.figuramc.figura.script_languages.lua;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
-import org.figuramc.figura.data.ModuleMaterials;
-import org.figuramc.figura.manage.AvatarLoadingException;
+import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
@@ -11,10 +11,8 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
 import org.figuramc.figura.util.IOUtils;
-import org.figuramc.figura.util.ListUtils;
 
 import java.io.ByteArrayInputStream;
-import java.util.Map;
 
 /**
  * Class for setup of require() function, given the provided scripts map
@@ -22,10 +20,10 @@ import java.util.Map;
 public class FiguraRequire {
 
     // Helpful constants
-    public static final LuaString REQUIRE_KEY = LuaString.valueOf(null, "figura_require");
-    public static final LuaString LOADED_KEY = LuaString.valueOf(null, "figura_loaded");
+    public static final LuaString REQUIRE_KEY = LuaString.valueOfNoAlloc("figura_require");
+    public static final LuaString LOADED_KEY = LuaString.valueOfNoAlloc("figura_loaded");
 
-    public static LuaValue createRequire(LuaState state, LuaTable _ENV, AvatarModules.Module module, FiguraMetatables metatables) throws LuaError, AvatarLoadingException {
+    public static LuaValue createRequire(LuaState state, LuaTable _ENV, AvatarModules.Module module) throws LuaError, AvatarError {
 
         int index = module.index;
 
@@ -45,9 +43,7 @@ public class FiguraRequire {
                 LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, _ENV);
                 functionStorage.rawset(name, closure);
             } catch (CompileException ex) {
-                throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, false, name, ex.getMessage());
-            } catch (LuaError ex) {
-                throw new AvatarLoadingException("figura.error.loading.script.lua.compile_error", ex, true, name, ex.getMessage());
+                throw new AvatarError("figura.error.loading.script.lua.compile_error", ex, name, ex.getMessage());
             }
         }
         for (var entry : module.dependencies().entrySet()) {
@@ -61,7 +57,7 @@ public class FiguraRequire {
                     // Fetch API functions and return them in a table.
                     LuaTable tab = new LuaTable(s.allocationTracker);
                     for (var apiEntry : dependency.callbacks.entrySet()) {
-                        tab.rawset(apiEntry.getKey(), CallbackAPI.wrap(apiEntry.getValue(), metatables));
+                        tab.rawset(apiEntry.getKey(), CallbackAPI.wrap(apiEntry.getValue(), state));
                     }
                     return tab;
                 } catch (Throwable t) {

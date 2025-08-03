@@ -3,8 +3,6 @@ package org.figuramc.figura.model.part;
 import net.minecraft.util.Mth;
 import org.figuramc.figura.animation.Animator;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
@@ -13,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Simple transform, more aligned to Minecraft/Blockbench
-public class PartTransform extends MarkedObjectBase {
+public class PartTransform {
 
     private final Vector3f origin = new Vector3f();
     private final Vector3f rotation = new Vector3f(); // ZYX euler angles in radians
@@ -161,15 +159,4 @@ public class PartTransform extends MarkedObjectBase {
         stack.color(color);
     }
 
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        long res = 300; // idk
-        counter.trace(mimicPart, depth);
-        if (animators != null) {
-            res += animators.size() * POINTER_SIZE;
-            for (Animator animator : animators)
-                counter.trace(animator, depth);
-        }
-        return res;
-    }
 }

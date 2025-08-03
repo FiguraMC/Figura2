@@ -49,15 +49,15 @@ public final class Buffer {
 	 */
 	private int length;
 
-	// Allocation tracker for this buffer
-	private final @Nullable AllocationTracker allocTracker;
+	// Tracker is saved for convenience
+	private @Nullable AllocationTracker tracker;
 
 	/**
 	 * Create buffer with default capacity
 	 *
 	 * @see #DEFAULT_CAPACITY
 	 */
-	public Buffer(@Nullable AllocationTracker allocTracker) {
+	public Buffer(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		this(DEFAULT_CAPACITY, allocTracker);
 	}
 
@@ -66,11 +66,11 @@ public final class Buffer {
 	 *
 	 * @param initialCapacity the initial capacity
 	 */
-	public Buffer(int initialCapacity, @Nullable AllocationTracker allocTracker) {
-		if (allocTracker != null) allocTracker.allocate(initialCapacity);
+	public Buffer(int initialCapacity, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		bytes = new byte[initialCapacity];
 		length = 0;
-		this.allocTracker = allocTracker;
+		tracker = allocTracker;
+		if (allocTracker != null) allocTracker.allocate(bytes, initialCapacity);
 	}
 
 	/**
@@ -79,8 +79,11 @@ public final class Buffer {
 	 * @return the value as a {@link LuaString}
 	 */
 	public LuaString toLuaString() {
-		realloc(length);
-		return LuaString.valueOf(null, bytes, 0, length);
+		// There is no reason to call realloc here, right?
+		// bytes.length >= length is already guaranteed?
+		// I suppose it will give a potentially smaller byte[] to the string, but that shouldn't be needed
+//		realloc(length);
+		return LuaString.valueOfNoCopy(bytes, 0, length);
 	}
 
 	/**
@@ -89,8 +92,13 @@ public final class Buffer {
 	 * @return the value as a Java String
 	 */
 	@Override
+	@Deprecated
 	public String toString() {
-		return toLuaString().toString();
+		return "(Lua Buffer toString() unimplemented - use toJavaString instead!)";
+	}
+
+	public String toJavaString() throws AllocationTracker.AvatarOOMException {
+		return toLuaString().toJavaString(this.tracker);
 	}
 
 	/**
@@ -98,7 +106,7 @@ public final class Buffer {
 	 *
 	 * @param b The byte to append
 	 */
-	public void append(byte b) {
+	public void append(byte b) throws AllocationTracker.AvatarOOMException {
 		ensure(1);
 		bytes[length++] = b;
 	}
@@ -108,7 +116,7 @@ public final class Buffer {
 	 *
 	 * @param b The bytes to append
 	 */
-	public void append(byte[] b) {
+	public void append(byte[] b) throws AllocationTracker.AvatarOOMException {
 		ensure(b.length);
 		System.arraycopy(b, 0, bytes, length, b.length);
 		length += b.length;
@@ -121,7 +129,7 @@ public final class Buffer {
 	 * @param start  The start index
 	 * @param length The number of values to append
 	 */
-	public Buffer append(byte[] b, int start, int length) {
+	public Buffer append(byte[] b, int start, int length) throws AllocationTracker.AvatarOOMException {
 		ensure(length);
 		System.arraycopy(b, start, bytes, this.length, length);
 		this.length += length;
@@ -133,7 +141,7 @@ public final class Buffer {
 	 *
 	 * @param c The byte to append
 	 */
-	public void append(char c) {
+	public void append(char c) throws AllocationTracker.AvatarOOMException {
 		ensure(1);
 		bytes[length++] = c < 256 ? (byte) c : 63;
 	}
@@ -145,7 +153,7 @@ public final class Buffer {
 	 * @param start  The start index
 	 * @param length The number of values to append
 	 */
-	public void append(char[] chars, int start, int length) {
+	public void append(char[] chars, int start, int length) throws AllocationTracker.AvatarOOMException {
 		ensure(length);
 		int j = this.length;
 		for (int i = start; i < start + length; i++, j++) {
@@ -161,7 +169,7 @@ public final class Buffer {
 	 * @param str The string to append
 	 * @return {@code this}, for chaining.
 	 */
-	public Buffer append(LuaString str) {
+	public Buffer append(LuaString str) throws AllocationTracker.AvatarOOMException {
 		ensure(str.length());
 		length = str.copyTo(bytes, length);
 		return this;
@@ -173,7 +181,7 @@ public final class Buffer {
 	 * @param str The string to append
 	 * @return {@code this}, for chaining.
 	 */
-	public Buffer append(LuaString str, int start, int srcLength) {
+	public Buffer append(LuaString str, int start, int srcLength) throws AllocationTracker.AvatarOOMException {
 		ensure(length);
 		length = str.copyTo(start, bytes, length, srcLength);
 		return this;
@@ -187,7 +195,7 @@ public final class Buffer {
 	 * @return {@code this}, for chaining.
 	 * @see LuaString#encode(String, byte[], int)
 	 */
-	public Buffer append(String str) {
+	public Buffer append(String str) throws AllocationTracker.AvatarOOMException {
 		final int n = str.length();
 		ensure(n);
 		LuaString.encode(str, bytes, length);
@@ -200,7 +208,7 @@ public final class Buffer {
 	 *
 	 * @param space number of unused bytes which must follow the data after this completes
 	 */
-	public void ensure(int space) {
+	public void ensure(int space) throws AllocationTracker.AvatarOOMException {
 		int newLength = length + space;
 		if (bytes.length >= newLength) return;
 
@@ -213,13 +221,11 @@ public final class Buffer {
 	 *
 	 * @param newSize the size of the buffer to use
 	 */
-	private void realloc(int newSize) {
+	private void realloc(int newSize) throws AllocationTracker.AvatarOOMException {
 		if (newSize == bytes.length) return;
 
-		if (allocTracker != null && newSize > bytes.length)
-			allocTracker.allocate(newSize);
-
 		byte[] newBytes = new byte[newSize];
+		if (tracker != null) tracker.allocate(newBytes, newSize);
 		System.arraycopy(bytes, 0, newBytes, 0, length);
 		bytes = newBytes;
 	}

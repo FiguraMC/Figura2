@@ -1,5 +1,7 @@
 package org.figuramc.figura.script_languages.lua;
 
+import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
@@ -15,7 +17,7 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
 @SuppressWarnings("DuplicatedCode") // Duplication can help with speed.
 public class FiguraTable {
 
-    public static void init(LuaState state) throws LuaError {
+    public static void init(LuaState state) throws LuaError, AvatarError {
         // Get "table" lib
         LuaTable table = state.globals().rawget("table").checkTable(state);
 
@@ -196,7 +198,7 @@ public class FiguraTable {
             LuaFunction func = args.arg(4).checkFunction(s);
             for (double v = min; v <= max; v += step) {
                 final double fv = v;
-                SuspendedAction.run(di, () -> Dispatch.call(s, func, ValueFactory.valueOf(fv)));
+                SuspendedAction.run(di, () -> Dispatch.call(s, func, LuaDouble.valueOf(fv)));
             }
             return NONE;
         }));
@@ -214,7 +216,7 @@ public class FiguraTable {
 
     }
 
-    private static LuaTable range(LuaState state, double start, double end, double step) throws LuaError {
+    private static LuaTable range(LuaState state, double start, double end, double step) throws LuaError, AllocationTracker.AvatarOOMException {
         // Validate args
         if (step == 0) throw new LuaError("Invalid step argument to table.range(): 0", state.allocationTracker);
         if ((start != end) && ((start > end) != (step < 0))) throw new LuaError("table.range() will never terminate with args " + start + ", " + end + ", " + step, state.allocationTracker);
@@ -225,7 +227,7 @@ public class FiguraTable {
         LuaTable t = new LuaTable(count, 0, state.allocationTracker);
         int i = 1;
         for (double v = start; (step < 0) ? v >= end : v <= end; v += step)
-            t.rawset(i++, valueOf(v));
+            t.rawset(i++, LuaDouble.valueOf(v));
         return t;
     }
 

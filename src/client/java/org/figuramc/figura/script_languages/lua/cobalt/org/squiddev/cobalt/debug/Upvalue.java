@@ -24,8 +24,6 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Prototype;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaClosure;
@@ -36,7 +34,7 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
  * @see LuaClosure
  * @see Prototype
  */
-public final class Upvalue implements MemoryCountable {
+public final class Upvalue {
 	private LuaValue[] array; // initially the stack, becomes a holder
 	private int index;
 
@@ -102,9 +100,4 @@ public final class Upvalue implements MemoryCountable {
 		return previous;
 	}
 
-	@Override
-	public long count(MemoryCounter counter, int depth) {
-		counter.trace(getValue(), depth);
-		return OBJECT_SIZE;
-	}
 }

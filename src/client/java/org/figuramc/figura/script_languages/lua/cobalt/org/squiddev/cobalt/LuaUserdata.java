@@ -24,10 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCountable;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 
-public class LuaUserdata extends MarkedLuaValue {
+public class LuaUserdata extends LuaValue {
 
 	public final Object instance;
 	public LuaTable metatable;
@@ -52,13 +51,9 @@ public class LuaUserdata extends MarkedLuaValue {
 		return instance;
 	}
 
-	public Object toUserdata() {
-		return instance;
-	}
-
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError {
+	public <T> T checkUserdata(LuaState state, Class<T> targetClass) throws LuaError, AllocationTracker.AvatarOOMException {
 		if (targetClass.isInstance(instance))
 			return (T) instance;
 		return super.checkUserdata(state, targetClass);
@@ -79,12 +74,4 @@ public class LuaUserdata extends MarkedLuaValue {
 		return this == val || (val instanceof LuaUserdata other && metatable == other.metatable && instance.equals(other.instance));
 	}
 
-	@Override
-	protected long traceNoMark(MemoryCounter counter, int depth) {
-		// Trace instance if possible
-		if (instance instanceof MemoryCountable countable) counter.trace(countable, depth);
-		// Always trace metatable
-		counter.trace(metatable, depth);
-		return OBJECT_SIZE + POINTER_SIZE * 2;
-	}
 }

@@ -37,85 +37,12 @@ public final class ValueFactory {
 	}
 
 	/**
-	 * Convert java boolean to a {@link LuaValue}.
-	 *
-	 * @param b boolean value to convert
-	 * @return {@link Constants#TRUE} if not  or {@link Constants#FALSE} if false
-	 */
-	public static LuaBoolean valueOf(boolean b) {
-		return b ? Constants.TRUE : Constants.FALSE;
-	}
-
-	/**
-	 * Convert java int to a {@link LuaValue}.
-	 *
-	 * @param i int value to convert
-	 * @return {@link LuaInteger} instance, possibly pooled, whose value is i
-	 */
-	public static LuaInteger valueOf(int i) {
-		return LuaInteger.valueOf(i);
-	}
-
-	/**
-	 * Convert java double to a {@link LuaValue}.
-	 * This may return a {@link LuaInteger} or {@link LuaDouble} depending
-	 * on the value supplied.
-	 *
-	 * @param d double value to convert
-	 * @return {@link LuaNumber} instance, possibly pooled, whose value is d
-	 */
-	public static LuaNumber valueOf(double d) {
-		return LuaDouble.valueOf(d);
-	}
-
-	/**
-	 * Convert java string to a {@link LuaValue}.
-	 *
-	 * @param s String value to convert
-	 * @return {@link LuaString} instance, possibly pooled, whose value is s
-	 */
-	public static LuaString valueOf(String s, @Nullable AllocationTracker allocTracker) {
-		return LuaString.valueOf(allocTracker, s);
-	}
-
-	/**
-	 * Convert bytes in an array to a {@link LuaValue}.
-	 *
-	 * @param bytes byte array to convert
-	 * @return {@link LuaString} instance, possibly pooled, whose bytes are those in the supplied array
-	 */
-	public static LuaString valueOf(byte[] bytes) {
-		return LuaString.valueOf(bytes);
-	}
-
-	/**
-	 * Convert bytes in an array to a {@link LuaValue}.
-	 *
-	 * @param bytes byte array to convert
-	 * @param off   offset into the byte array, starting at 0
-	 * @param len   number of bytes to include in the {@link LuaString}
-	 * @return {@link LuaString} instance, possibly pooled, whose bytes are those in the supplied array
-	 */
-	public static LuaString valueOf(byte[] bytes, int off, int len, @Nullable AllocationTracker allocTracker) {
-		return LuaString.valueOf(allocTracker, bytes, off, len);
-	}
-
-	/**
-	 * Construct an empty {@link LuaTable}.
-	 *
-	 * @return new {@link LuaTable} instance with no values and no metatable.
-	 */
-	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker) {
-		return new LuaTable(allocTracker);
-	}
-
-	/**
 	 * Construct a {@link LuaTable} initialized with supplied array values.
 	 *
 	 * @param values array of {@link LuaValue} containing the values to use in initialization
 	 * @return new {@link LuaTable} instance with sequential elements coming from the array.
 	 */
-	public static LuaTable listOf(@Nullable AllocationTracker allocTracker, LuaValue... values) {
+	public static LuaTable listOf(@Nullable AllocationTracker allocTracker, LuaValue... values) throws AllocationTracker.AvatarOOMException {
 		LuaTable table = new LuaTable(values.length, 0, allocTracker);
 		for (int i = 0; i < values.length; i++) table.rawset(i + 1, values[i]);
 		return table;
@@ -128,33 +55,12 @@ public final class ValueFactory {
 	 *              in order {@code {key-a, value-a, key-b, value-b, ...} }
 	 * @return new {@link LuaTable} instance with non-sequential keys coming from the supplied array.
 	 */
-	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker, LuaValue... items) throws LuaError {
+	public static LuaTable tableOf(@Nullable AllocationTracker allocTracker, LuaValue... items) throws LuaError, AllocationTracker.AvatarOOMException  {
 		LuaTable table = new LuaTable(0, items.length >> 1, allocTracker);
 		for (int i = 0; i < items.length; i += 2) {
 			if (!items[i + 1].isNil()) table.rawset(items[i], items[i + 1]);
 		}
 		return table;
-	}
-
-	/**
-	 * Construct a LuaUserdata for an object.
-	 *
-	 * @param o The java instance to be wrapped as userdata
-	 * @return {@link LuaUserdata} value wrapping the java instance.
-	 */
-	public static LuaUserdata userdataOf(Object o) {
-		return new LuaUserdata(o);
-	}
-
-	/**
-	 * Construct a LuaUserdata for an object with a user supplied metatable.
-	 *
-	 * @param o         The java instance to be wrapped as userdata
-	 * @param metatable The metatble to associate with the userdata instance.
-	 * @return {@link LuaUserdata} value wrapping the java instance.
-	 */
-	public static LuaUserdata userdataOf(Object o, LuaTable metatable) {
-		return new LuaUserdata(o, metatable);
 	}
 
 	/**

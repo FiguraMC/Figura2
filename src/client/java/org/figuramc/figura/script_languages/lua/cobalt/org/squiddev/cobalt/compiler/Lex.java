@@ -6,7 +6,6 @@ import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.interna
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.Utf8Lib;
-import org.jetbrains.annotations.Nullable;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -60,7 +59,7 @@ final class Lex {
 			// We skip GOTO and inject it later on when parsing statements.
 			if (FIRST_RESERVED + i == TK_GOTO) continue;
 
-			reserved.put(ValueFactory.valueOf(tokenNames[i], null).toBuffer(), FIRST_RESERVED + i);
+			reserved.put(LuaString.valueOfNoAlloc(tokenNames[i]).toBuffer(), FIRST_RESERVED + i);
 		}
 		RESERVED = Collections.unmodifiableMap(reserved);
 	}
@@ -151,7 +150,7 @@ final class Lex {
 		lookahead.token = TK_EOS;
 	}
 
-	private void next() throws CompileException, LuaError, UnwindThrowable {
+	private void next() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		current = z.read();
 		columnNumber++;
 	}
@@ -165,7 +164,7 @@ final class Lex {
 		return current == '\n' || current == '\r';
 	}
 
-	private void saveAndNext() throws CompileException, LuaError, UnwindThrowable {
+	private void saveAndNext() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		save(current);
 		next();
 	}
@@ -183,11 +182,11 @@ final class Lex {
 		}
 	}
 
-	Buffer createErrorMessage(int line) {
+	Buffer createErrorMessage(int line) throws AllocationTracker.AvatarOOMException {
 		return new Buffer(state.allocationTracker).append(shortSource).append(":").append(Integer.toString(line)).append(": ");
 	}
 
-	CompileException lexError(String msg, int token) {
+	CompileException lexError(String msg, int token) throws AllocationTracker.AvatarOOMException {
 		var buffer = createErrorMessage(lineNumber).append(msg);
 		if (token != 0) {
 			buffer.append(" near ");
@@ -196,10 +195,10 @@ final class Lex {
 				default -> buffer.append(token2str(token));
 			}
 		}
-		return new CompileException(buffer.toString());
+		return new CompileException(buffer.toJavaString());
 	}
 
-	CompileException syntaxError(String msg) {
+	CompileException syntaxError(String msg) throws AllocationTracker.AvatarOOMException {
 		return lexError(msg, token.token());
 	}
 
@@ -215,33 +214,33 @@ final class Lex {
 	 * @param len    The length of the string.
 	 * @return The created or interned string.
 	 */
-	LuaString newString(byte[] bytes, int offset, int len) {
+	LuaString newString(byte[] bytes, int offset, int len) throws AllocationTracker.AvatarOOMException {
 		LuaString interned = strings.get(ByteBuffer.wrap(bytes, offset, len));
 		if (interned == null) {
 			// must copy bytes, since bytes could be from reusable buffer
-			if (state.allocationTracker != null) state.allocationTracker.allocate(len);
 			byte[] slice = new byte[len];
+			if (state.allocationTracker != null) state.allocationTracker.allocate(slice, len);
 			System.arraycopy(bytes, offset, slice, 0, len);
-			strings.put(ByteBuffer.wrap(slice), interned = LuaString.valueOf(slice));
+			strings.put(ByteBuffer.wrap(slice), interned = LuaString.valueOfNoCopy(slice));
 		}
 		return interned;
 	}
 
-	LuaString newString(String value) {
-		if (state.allocationTracker != null) state.allocationTracker.allocate(value.length());
+	LuaString newString(String value) throws AllocationTracker.AvatarOOMException {
 		byte[] contents = new byte[value.length()];
+		if (state.allocationTracker != null) state.allocationTracker.allocate(contents, value.length());
 		LuaString.encode(value, contents, 0);
 		var buffer = ByteBuffer.wrap(contents);
 
 		LuaString interned = strings.get(buffer);
-		if (interned == null) strings.put(buffer, interned = LuaString.valueOf(contents));
+		if (interned == null) strings.put(buffer, interned = LuaString.valueOfNoCopy(contents));
 		return interned;
 	}
 
 	/**
 	 * Increment line number and skips newline sequence (any of \n, \r, \n\r, or \r\n)
 	 */
-	private void inclineNumber() throws CompileException, LuaError, UnwindThrowable {
+	private void inclineNumber() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int old = current;
 		assert currIsNewline();
 		next(); /* skip '\n' or '\r' */
@@ -250,7 +249,7 @@ final class Lex {
 		columnNumber = 1;
 	}
 
-	private boolean checkNext(char character) throws CompileException, LuaError, UnwindThrowable {
+	private boolean checkNext(char character) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (current == character) {
 			next();
 			return true;
@@ -259,7 +258,7 @@ final class Lex {
 		return false;
 	}
 
-	private boolean checkNext(char c1, char c2) throws CompileException, LuaError, UnwindThrowable {
+	private boolean checkNext(char c1, char c2) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (current == c1 || current == c2) {
 			saveAndNext();
 			return true;
@@ -268,7 +267,7 @@ final class Lex {
 		return false;
 	}
 
-	private LuaNumber readNumeral() throws CompileException, LuaError, UnwindThrowable {
+	private LuaNumber readNumeral() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		assert CharProperties.isDigit(current);
 
 		int first = current;
@@ -292,7 +291,7 @@ final class Lex {
 
 		var value = NumberParser.parse(buff, 0, bufferSize, 10);
 		if (Double.isNaN(value)) throw lexError("malformed number", TK_NUMBER);
-		return ValueFactory.valueOf(value);
+		return LuaDouble.valueOf(value);
 	}
 
 	/**
@@ -301,7 +300,7 @@ final class Lex {
 	 * @return If the sequence is well formed, the number of '='s + 2. If not, then 1 if it is a single bracket (no '='s
 	 * and no 2nd bracket); otherwise (an unfinished '[==...') 0.
 	 */
-	private int skipSep() throws CompileException, LuaError, UnwindThrowable {
+	private int skipSep() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int count = 0;
 		int s = current;
 		assert s == '[' || s == ']';
@@ -315,7 +314,7 @@ final class Lex {
 		return count == 0 ? 1 : 0;
 	}
 
-	private void readLongString(Token token, int sep) throws CompileException, LuaError, UnwindThrowable {
+	private void readLongString(Token token, int sep) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int line = lineNumber;
 		saveAndNext(); // skip 2nd `['
 		if (currIsNewline()) inclineNumber(); // Skip leading string if needed
@@ -353,25 +352,25 @@ final class Lex {
 		}
 	}
 
-	private CompileException escapeError(String message) throws CompileException, LuaError, UnwindThrowable {
+	private CompileException escapeError(String message) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (current != EOZ) saveAndNext();
 		return lexError(message, TK_STRING);
 	}
 
-	private int readHex() throws CompileException, LuaError, UnwindThrowable {
+	private int readHex() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		saveAndNext();
 		if (!CharProperties.isHex(current)) throw escapeError("hexadecimal digit expected");
 		return CharProperties.hexValue(current);
 	}
 
-	private int readHexEsc() throws CompileException, LuaError, UnwindThrowable {
+	private int readHexEsc() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int left = readHex();
 		int right = readHex();
 		bufferSize -= 2;
 		return (left << 4) | right;
 	}
 
-	private void readUtf8Esc() throws CompileException, LuaError, UnwindThrowable {
+	private void readUtf8Esc() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		saveAndNext();
 		if (current != '{') throw escapeError("missing '{'");
 
@@ -398,7 +397,7 @@ final class Lex {
 		}
 	}
 
-	private int readDecEsc() throws CompileException, LuaError, UnwindThrowable {
+	private int readDecEsc() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int i = 0;
 		int result = 0;
 		for (; i < 3 && CharProperties.isDigit(current); i++) {
@@ -412,7 +411,7 @@ final class Lex {
 		return result;
 	}
 
-	private LuaString readString(int del) throws CompileException, LuaError, UnwindThrowable {
+	private LuaString readString(int del) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		saveAndNext();
 		while (current != del) {
 			switch (current) {
@@ -486,13 +485,13 @@ final class Lex {
 		return newString(buff, 1, bufferSize - 2);
 	}
 
-	private void saveEscape(int character) throws CompileException, LuaError, UnwindThrowable {
+	private void saveEscape(int character) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		next();
 		bufferSize--;
 		save(character);
 	}
 
-	private int lexToken(Token token) throws CompileException, LuaError, UnwindThrowable {
+	private int lexToken(Token token) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		bufferSize = 0;
 		while (true) {
 			token.position = packPosition(lineNumber, columnNumber);
@@ -613,13 +612,13 @@ final class Lex {
 		return lastPosition;
 	}
 
-	void skipShebang() throws CompileException, LuaError, UnwindThrowable {
+	void skipShebang() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (current == '#') {
 			while (!currIsNewline() && current != EOZ) next();
 		}
 	}
 
-	void nextToken() throws CompileException, LuaError, UnwindThrowable {
+	void nextToken() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		lastPosition = packPosition(lineNumber, columnNumber);
 		if (lookahead.token != TK_EOS) { // is there a look-ahead token?
 			token.set(lookahead);
@@ -629,7 +628,7 @@ final class Lex {
 		}
 	}
 
-	Token lookahead() throws CompileException, LuaError, UnwindThrowable {
+	Token lookahead() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (lookahead.token == TK_EOS) lookahead.token = lexToken(lookahead);
 		return lookahead;
 	}

@@ -24,10 +24,11 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,7 +77,7 @@ final class Parser {
 	private int activeVariableSize;
 	private short[] activeVariables = new short[16];
 
-	public Parser(LuaState state, InputReader stream, int firstByte, LuaString source, LuaString shortSource) {
+	public Parser(LuaState state, InputReader stream, int firstByte, LuaString source, LuaString shortSource) throws AllocationTracker.AvatarOOMException {
 		lexer = new Lex(state, source, shortSource, stream, firstByte);
 		envName = lexer.newString("_ENV");
 		gotoName = lexer.newString("goto");
@@ -165,30 +166,30 @@ final class Parser {
 	------------------------------------------------------------------------*/
 
 
-	CompileException syntaxError(String msg) {
+	CompileException syntaxError(String msg) throws AllocationTracker.AvatarOOMException {
 		return lexer.syntaxError(msg);
 	}
 
-	CompileException semError(String msg) {
+	CompileException semError(String msg) throws AllocationTracker.AvatarOOMException {
 		return lexer.lexError(msg, 0);
 	}
 
-	private void errorExpected(int token) throws CompileException {
+	private void errorExpected(int token) throws CompileException, AllocationTracker.AvatarOOMException {
 		throw syntaxError(token2str(token) + " expected");
 	}
 
-	private void errorLimit(FuncState fs, int limit, String what) throws CompileException {
+	private void errorLimit(FuncState fs, int limit, String what) throws CompileException, AllocationTracker.AvatarOOMException {
 		String msg = fs.lineDefined == 0
 			? "main function has more than " + limit + " " + what
 			: "function at line " + fs.lineDefined + " has more than " + limit + " " + what;
 		throw lexer.lexError(msg, 0);
 	}
 
-	private void checkLimit(FuncState fs, int value, int limit, String msg) throws CompileException {
+	private void checkLimit(FuncState fs, int value, int limit, String msg) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (value > limit) errorLimit(fs, limit, msg);
 	}
 
-	private boolean testNext(int c) throws CompileException, LuaError, UnwindThrowable {
+	private boolean testNext(int c) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (lexer.token.token() == c) {
 			lexer.nextToken();
 			return true;
@@ -197,20 +198,20 @@ final class Parser {
 		}
 	}
 
-	void check(int c) throws CompileException {
+	void check(int c) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (lexer.token.token() != c) errorExpected(c);
 	}
 
-	private void checkNext(int c) throws CompileException, LuaError, UnwindThrowable {
+	private void checkNext(int c) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		check(c);
 		lexer.nextToken();
 	}
 
-	private void checkCondition(boolean c, String msg) throws CompileException {
+	private void checkCondition(boolean c, String msg) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (!c) throw syntaxError(msg);
 	}
 
-	private void checkMatch(int what, int who, int where) throws CompileException, LuaError, UnwindThrowable {
+	private void checkMatch(int what, int who, int where) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (testNext(what)) return;
 
 		if (where == lexer.token.line()) {
@@ -220,7 +221,7 @@ final class Parser {
 		}
 	}
 
-	private LuaString strCheckName() throws CompileException, LuaError, UnwindThrowable {
+	private LuaString strCheckName() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		check(TK_NAME);
 		LuaString ts = lexer.token.stringContents();
 		lexer.nextToken();
@@ -231,7 +232,7 @@ final class Parser {
 		e.init(ExpKind.VK, fs.stringK(s));
 	}
 
-	private void checkName(ExpDesc e) throws CompileException, LuaError, UnwindThrowable {
+	private void checkName(ExpDesc e) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		codeString(e, strCheckName());
 	}
 
@@ -242,11 +243,11 @@ final class Parser {
 		return index;
 	}
 
-	private void newLocal(String name) throws CompileException {
+	private void newLocal(String name) throws CompileException, AllocationTracker.AvatarOOMException {
 		newLocal(lexer.newString(name));
 	}
 
-	private void newLocal(LuaString name) throws CompileException {
+	private void newLocal(LuaString name) throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState fs = this.fs;
 		checkLimit(fs, activeVariableSize + 1, LuaC.LUAI_MAXVARS, "local variables");
 		if (activeVariableSize >= activeVariables.length) {
@@ -284,7 +285,7 @@ final class Parser {
 		return -1;
 	}
 
-	private int newUpvalue(FuncState fs, LuaString name, ExpDesc v) throws CompileException {
+	private int newUpvalue(FuncState fs, LuaString name, ExpDesc v) throws CompileException, AllocationTracker.AvatarOOMException {
 		// Add a new upvalue
 		checkLimit(fs, fs.upvalues.size(), LUAI_MAXUPVALUES, "upvalues");
 		assert v.kind == ExpKind.VLOCAL || v.kind == ExpKind.VUPVAL;
@@ -313,7 +314,7 @@ final class Parser {
 	/**
 	 * Find variable with given name 'n'. If it is an upvalue, add this upvalue into all intermediate functions.
 	 */
-	private ExpKind singleVarAux(FuncState fs, LuaString n, ExpDesc var, boolean base) throws CompileException {
+	private ExpKind singleVarAux(FuncState fs, LuaString n, ExpDesc var, boolean base) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (fs == null) { // No more levels
 			return ExpKind.VVOID; // Default is global
 		}
@@ -337,7 +338,7 @@ final class Parser {
 		}
 	}
 
-	private void singleVar(ExpDesc var) throws CompileException, LuaError, UnwindThrowable {
+	private void singleVar(ExpDesc var) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		var.position = lexer.token.position();
 
 		LuaString varName = strCheckName();
@@ -351,7 +352,7 @@ final class Parser {
 		}
 	}
 
-	private void adjustAssign(int nvars, int nexps, ExpDesc e) throws CompileException {
+	private void adjustAssign(int nvars, int nexps, ExpDesc e) throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState fs = this.fs;
 		int extra = nvars - nexps;
 		if (e.kind.hasMultiRet()) {
@@ -371,7 +372,7 @@ final class Parser {
 		if (nexps > nvars) fs.freeReg -= nexps - nvars;
 	}
 
-	private void enterLevel() throws CompileException {
+	private void enterLevel() throws CompileException, AllocationTracker.AvatarOOMException {
 		nCcalls++;
 		checkLimit(fs, nCcalls, LUAI_MAXCCALLS, "syntax levels");
 	}
@@ -385,7 +386,7 @@ final class Parser {
 	 * <p>
 	 * If it jumps into the scope of some variable, raises an error.
 	 */
-	private void closeGoto(int g, LabelDesc label) throws CompileException {
+	private void closeGoto(int g, LabelDesc label) throws CompileException, AllocationTracker.AvatarOOMException {
 		var gt = pendingGotos.get(g);
 		assert gt.name == label.name;
 
@@ -404,7 +405,7 @@ final class Parser {
 	 * @param g The goto index.
 	 * @return If a label was found.
 	 */
-	private boolean findLabel(int g) throws CompileException {
+	private boolean findLabel(int g) throws CompileException, AllocationTracker.AvatarOOMException {
 		var block = fs.block;
 		var gt = pendingGotos.get(g);
 		for (int i = block.firstLabel; i < activeLabels.size(); i++) {
@@ -420,7 +421,7 @@ final class Parser {
 		return false;
 	}
 
-	private int newLabelEntry(List<LabelDesc> labels, LuaString label, int line, int pc) throws CompileException {
+	private int newLabelEntry(List<LabelDesc> labels, LuaString label, int line, int pc) throws CompileException, AllocationTracker.AvatarOOMException {
 		checkLimit(fs, labels.size() + 1, Short.MAX_VALUE, "labels/gotos");
 		int index = labels.size();
 		labels.add(new LabelDesc(label, pc, line, fs.activeVariableCount));
@@ -432,7 +433,7 @@ final class Parser {
 	 *
 	 * @param label The label whose corresponding gotos should be "closed".
 	 */
-	private void findGotos(LabelDesc label) throws CompileException {
+	private void findGotos(LabelDesc label) throws CompileException, AllocationTracker.AvatarOOMException {
 		int i = fs.block.firstGoto;
 
 		while (i < pendingGotos.size()) {
@@ -450,7 +451,7 @@ final class Parser {
 	 *
 	 * @param bl The current block.
 	 */
-	private void moveGotosOut(FuncState.BlockCnt bl) throws CompileException {
+	private void moveGotosOut(FuncState.BlockCnt bl) throws CompileException, AllocationTracker.AvatarOOMException {
 		for (int i = bl.firstGoto; i < pendingGotos.size(); ) {
 			var gt = pendingGotos.get(i);
 			if (gt.activeVariables > bl.activeVariableCount) {
@@ -479,12 +480,12 @@ final class Parser {
 	/**
 	 * Create a label named 'break' to resolve break statements
 	 */
-	private void breakLabel() throws CompileException {
+	private void breakLabel() throws CompileException, AllocationTracker.AvatarOOMException {
 		var label = newLabelEntry(activeLabels, lexer.newString("break"), 0, fs.pc);
 		findGotos(activeLabels.get(label));
 	}
 
-	private CompileException undefGoto(LabelDesc gt) {
+	private CompileException undefGoto(LabelDesc gt) throws AllocationTracker.AvatarOOMException {
 		// We report this error message on the label's line, rather than the line of the closing "end".
 		var buffer = lexer.createErrorMessage(gt.line);
 		if (Lex.isReserved(gt.name)) {
@@ -492,10 +493,10 @@ final class Parser {
 		} else {
 			buffer.append("no visible label '").append(gt.name).append("' for <goto> at line ").append(Integer.toString(gt.line));
 		}
-		return new CompileException(buffer.toString());
+		return new CompileException(buffer.toJavaString());
 	}
 
-	private void leaveBlock(FuncState fs) throws CompileException {
+	private void leaveBlock(FuncState fs) throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState.BlockCnt bl = fs.block;
 		if (bl.previous != null && bl.upval) {
 			int j = fs.jump();
@@ -521,7 +522,7 @@ final class Parser {
 	/**
 	 * Codes instruction to create new closure in parent function.
 	 */
-	private void codeClosure(Prototype childPrototype, ExpDesc v) throws CompileException {
+	private void codeClosure(Prototype childPrototype, ExpDesc v) throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState current = fs;
 		int index = current.children.size();
 		current.children.add(childPrototype);
@@ -530,7 +531,7 @@ final class Parser {
 		fs.exp2NextReg(v);
 	}
 
-	FuncState openFunc() throws CompileException {
+	FuncState openFunc() throws CompileException, AllocationTracker.AvatarOOMException {
 		if (fs != null) checkLimit(fs, fs.children.size(), MAXARG_Bx, "functions");
 		FuncState fs = new FuncState(lexer, this.fs, activeVariableSize, activeLabels.size());
 		this.fs = fs;
@@ -538,7 +539,7 @@ final class Parser {
 		return fs;
 	}
 
-	Prototype closeFunc() throws CompileException {
+	Prototype closeFunc() throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState fs = this.fs;
 
 		fs.ret(0, 0); // final return
@@ -566,7 +567,7 @@ final class Parser {
 		};
 	}
 
-	private void statementList() throws CompileException, LuaError, UnwindThrowable {
+	private void statementList() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* statlist -> { stat [`;'] } */
 		while (!blockFollow(true)) {
 			if (lexer.token.token() == TK_RETURN) {
@@ -577,7 +578,7 @@ final class Parser {
 		}
 	}
 
-	private void fieldSelect(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void fieldSelect(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* field -> ['.' | ':'] NAME */
 		ExpDesc key = new ExpDesc();
 		fs.exp2AnyRegUp(v);
@@ -587,7 +588,7 @@ final class Parser {
 		fs.indexed(v, key, indexPos);
 	}
 
-	private void yindex(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void yindex(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* index -> '[' expr ']' */
 		lexer.nextToken(); // skip the '['
 		expression(v);
@@ -613,7 +614,7 @@ final class Parser {
 		}
 	}
 
-	private void recordField(ConsControl cc) throws CompileException, LuaError, UnwindThrowable {
+	private void recordField(ConsControl cc) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* recfield -> (NAME | `['exp1`]') = exp1 */
 		FuncState fs = this.fs;
 		int reg = this.fs.freeReg;
@@ -634,7 +635,7 @@ final class Parser {
 		fs.freeReg = reg; // free registers
 	}
 
-	void closeListField(FuncState fs, ConsControl cc) throws CompileException {
+	void closeListField(FuncState fs, ConsControl cc) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (cc.v.kind == ExpKind.VVOID) return; // there is no list item
 		fs.exp2NextReg(cc.v);
 		cc.v.kind = ExpKind.VVOID;
@@ -644,7 +645,7 @@ final class Parser {
 		}
 	}
 
-	void lastListField(FuncState fs, ConsControl cc) throws CompileException {
+	void lastListField(FuncState fs, ConsControl cc) throws CompileException, AllocationTracker.AvatarOOMException {
 		if (cc.toStore == 0) return;
 		if (cc.v.kind.hasMultiRet()) {
 			fs.setMultiRet(cc.v);
@@ -656,14 +657,14 @@ final class Parser {
 		}
 	}
 
-	private void listField(ConsControl cc) throws CompileException, LuaError, UnwindThrowable {
+	private void listField(ConsControl cc) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		expression(cc.v);
 		checkLimit(fs, cc.arraySize, Lex.MAX_INT, "items in a constructor");
 		cc.arraySize++;
 		cc.toStore++;
 	}
 
-	private void field(ConsControl cc) throws CompileException, LuaError, UnwindThrowable {
+	private void field(ConsControl cc) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// field -> listfield | recfield
 		switch (lexer.token.token()) {
 			case TK_NAME -> { // may be listfields or recfields
@@ -678,7 +679,7 @@ final class Parser {
 		}
 	}
 
-	private void constructor(ExpDesc t) throws CompileException, LuaError, UnwindThrowable {
+	private void constructor(ExpDesc t) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* constructor -> ?? */
 		FuncState fs = this.fs;
 		int line = lexer.token.line();
@@ -723,7 +724,7 @@ final class Parser {
 
 	/* }====================================================================== */
 
-	private void parlist() throws CompileException, LuaError, UnwindThrowable {
+	private void parlist() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* parlist -> [ param { `,' param } ] */
 		FuncState fs = this.fs;
 		int numParams = 0;
@@ -747,7 +748,7 @@ final class Parser {
 		fs.reserveRegs(fs.activeVariableCount);  /* reserve register for parameters */
 	}
 
-	private void body(ExpDesc e, boolean needSelf, int line) throws CompileException, LuaError, UnwindThrowable {
+	private void body(ExpDesc e, boolean needSelf, int line) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* body -> `(' parlist `)' chunk END */
 		FuncState newFuncState = openFunc();
 		newFuncState.lineDefined = line;
@@ -766,7 +767,7 @@ final class Parser {
 		codeClosure(proto, e);
 	}
 
-	private int expList1(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private int expList1(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* explist1 -> expr { `,' expr } */
 		int n = 1; // at least one expression
 		expression(v);
@@ -778,7 +779,7 @@ final class Parser {
 		return n;
 	}
 
-	private void funcArgs(ExpDesc f) throws CompileException, LuaError, UnwindThrowable {
+	private void funcArgs(ExpDesc f) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		FuncState fs = this.fs;
 		ExpDesc args = new ExpDesc();
 		long position = lexer.token.position();
@@ -824,7 +825,7 @@ final class Parser {
 	 ** =======================================================================
 	 */
 
-	private void primaryExpression(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void primaryExpression(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// primaryexp -> NAME | '(' expr ')'
 		switch (lexer.token.token()) {
 			case '(' -> {
@@ -841,7 +842,7 @@ final class Parser {
 		}
 	}
 
-	private void suffixedExpression(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void suffixedExpression(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// suffixedexp -> primaryexp { '.' NAME | '[' exp ']' | ':' NAME funcargs | funcargs }
 		FuncState fs = this.fs;
 		primaryExpression(v);
@@ -875,7 +876,7 @@ final class Parser {
 		}
 	}
 
-	private void simpleExpression(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void simpleExpression(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/*
 		 * simpleexp -> NUMBER | STRING | NIL | true | false | ... | constructor |
 		 * FUNCTION body | suffixedexp
@@ -916,7 +917,7 @@ final class Parser {
 	 ** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
 	 ** where `binop' is any binary operator with a priority higher than `limit'
 	 */
-	private BinOpr subExpression(ExpDesc v, int limit) throws CompileException, LuaError, UnwindThrowable {
+	private BinOpr subExpression(ExpDesc v, int limit) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		enterLevel();
 		UnOpr unop = UnOpr.ofToken(lexer.token.token());
 		if (unop != null) {
@@ -944,7 +945,7 @@ final class Parser {
 		return binop; // return first untreated operator
 	}
 
-	private void expression(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private void expression(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		subExpression(v, 0);
 	}
 
@@ -956,7 +957,7 @@ final class Parser {
 	 ** =======================================================================
 	 */
 
-	private void block() throws CompileException, LuaError, UnwindThrowable {
+	private void block() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* block -> chunk */
 		enterBlock(fs, false);
 		statementList();
@@ -981,7 +982,7 @@ final class Parser {
 	 * local value in a safe place and use this safe copy in the previous
 	 * assignment.
 	 */
-	private void checkConflict(LhsAssign lh, ExpDesc v) throws CompileException {
+	private void checkConflict(LhsAssign lh, ExpDesc v) throws CompileException, AllocationTracker.AvatarOOMException {
 		FuncState fs = this.fs;
 		int extra = fs.freeReg;  // eventual position to save local variable
 		boolean conflict = false;
@@ -1009,7 +1010,7 @@ final class Parser {
 		}
 	}
 
-	private void assignment(LhsAssign lh, int nvars) throws CompileException, LuaError, UnwindThrowable {
+	private void assignment(LhsAssign lh, int nvars) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		ExpDesc e = new ExpDesc();
 		checkCondition(lh.v.kind.isVar(), "syntax error");
 		if (testNext(',')) { // assignment -> `,' primaryexp assignment
@@ -1032,7 +1033,7 @@ final class Parser {
 		fs.storeVar(lh.v, e);
 	}
 
-	private int cond() throws CompileException, LuaError, UnwindThrowable {
+	private int cond() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* cond -> exp */
 		ExpDesc v = new ExpDesc();
 		expression(v); // read condition
@@ -1041,18 +1042,18 @@ final class Parser {
 		return v.f.value;
 	}
 
-	private void gotoLabel(int pc, int line, LuaString label) throws CompileException {
+	private void gotoLabel(int pc, int line, LuaString label) throws CompileException, AllocationTracker.AvatarOOMException {
 		int g = newLabelEntry(pendingGotos, label, line, pc);
 		findLabel(g); // Link if label already defined.
 	}
 
-	private void breakStmt(int pc) throws CompileException, LuaError, UnwindThrowable {
+	private void breakStmt(int pc) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int line = lexer.token.line();
 		lexer.nextToken();
 		gotoLabel(pc, line, lexer.newString("break"));
 	}
 
-	private void gotoStat(int pc) throws CompileException, LuaError, UnwindThrowable {
+	private void gotoStat(int pc) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int line = lexer.token.line();
 		lexer.nextToken();
 		gotoLabel(pc, line, strCheckName());
@@ -1063,7 +1064,7 @@ final class Parser {
 	 *
 	 * @param name The name of the label.
 	 */
-	private void checkRepeated(LuaString name) throws CompileException {
+	private void checkRepeated(LuaString name) throws CompileException, AllocationTracker.AvatarOOMException {
 		for (int i = fs.firstLabel; i < activeLabels.size(); i++) {
 			var label = activeLabels.get(i);
 			if (label.name == name) throw semError("label '" + name + "' already defined on line " + label.line);
@@ -1073,11 +1074,11 @@ final class Parser {
 	/**
 	 * Skip no-op statements
 	 */
-	private void skipNoOpStatements() throws CompileException, LuaError, UnwindThrowable {
+	private void skipNoOpStatements() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		while (lexer.token.token() == ';' || lexer.token.token() == TK_DBCOLON) statement();
 	}
 
-	private void labelStat(LuaString name, int line) throws CompileException, LuaError, UnwindThrowable {
+	private void labelStat(LuaString name, int line) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// label -> '::' NAME '::'
 		checkRepeated(name);
 		checkNext(TK_DBCOLON);
@@ -1090,7 +1091,7 @@ final class Parser {
 		findGotos(activeLabels.get(label));
 	}
 
-	private void whileStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void whileStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* whilestat -> WHILE cond DO block END */
 		int line = lexer.token.line();
 		lexer.nextToken(); // Skip WHILE
@@ -1108,7 +1109,7 @@ final class Parser {
 		fs.patchToHere(contExit); // false conditions finish the loop
 	}
 
-	private void repeatStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void repeatStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* repeatstat -> REPEAT block UNTIL cond */
 		int line = lexer.token.line();
 		lexer.nextToken(); // Skip REPEAT
@@ -1128,13 +1129,13 @@ final class Parser {
 		leaveBlock(fs); /* finish loop */
 	}
 
-	private void exp1() throws CompileException, LuaError, UnwindThrowable {
+	private void exp1() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		ExpDesc e = new ExpDesc();
 		expression(e);
 		fs.exp2NextReg(e);
 	}
 
-	private void forBody(int base, long position, int nvars, boolean isNum) throws CompileException, LuaError, UnwindThrowable {
+	private void forBody(int base, long position, int nvars, boolean isNum) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* forbody -> DO block */
 		FuncState.BlockCnt bl = new FuncState.BlockCnt();
 		FuncState fs = this.fs;
@@ -1157,7 +1158,7 @@ final class Parser {
 		fs.patchList(endFor, prep + 1);
 	}
 
-	private void forNum(LuaString varName, long position) throws CompileException, LuaError, UnwindThrowable {
+	private void forNum(LuaString varName, long position) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* fornum -> NAME = exp1,exp1[,exp1] forbody */
 		FuncState fs = this.fs;
 		int base = fs.freeReg;
@@ -1178,7 +1179,7 @@ final class Parser {
 		forBody(base, position, 1, true);
 	}
 
-	private void forList(LuaString indexName) throws CompileException, LuaError, UnwindThrowable {
+	private void forList(LuaString indexName) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* forlist -> NAME {,NAME} IN explist1 forbody */
 		FuncState fs = this.fs;
 		ExpDesc e = new ExpDesc();
@@ -1201,7 +1202,7 @@ final class Parser {
 		forBody(base, position, nvars - 3, false);
 	}
 
-	private void forStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void forStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* forstat -> FOR (fornum | forlist) END */
 		long position = lexer.token.position();
 		lexer.nextToken(); /* skip `for' */
@@ -1219,7 +1220,7 @@ final class Parser {
 		leaveBlock(fs); // loop scope (`break' jumps to this point)
 	}
 
-	private void testThenBlock(IntPtr escapeList) throws CompileException, LuaError, UnwindThrowable {
+	private void testThenBlock(IntPtr escapeList) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// test_then_block -> [IF | ELSEIF] cond THEN block
 		lexer.nextToken(); // skip IF or ELSEIF
 
@@ -1266,7 +1267,7 @@ final class Parser {
 		fs.patchToHere(jumpFalse);
 	}
 
-	private void ifStat() throws CompileException, LuaError, UnwindThrowable {
+	private void ifStat() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// ifstat -> IF cond THEN block {ELSEIF cond THEN block} [ELSE block] END
 		int line = lexer.token.line();
 
@@ -1280,7 +1281,7 @@ final class Parser {
 		fs.patchToHere(escapeList.value); // Patch list to "if" end.
 	}
 
-	private void localFunc() throws CompileException, LuaError, UnwindThrowable {
+	private void localFunc() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		FuncState fs = this.fs;
 		newLocal(strCheckName());
 		adjustLocalVars(1);
@@ -1290,7 +1291,7 @@ final class Parser {
 		getLocal(fs, b.info).startpc = fs.pc;
 	}
 
-	private void localStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void localStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		/* stat -> LOCAL NAME {`,' NAME} [`=' explist1] */
 		int nvars = 0;
 		ExpDesc e = new ExpDesc();
@@ -1310,7 +1311,7 @@ final class Parser {
 		adjustLocalVars(nvars);
 	}
 
-	private boolean funcName(ExpDesc v) throws CompileException, LuaError, UnwindThrowable {
+	private boolean funcName(ExpDesc v) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// funcname -> NAME {field} [`:' NAME]
 		singleVar(v);
 		while (lexer.token.token() == '.') fieldSelect(v);
@@ -1323,7 +1324,7 @@ final class Parser {
 		return needSelf;
 	}
 
-	private void funcStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void funcStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// funcstat -> FUNCTION funcname body
 		long position = lexer.token.position();
 		lexer.nextToken(); // skip FUNCTION
@@ -1335,7 +1336,7 @@ final class Parser {
 		fs.fixPosition(position); // definition `happens' in the first line
 	}
 
-	private void exprStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void exprStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// stat -> func | assignment
 		FuncState fs = this.fs;
 		LhsAssign v = new LhsAssign(null);
@@ -1349,7 +1350,7 @@ final class Parser {
 		}
 	}
 
-	private void returnStmt() throws CompileException, LuaError, UnwindThrowable {
+	private void returnStmt() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// stat -> RETURN explist
 		FuncState fs = this.fs;
 		int first, nret; // registers with returned values
@@ -1381,14 +1382,14 @@ final class Parser {
 		testNext(';');
 	}
 
-	private boolean tryGoto() throws CompileException, LuaError, UnwindThrowable {
+	private boolean tryGoto() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		assert lexer.token.token() == TK_NAME;
 		if (lexer.token.stringContents() != gotoName) return false;
 
 		return lexer.lookahead().token() == TK_NAME;
 	}
 
-	private void statement() throws CompileException, LuaError, UnwindThrowable {
+	private void statement() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		enterLevel();
 
 		switch (lexer.token.token()) {
@@ -1440,7 +1441,7 @@ final class Parser {
 
 	/* }====================================================================== */
 
-	public Prototype mainFunction() throws CompileException, LuaError, UnwindThrowable {
+	public Prototype mainFunction() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		FuncState funcstate = openFunc();
 		funcstate.isVararg = true; /* main func. is always vararg */
 

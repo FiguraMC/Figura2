@@ -1,6 +1,5 @@
 package org.figuramc.figura.avatars;
 
-import org.figuramc.figura.manage.AvatarLoadingException;
 import org.figuramc.figura.util.enumlike.EnumLike;
 
 import java.util.Arrays;
@@ -29,16 +28,13 @@ public interface AvatarComponent<Self extends AvatarComponent<Self>> {
 
     // This is called upon creation of an Avatar.
     // This method runs on an off-thread, so do not use anything requiring the main threads without appropriate wrapping.
-    default void initialize(AvatarModules modules, Avatar<?> self) throws AvatarLoadingException {}
+    default void initialize(AvatarModules modules, Avatar<?> self) throws AvatarError {}
 
     // Once loading is complete, this is run on the main/render thread, to instantiate the avatar.
     default void mainThreadInitialize() { }
 
     // Run on Avatar cleanup. Should eventually destroy any native resources that won't be GC'ed and prevent a memory leak.
     default void destroy() { }
-
-    // Run when there's an error
-    default void onError(Throwable reason) {}
 
     // Runs when the Avatar is ticked.
     // Dependencies will always run before this, as declared in createId().

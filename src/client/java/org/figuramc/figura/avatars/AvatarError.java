@@ -6,21 +6,22 @@ import org.figuramc.figura.util.exception.FiguraException;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Indicates an error that occurred after the Avatar finished loading, while it was running.
+ * Indicates an error that occurred with an Avatar, after it's been imported
  */
 public class AvatarError extends FiguraException {
-
-    public final String translationKey;
-    public final Object[] args;
-
-    public AvatarError(@NotNull @Translatable String translationKey, Object... args) {
-        super(Component.empty());
-        this.translationKey = translationKey;
-        this.args = args;
+    public AvatarError(@NotNull Component message) {
+        super(message);
     }
-    public AvatarError(@NotNull @Translatable String translationKey, Throwable cause, @NotNull Boolean showCause, Object... args) {
-        super(Component.empty(), cause, showCause);
-        this.translationKey = translationKey;
-        this.args = args;
+
+    public AvatarError(@NotNull Component message, @NotNull Throwable cause) {
+        super(message, cause);
+    }
+
+    public AvatarError(@Translatable String translationKey, Object... args) {
+        super(translationKey, args);
+    }
+
+    public AvatarError(@Translatable String translationKey, @NotNull Throwable cause, Object... args) {
+        super(translationKey, cause, args);
     }
 }

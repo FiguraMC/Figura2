@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Varargs;
@@ -21,7 +22,7 @@ public abstract class InputReader {
 	 * @throws UnwindThrowable  If the reader yielded. {@link #resume(Varargs)} will be called when the coroutine is
 	 *                          resumed.
 	 */
-	public abstract int read() throws CompileException, LuaError, UnwindThrowable;
+	public abstract int read() throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
 
 	/**
 	 * Resume this reader after yielding.
@@ -33,5 +34,5 @@ public abstract class InputReader {
 	 *                          passed to the {@code xpcall} error handler.
 	 * @throws UnwindThrowable  If the reader yielded.
 	 */
-	public abstract int resume(Varargs varargs) throws CompileException, LuaError, UnwindThrowable;
+	public abstract int resume(Varargs varargs) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable;
 }

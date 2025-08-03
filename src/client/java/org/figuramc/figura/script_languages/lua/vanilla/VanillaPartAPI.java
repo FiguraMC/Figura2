@@ -1,21 +1,25 @@
 package org.figuramc.figura.script_languages.lua.vanilla;
 
 import net.minecraft.client.model.geom.ModelPart;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.ducks.client.ModelPartTrackingAccess;
+import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_languages.lua.FiguraMetatables;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.math.vector.Vector3API;
+import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3d;
+
+import java.util.Objects;
 
 public class VanillaPartAPI {
 
-    public static LuaValue wrap(VanillaRendering.VanillaPart part, FiguraMetatables metatables) {
-        return new LuaUserdata(part, metatables.vanillaPart);
+    public static LuaValue wrap(VanillaRendering.VanillaPart part, LuaState state) {
+        return new LuaUserdata(part, state.figuraMetatables.vanillaPart);
     }
 
-    public static LuaTable createMetatable(LuaState state, FiguraMetatables metatables) throws LuaError {
+    public static LuaTable createMetatable(LuaState state, @NotNull LuaTable riggedHierarchy) throws LuaError, AvatarError {
 
         LuaTable metatable = ValueFactory.tableOf(state.allocationTracker);
 
@@ -23,7 +27,7 @@ public class VanillaPartAPI {
         metatable.rawset("cancelOrigin", LibFunction.createV((s, args) -> {
             VanillaRendering.VanillaPart part = args.first().checkUserdata(s, VanillaRendering.VanillaPart.class);
             switch (args.count()) {
-                case 1 -> { return ValueFactory.valueOf(part.cancelVanillaOrigin); }
+                case 1 -> { return LuaBoolean.valueOf(part.cancelVanillaOrigin); }
                 case 2 -> part.cancelVanillaOrigin = args.arg(2).checkBoolean(s);
                 default -> throw new LuaError("Invalid number of args to VanillaModelPart:cancelOrigin(): expected 0 or 1", s.allocationTracker);
             }
@@ -32,7 +36,7 @@ public class VanillaPartAPI {
         metatable.rawset("cancelRot", LibFunction.createV((s, args) -> {
             VanillaRendering.VanillaPart part = args.first().checkUserdata(s, VanillaRendering.VanillaPart.class);
             switch (args.count()) {
-                case 1 -> { return ValueFactory.valueOf(part.cancelVanillaRotation); }
+                case 1 -> { return LuaBoolean.valueOf(part.cancelVanillaRotation); }
                 case 2 -> part.cancelVanillaRotation = args.arg(2).checkBoolean(s);
                 default -> throw new LuaError("Invalid number of args to VanillaModelPart:cancelRot(): expected 0 or 1", s.allocationTracker);
             }
@@ -41,7 +45,7 @@ public class VanillaPartAPI {
         metatable.rawset("cancelScale", LibFunction.createV((s, args) -> {
             VanillaRendering.VanillaPart part = args.first().checkUserdata(s, VanillaRendering.VanillaPart.class);
             switch (args.count()) {
-                case 1 -> { return ValueFactory.valueOf(part.cancelVanillaScale); }
+                case 1 -> { return LuaBoolean.valueOf(part.cancelVanillaScale); }
                 case 2 -> part.cancelVanillaScale = args.arg(2).checkBoolean(s);
                 default -> throw new LuaError("Invalid number of args to VanillaModelPart:cancelScale(): expected 0 or 1", s.allocationTracker);
             }
@@ -49,9 +53,9 @@ public class VanillaPartAPI {
         }));
 
         // Fetching stored transforms
-        metatable.rawset("storedOrigin", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaOrigin), metatables)));
-        metatable.rawset("storedRot", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaRotation), metatables)));
-        metatable.rawset("storedScale", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaScale), metatables)));
+        metatable.rawset("storedOrigin", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaOrigin), s)));
+        metatable.rawset("storedRot", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaRotation), s)));
+        metatable.rawset("storedScale", LibFunction.create((s, part) -> Vector3API.wrap(new Vector3d(part.checkUserdata(s, VanillaRendering.VanillaPart.class).storedVanillaScale), s)));
 
         // :children() - get a table of the children of this part by name
         metatable.rawset("children", LibFunction.create((s, p) -> {
@@ -60,15 +64,15 @@ public class VanillaPartAPI {
             for (var childEntry : part.part.children.entrySet()) {
                 VanillaRendering.VanillaPart scriptChild = part.getComponent().partMap.get(childEntry.getValue());
                 if (scriptChild == null) continue;
-                t.rawset(childEntry.getKey(), wrap(scriptChild, metatables));
+                t.rawset(childEntry.getKey(), wrap(scriptChild, s));
             }
             return t;
         }));
 
         // Metamethod __name for error messages
-        metatable.rawset(Constants.NAME, ValueFactory.valueOf("VanillaPart", state.allocationTracker));
+        metatable.rawset(Constants.NAME, LuaString.valueOfNoAlloc("VanillaPart"));
 
-        FiguraMetatables.setupIndexing(state, metatable, metatables.transformable, LibFunction.create((s, p, k) -> {
+        FiguraMetatables.setupIndexingWithSuperclassAndCustomIndexer(state, metatable, riggedHierarchy, LibFunction.create((s, p, k) -> {
             // Fetch the child
             VanillaRendering.VanillaPart scriptPart = p.checkUserdata(s, VanillaRendering.VanillaPart.class);
             String name = k.checkString(s);
@@ -76,7 +80,7 @@ public class VanillaPartAPI {
             if (child == null) return Constants.NIL;
             VanillaRendering.VanillaPart scriptChild = scriptPart.getComponent().partMap.get(child);
             if (scriptChild == null) return Constants.NIL;
-            return VanillaPartAPI.wrap(scriptChild, metatables);
+            return VanillaPartAPI.wrap(scriptChild, s);
         }));
 
         return metatable;

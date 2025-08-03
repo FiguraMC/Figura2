@@ -34,8 +34,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
-
 /**
  * Class to manage loading of {@link Prototype} instances.
  * <p>
@@ -73,7 +71,7 @@ public final class LoadState {
 		 * @param env       The function's environment.
 		 * @return The loaded function
 		 */
-		LuaClosure load(Prototype prototype, LuaValue env);
+		LuaClosure load(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AllocationTracker.AvatarOOMException;
 	}
 
 	private LoadState() {
@@ -82,15 +80,15 @@ public final class LoadState {
 	/**
 	 * A basic {@link FunctionFactory} which loads into
 	 */
-	public static LuaClosure interpretedFunction(Prototype prototype, LuaValue env) {
-		LuaInterpretedFunction closure = new LuaInterpretedFunction(prototype);
+	public static LuaClosure interpretedFunction(@Nullable AllocationTracker allocTracker, Prototype prototype, LuaValue env) throws AllocationTracker.AvatarOOMException {
+		LuaInterpretedFunction closure = new LuaInterpretedFunction(allocTracker, prototype);
 		closure.nilUpvalues();
 		if (closure.upvalues.length > 0) closure.upvalues[0].setValue(env);
 		return closure;
 	}
 
-	public static LuaClosure load(LuaState state, InputStream stream, String name, LuaValue env) throws CompileException, LuaError {
-		return load(state, stream, valueOf(name, state.allocationTracker), env);
+	public static LuaClosure load(LuaState state, InputStream stream, String name, LuaValue env) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+		return load(state, stream, LuaString.valueOf(state.allocationTracker, name), env);
 	}
 
 	/**
@@ -104,20 +102,20 @@ public final class LoadState {
 	 * @throws IllegalArgumentException If the signature is bac
 	 * @throws CompileException         If the stream cannot be loaded.
 	 */
-	public static LuaClosure load(LuaState state, InputStream stream, LuaString name, LuaValue env) throws CompileException, LuaError {
-		return state.compiler.load(LuaC.compile(state, stream, name), env);
+	public static LuaClosure load(LuaState state, InputStream stream, LuaString name, LuaValue env) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+		return state.compiler.load(state.allocationTracker, LuaC.compile(state, stream, name), env);
 	}
 
 	private static final int NAME_LENGTH = 30;
 	private static final int FILE_LENGTH = NAME_LENGTH - " '...' ".length() - 1;
 	private static final int STRING_LENGTH = NAME_LENGTH - " [string \"...\"] ".length() - 1;
 
-	private static final LuaString REMAINING = valueOf("...", null);
-	private static final LuaString STRING = valueOf("[string \"", null);
-	private static final LuaString EMPTY_STRING = valueOf("[string \"\"]", null);
-	private static final LuaString NEW_LINES = valueOf("\r\n", null);
+	private static final LuaString REMAINING = LuaString.valueOfNoAlloc("...");
+	private static final LuaString STRING = LuaString.valueOfNoAlloc("[string \"");
+	private static final LuaString EMPTY_STRING = LuaString.valueOfNoAlloc("[string \"\"]");
+	private static final LuaString NEW_LINES = LuaString.valueOfNoAlloc("\r\n");
 
-	static LuaString getShortName(LuaString name, @Nullable AllocationTracker allocTracker) {
+	static LuaString getShortName(LuaString name, @Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		if (name.length() == 0) return EMPTY_STRING;
 		switch (name.charAt(0)) {
 			case '=' -> {
@@ -125,11 +123,11 @@ public final class LoadState {
 			}
 			case '@' -> { // out = "source", or "...source"
 				if (name.length() - 1 > FILE_LENGTH) {
-					if (allocTracker != null) allocTracker.allocate(FILE_LENGTH + 3);
 					byte[] bytes = new byte[FILE_LENGTH + 3];
+					if (allocTracker != null) allocTracker.allocate(bytes, bytes.length);
 					REMAINING.copyTo(bytes, 0);
 					name.copyTo(name.length() - FILE_LENGTH, bytes, REMAINING.length(), FILE_LENGTH);
-					return valueOf(bytes);
+					return LuaString.valueOfNoCopy(bytes);
 				} else {
 					return name.substring(1);
 				}
@@ -151,8 +149,8 @@ public final class LoadState {
 			len = STRING_LENGTH;
 		}
 
-		if (allocTracker != null) allocTracker.allocate(NAME_LENGTH);
 		byte[] out = new byte[NAME_LENGTH];
+		if (allocTracker != null) allocTracker.allocate(out, NAME_LENGTH);
 		STRING.copyTo(out, 0);
 		int offset = STRING.length();
 		offset = name.copyTo(0, out, offset, len);

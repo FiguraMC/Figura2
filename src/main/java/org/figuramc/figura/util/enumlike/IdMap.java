@@ -22,7 +22,7 @@ public class IdMap<K extends EnumLike, V> implements Map<K, V> {
     }
 
     // Initialize with a value for every key
-    public IdMap(Class<K> kClass, Function<K, @Nullable V> initial) {
+    public IdMap(Class<? super K> kClass, Function<K, @Nullable V> initial) {
         allKeys = EnumLike.values(kClass);
         values = new ArrayList<>(allKeys.size());
         for (K key : allKeys) {

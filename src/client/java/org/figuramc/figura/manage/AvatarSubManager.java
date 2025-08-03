@@ -1,6 +1,7 @@
 package org.figuramc.figura.manage;
 
 import org.figuramc.figura.avatars.Avatar;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.util.ErrorReporting;
 import org.jetbrains.annotations.Nullable;
@@ -28,21 +29,14 @@ public class AvatarSubManager<K> {
                     // If the following getNow() call doesn't throw, then the async task finished without throwing
                     result = future.getNow(null);
                 } catch (CompletionException ex) {
-                    Throwable cause = ex.getCause();
-
                     // For now, we'll ALWAYS report to chat/console.
                     // Maybe later we'll disable this for multiplayer avatars (whenever we get to that lol)
-                    switch (cause) {
-                        case ModuleImportingException importingException -> ErrorReporting.avatarImporting(importingException);
-                        case AvatarLoadingException loadingException -> ErrorReporting.avatarLoading(loadingException);
-                        default -> ErrorReporting.unexpectedError(cause);
-                    }
-
+                    ErrorReporting.reportError(ex.getCause());
                     // Cancel the in-progress Avatar, since it errored
                     cancelInProgress(key);
                     continue;
                 } catch (Throwable unexpected) {
-                    ErrorReporting.unexpectedError(unexpected);
+                    ErrorReporting.reportError(unexpected);
                     cancelInProgress(key);
                     continue;
                 }

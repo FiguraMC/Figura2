@@ -24,18 +24,13 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.string.NumberParser;
-import org.checkerframework.checker.nullness.qual.NonNull;
-import org.checkerframework.framework.qual.DefaultQualifier;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.NIL;
 
@@ -52,14 +47,11 @@ import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobal
  * Currently {@link LuaString}s are pooled via a centrally managed weak table.
  * To ensure that as many string values as possible take advantage of this,
  * Constructors are not exposed directly.  As with number, booleans, and nil,
- * instance construction should be via {@link ValueFactory#valueOf(byte[])} or similar API.
+ * instance construction should be via {@link LuaString#valueOfNoCopy(byte[])} or similar API.
  *
  * @see LuaValue
- * @see ValueFactory#valueOf(String)
- * @see ValueFactory#valueOf(byte[])
  */
-@DefaultQualifier(NonNull.class)
-public final class LuaString extends MarkedLuaValue implements Comparable<LuaString> {
+public final class LuaString extends LuaValue implements Comparable<LuaString> {
 	/**
 	 * Size of cache of recent short strings. This is the maximum number of LuaStrings that
 	 * will be retained in the cache of recent short strings. Must be a power of 2.
@@ -74,12 +66,9 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	public static final int RECENT_STRINGS_MAX_LENGTH = 32;
 
 	/**
-	 * The contents of this string. Either a {@code byte[]} or a {@code LuaString[]}.
-	 *
-	 * @see #bytes()
-	 * @see #flatten()
+	 * The contents of this string.
 	 */
-	private Object contents;
+	private final byte[] contents;
 
 	/**
 	 * The offset into the byte array, 0 means start at the first byte
@@ -123,11 +112,21 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param string Java String containing characters which will be limited to the 0-255 range
 	 * @return {@link LuaString} with bytes corresponding to the supplied String
 	 */
-	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) {
-		if (allocTracker != null) allocTracker.allocate(string.length());
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, String string) throws AllocationTracker.AvatarOOMException {
 		byte[] bytes = new byte[string.length()];
+		if (allocTracker != null) allocTracker.allocate(bytes, bytes.length);
 		encode(string, bytes, 0);
 		return valueOf(null, bytes, 0, bytes.length);
+	}
+
+	// Helper to call valueOf() with no allocator, which doesn't throw the exception.
+	// Use this for those static global strings which cost negligible space.
+	public static LuaString valueOfNoAlloc(String string) {
+		try {
+			return valueOf(null, string);
+		} catch (AllocationTracker.AvatarOOMException impossible) {
+			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
+		}
 	}
 
 	/**
@@ -140,22 +139,35 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param len   length of the byte buffer
 	 * @return {@link LuaString} wrapping the byte buffer
 	 */
-	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len) {
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len, boolean forceNoCopy) throws AllocationTracker.AvatarOOMException {
 		// Don't bother tracking strings that are shorter than RECENT_STRINGS_MAX_LENGTH.
 		// They aren't the memory hogs anyway.
 		if (bytes.length < RECENT_STRINGS_MAX_LENGTH) {
 			return Cache.instance.get(new LuaString(bytes, off, len));
-		} else if (len >= bytes.length / 2) {
+		} else if (forceNoCopy || len >= bytes.length / 2) {
 			// Reuse backing only when more than half the bytes are part of the result.
 			// Backing is reused, don't track.
 			return new LuaString(bytes, off, len);
 		} else {
 			// Short result relative to the source.  Copy only the bytes that are actually to be used.
-			if (allocTracker != null) allocTracker.allocate(len);
 			final byte[] b = new byte[len];
+			if (allocTracker != null) allocTracker.allocate(b, len);
 			System.arraycopy(bytes, off, b, 0, len);
 			LuaString string = new LuaString(b, 0, len);
 			return len < RECENT_STRINGS_MAX_LENGTH ? Cache.instance.get(string) : string;
+		}
+	}
+	public static LuaString valueOf(@Nullable AllocationTracker allocTracker, byte[] bytes, int off, int len) throws AllocationTracker.AvatarOOMException {
+		return valueOf(allocTracker, bytes, off, len, false);
+	}
+
+	// Helper to call valueOf() without copying the byte[], which doesn't take significant space
+	// Expects the byte[] to already be known about by the allocator (if there is an allocator).
+	public static LuaString valueOfNoCopy(byte[] bytes, int off, int len) {
+		try {
+			return valueOf(null, bytes, off, len, true);
+		} catch (AllocationTracker.AvatarOOMException impossible) {
+			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
 		}
 	}
 
@@ -167,8 +179,8 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param bytes byte buffer
 	 * @return {@link LuaString} wrapping the byte buffer
 	 */
-	public static LuaString valueOf(byte[] bytes) {
-		return valueOf(null, bytes, 0, bytes.length);
+	public static LuaString valueOfNoCopy(byte[] bytes) {
+		return valueOfNoCopy(bytes, 0, bytes.length);
 	}
 
 	/**
@@ -182,26 +194,15 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param strLength The length of the resulting string. This must be equal
 	 * @return The resulting Lua string.
 	 */
-	public static LuaString valueOfStrings(@Nullable AllocationTracker allocTracker, LuaValue[] contents, int offset, int length, int strLength) {
+	public static LuaString valueOfStrings(@Nullable AllocationTracker allocTracker, LuaValue[] contents, int offset, int length, int strLength) throws AllocationTracker.AvatarOOMException {
 		if (length == 0 || strLength == 0) return Constants.EMPTYSTRING;
 		if (length == 1) return (LuaString) contents[0];
 
-		if (strLength > RECENT_STRINGS_MAX_LENGTH) {
-			// Rationale: This rope-based string may get turned into a byte[] string
-			// at *any arbitrary point in the future*. It's too difficult to track that
-			// happening, so instead we will allocate with the full, expanded length up front.
-			if (allocTracker != null) allocTracker.allocate(strLength);
-
-			LuaString[] slice = new LuaString[length];
-			System.arraycopy(contents, offset, slice, 0, length);
-			return new LuaString(slice, strLength);
-		}
-
-		if (allocTracker != null) allocTracker.allocate(strLength);
 		byte[] out = new byte[strLength];
+		if (allocTracker != null) allocTracker.allocate(out, strLength);
 		int position = 0;
 		for (int i = 0; i < length; i++) position = ((LuaString) contents[offset + i]).copyTo(out, position);
-		return valueOf(out);
+		return valueOfNoCopy(out); // out is already tracked
 	}
 
 	/**
@@ -220,16 +221,18 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		this.length = length;
 	}
 
-	private LuaString(LuaValue[] contents, int length) {
-		super(Constants.TSTRING);
-		this.contents = contents;
-		offset = 0;
-		this.length = length;
+	@Override
+	@Deprecated
+	public String toString() {
+		try {
+			return decode(null, contents, offset, length);
+		} catch (AllocationTracker.AvatarOOMException impossible) {
+			throw new IllegalStateException("Should never happen. Contact Figura devs!", impossible);
+		}
 	}
 
-	@Override
-	public String toString() {
-		return decode(bytes(), offset, length);
+	public String toJavaString(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
+		return decode(allocTracker, contents, offset, length);
 	}
 
 	@Override
@@ -241,75 +244,10 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		return length;
 	}
 
-	private byte[] bytes() {
-		Object contents = this.contents;
-		if (contents instanceof byte[] bytes) return bytes;
-		return flatten();
-	}
-
-	/**
-	 * Flatten a nested list of {@link LuaString}s into a single {@link byte[]}.
-	 *
-	 * @return The flattened array.
-	 */
-	private byte[] flatten() {
-		byte[] out = new byte[length];
-		int position = 0;
-
-		// We maintain a stack of values to avoid blowing the actual stack. Previous versions used to maintain this
-		// stack by maintaining a linked list on the rope (avoiding allocations), but it's not clear if that's worth it
-		// in practice.
-		Deque<LuaString> queue;
-		LuaString string;
-
-		// Try to handle the easy case of having a list of byte[]s. In this case, we don't have to recurse, so can avoid
-		// allocating the stack.
-		rope:
-		{
-			LuaString[] strings = (LuaString[]) contents;
-			for (int i = 0; i < strings.length; i++) {
-				string = strings[i];
-				Object contents = string.contents;
-				if (contents instanceof byte[] bytes) {
-					System.arraycopy(bytes, string.offset, out, position, string.length);
-					position += string.length;
-				} else {
-					// We've got a more complex value, so add the remaining values to the queue and then begin to work.
-					queue = new ArrayDeque<>(Math.max(4, strings.length - i));
-					i++;
-					for (; i < strings.length; i++) queue.addLast(strings[i]);
-					break rope;
-				}
-			}
-
-			contents = out;
-			return out;
-		}
-
-		// If we were unable to unpack the string in the initial pass, loop through expanding the rope.
-		while (true) {
-			Object contents = string.contents;
-			if (contents instanceof byte[] bytes) {
-				System.arraycopy(bytes, string.offset, out, position, string.length);
-				position += string.length;
-
-				string = queue.pollFirst();
-				if (string == null) break;
-			} else {
-				LuaString[] newStrings = (LuaString[]) contents;
-				for (int i = newStrings.length - 1; i > 0; i--) queue.addFirst(newStrings[i]);
-				string = newStrings[0];
-			}
-		}
-
-		contents = out;
-		return out;
-	}
-
 	//region Equality and comparison
 	@Override
 	public int compareTo(LuaString rhs) {
-		byte[] bytes = bytes(), rhsBytes = rhs.bytes();
+		byte[] bytes = contents, rhsBytes = rhs.contents;
 		// Find the first mismatched character in 0..n
 		int len = Math.min(length, rhs.length);
 		int mismatch = Arrays.mismatch(bytes, offset, offset + len, rhsBytes, rhs.offset, rhs.offset + len);
@@ -330,7 +268,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		if (contents == s.contents && s.offset == offset) return true;
 		if (s.hashCode() != hashCode()) return false;
 
-		return equals(bytes(), offset, s.bytes(), s.offset, length);
+		return equals(contents, offset, s.contents, s.offset, length);
 	}
 
 	// Figura function
@@ -338,16 +276,14 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	public boolean equals(String javaString) {
 		int c = javaString.length();
 		if (this.length != c) return false;
-		byte[] bytes = bytes(); // Get bytes, compare to chars
-		int o = this.offset;
-		for (int i = 0; i < c; i++)
-			if ((bytes[o + i] & 0xFF) != javaString.charAt(i))
+        for (int i = 0; i < c; i++)
+			if ((contents[this.offset + i] & 0xFF) != javaString.charAt(i))
 				return false;
 		return true;
 	}
 
 	public static boolean equals(LuaString a, int aOffset, LuaString b, int bOffset, int length) {
-		return equals(a.bytes(), a.offset + aOffset, b.bytes(), b.offset + bOffset, length);
+		return equals(a.contents, a.offset + aOffset, b.contents, b.offset + bOffset, length);
 	}
 
 	private static boolean equals(byte[] a, int aOffset, byte[] b, int bOffset, int length) {
@@ -362,9 +298,8 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		int o = this.length - c;
 		if (o < 0) return false;
 		o += this.offset;
-		byte[] bytes = bytes();
 		for (int i = 0; i < c; i++)
-			if ((bytes[o + i] & 0xFF) != javaString.charAt(i))
+			if ((contents[o + i] & 0xFF) != javaString.charAt(i))
 				return false;
 		return true;
 	}
@@ -375,12 +310,10 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 		int h = hashCode;
 		if (h != 0) return h;
 
-		byte[] bytes = bytes();
-
 		h = length;  /* seed */
 		int step = (length >> 5) + 1;  /* if string is too long, don't hash all its chars */
 		for (int l1 = length; l1 >= step; l1 -= step)  /* compute hash */ {
-			h = h ^ ((h << 5) + (h >> 2) + (((int) bytes[offset + l1 - 1]) & 0x0FF));
+			h = h ^ ((h << 5) + (h >> 2) + (((int) contents[offset + l1 - 1]) & 0x0FF));
 		}
 		return hashCode = h;
 	}
@@ -389,25 +322,25 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	// region String operations
 	// Substring of existing string -> no real new allocation
 	public LuaString substringOfLen(int beginIndex, int length) {
-		return valueOf(null, bytes(), offset + beginIndex, length);
+		return valueOfNoCopy(contents, offset + beginIndex, length);
 	}
 
 	public LuaString substringOfEnd(int beginIndex, int endIndex) {
-		return valueOf(null, bytes(), offset + beginIndex, endIndex - beginIndex);
+		return valueOfNoCopy(contents, offset + beginIndex, endIndex - beginIndex);
 	}
 
 	public LuaString substring(int beginIndex) {
-		return valueOf(null, bytes(), offset + beginIndex, length - 1);
+		return valueOfNoCopy(contents, offset + beginIndex, length - 1);
 	}
 
 	public byte byteAt(int index) {
 		if (index < 0 || index >= length) throw new IndexOutOfBoundsException();
-		return bytes()[offset + index];
+		return contents[offset + index];
 	}
 
 	public int charAt(int index) {
 		if (index < 0 || index >= length) throw new IndexOutOfBoundsException();
-		return Byte.toUnsignedInt(bytes()[offset + index]);
+		return Byte.toUnsignedInt(contents[offset + index]);
 	}
 
 	public boolean startsWith(byte character) {
@@ -421,12 +354,11 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return index of first match in the {@code accept} string, or -1 if not found.
 	 */
 	public int indexOfAny(LuaString accept) {
-		byte[] bytes = bytes(), acceptBytes = accept.bytes();
 		final int limit = offset + length;
 		final int searchLimit = accept.offset + accept.length;
 		for (int i = offset; i < limit; ++i) {
 			for (int j = accept.offset; j < searchLimit; ++j) {
-				if (bytes[i] == acceptBytes[j]) return i - offset;
+				if (contents[i] == accept.contents[j]) return i - offset;
 			}
 		}
 		return -1;
@@ -439,9 +371,8 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return index of first match found, or -1 if not found.
 	 */
 	public int indexOf(byte b) {
-		byte[] bytes = bytes();
 		for (int i = 0, j = offset; i < length; ++i) {
-			if (bytes[j++] == b) {
+			if (contents[j++] == b) {
 				return i;
 			}
 		}
@@ -456,11 +387,10 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return index of first match found, or -1 if not found.
 	 */
 	public int indexOf(LuaString search, int start) {
-		byte[] bytes = bytes(), searchBytes = search.bytes();
 		final int searchLen = search.length();
 		final int limit = offset + length - searchLen;
 		for (int i = offset + start; i <= limit; ++i) {
-			if (equals(bytes, i, searchBytes, search.offset, searchLen)) {
+			if (equals(contents, i, search.contents, search.offset, searchLen)) {
 				return i - offset;
 			}
 		}
@@ -474,9 +404,8 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return index of last match found, or -1 if not found.
 	 */
 	public int lastIndexOf(byte c) {
-		byte[] bytes = bytes();
 		for (int i = offset + length - 1; i >= offset; i--) {
-			if (bytes[i] == c) return i;
+			if (contents[i] == c) return i;
 		}
 		return -1;
 	}
@@ -491,7 +420,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @throws IOException If the underlying writer fails.
 	 */
 	public void write(DataOutput output) throws IOException {
-		output.write(bytes(), offset, length);
+		output.write(contents, offset, length);
 	}
 
 	/**
@@ -501,7 +430,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @throws IOException If the underlying writer fails.
 	 */
 	public void write(OutputStream output) throws IOException {
-		output.write(bytes(), offset, length);
+		output.write(contents, offset, length);
 	}
 
 	/**
@@ -510,7 +439,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return {@link InputStream} whose data matches the bytes in this {@link LuaString}
 	 */
 	public InputStream toInputStream() {
-		return new ByteArrayInputStream(bytes(), offset, length);
+		return new ByteArrayInputStream(contents, offset, length);
 	}
 
 	/**
@@ -519,7 +448,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return A view over the underlying string.
 	 */
 	public ByteBuffer toBuffer() {
-		return ByteBuffer.wrap(bytes(), offset, length).asReadOnlyBuffer();
+		return ByteBuffer.wrap(contents, offset, length).asReadOnlyBuffer();
 	}
 
 	/**
@@ -533,7 +462,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 */
 	public int copyTo(int strOffset, byte[] bytes, int arrayOffset, int len) {
 		if (strOffset < 0 || len > length - strOffset) throw new IndexOutOfBoundsException();
-		System.arraycopy(bytes(), offset + strOffset, bytes, arrayOffset, len);
+		System.arraycopy(contents, offset + strOffset, bytes, arrayOffset, len);
 		return arrayOffset + len;
 	}
 
@@ -546,7 +475,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 */
 	public int copyTo(byte[] dest, int destOffset) {
 		// We could avoid unpacking the bytes here, but it's not clear it's worth it.
-		System.arraycopy(bytes(), offset, dest, destOffset, length);
+		System.arraycopy(contents, offset, dest, destOffset, length);
 		return destOffset + length;
 	}
 	// endregion
@@ -560,12 +489,14 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @return Java String corresponding to the value of bytes interpreted using UTF8
 	 * @see #encode(String, byte[], int)
 	 */
-	private static String decode(byte[] bytes, int offset, int length) {
+	private static String decode(@Nullable AllocationTracker allocTracker, byte[] bytes, int offset, int length) throws AllocationTracker.AvatarOOMException {
 		char[] chars = new char[length];
 		for (int i = 0; i < length; i++) {
 			chars[i] = ((char) (bytes[offset + i] & 0xFF));
 		}
-		return String.valueOf(chars);
+		String s = String.valueOf(chars);
+		if (allocTracker != null) allocTracker.allocate(s, s.length() * Character.BYTES);
+		return s;
 	}
 
 	/**
@@ -578,7 +509,7 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 * @param string Array of characters to be encoded
 	 * @param bytes  byte array to hold the result
 	 * @param off    offset into the byte array to start writing
-	 * @see #decode(byte[], int, int)
+	 * @see #decode(AllocationTracker, byte[], int, int)
 	 */
 	public static void encode(String string, byte[] bytes, int off) {
 		int length = string.length();
@@ -590,17 +521,17 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 
 	// region Number conversion
 	@Override
-	public int checkInteger(LuaState state) throws LuaError {
+	public int checkInteger(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		return (int) (long) checkDouble(state);
 	}
 
 	@Override
-	public long checkLong(LuaState state) throws LuaError {
+	public long checkLong(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		return (long) checkDouble(state);
 	}
 
 	@Override
-	public double checkDouble(LuaState state) throws LuaError {
+	public double checkDouble(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
 			throw ErrorFactory.argError(state, this, "number");
@@ -609,17 +540,17 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	}
 
 	@Override
-	public LuaNumber checkNumber(LuaState state) throws LuaError {
-		return ValueFactory.valueOf(checkDouble(state));
+	public LuaNumber checkNumber(LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
+		return LuaDouble.valueOf(checkDouble(state));
 	}
 
 	@Override
-	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError {
+	public LuaNumber checkNumber(LuaState state, String msg) throws LuaError, AllocationTracker.AvatarOOMException {
 		double d = scanNumber(10);
 		if (Double.isNaN(d)) {
 			throw new LuaError(msg, state.allocationTracker);
 		}
-		return ValueFactory.valueOf(d);
+		return LuaDouble.valueOf(d);
 	}
 
 	@Override
@@ -649,13 +580,13 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	}
 
 	@Override
-	public String checkString(LuaState state) {
-		return toString();
+	public String checkString(LuaState state) throws AllocationTracker.AvatarOOMException {
+		return toJavaString(state.allocationTracker);
 	}
 
 	@Override
-	public String checkString(LuaState state, String message) {
-		return toString();
+	public String checkString(LuaState state, String message) throws AllocationTracker.AvatarOOMException {
+		return toJavaString(state.allocationTracker);
 	}
 
 	@Override
@@ -672,26 +603,14 @@ public final class LuaString extends MarkedLuaValue implements Comparable<LuaStr
 	 */
 	public LuaValue toNumber(int base) {
 		double d = scanNumber(base);
-		return Double.isNaN(d) ? NIL : ValueFactory.valueOf(d);
+		return Double.isNaN(d) ? NIL : LuaDouble.valueOf(d);
 	}
 
 	private double scanNumber(int base) {
 		if (base < 2 || base > 36) return Double.NaN;
-		return NumberParser.parse(bytes(), offset, length, base);
+		return NumberParser.parse(contents, offset, length, base);
 	}
 
 	// endregion
 
-	@Override
-	protected long traceNoMark(MemoryCounter counter, int depth) {
-		// Trace either primitive byte[] or the rope elements
-		if (contents instanceof byte[] bytes) {
-			counter.traceUnmarked(bytes);
-			return OBJECT_SIZE;
-		} else {
-			for (LuaString ropeElem : (LuaString[]) contents)
-				counter.trace(ropeElem, depth);
-			return OBJECT_SIZE + POINTER_SIZE * ((LuaString[]) contents).length;
-		}
-    }
 }

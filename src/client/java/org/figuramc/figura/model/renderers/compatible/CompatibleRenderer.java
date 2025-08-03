@@ -5,10 +5,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.FiguraModelPartRenderer;
-import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.ScriptError;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -17,7 +14,7 @@ import org.joml.Vector4f;
 
 import java.util.List;
 
-public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelPartRenderer {
+public class CompatibleRenderer implements FiguraModelPartRenderer {
 
     private final FiguraModelPart root;
 
@@ -31,19 +28,13 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
             FiguraTransformStack matrixStack,
             float tickDelta,
             int light, int overlay
-    ) throws ScriptError, StackOverflowError {
+    ) throws StackOverflowError {
         recursiveRender(root, bufferSource, List.of(), 0, matrixStack, tickDelta, light, overlay);
     }
 
     @Override
     public void destroy() {
         // Nothing to destroy
-    }
-
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        counter.trace(root, depth);
-        return OBJECT_SIZE + POINTER_SIZE;
     }
 
     private void recursiveRender(
@@ -55,9 +46,9 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
             float tickDelta,
             int light,
             int overlay
-    ) throws ScriptError, StackOverflowError {
+    ) throws StackOverflowError {
 
-        for (ScriptCallback callback : part.preRenderCallbacks) callback.call(tickDelta);
+        for (var callback : part.preRenderCallbacks) callback.call(new CallbackItem.F32(tickDelta));
 
         // Cancel if not invisible
         if (!part.transform.getVisible())
@@ -73,7 +64,8 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
         matrixStack.push();
         part.transform.affect(matrixStack);
 
-        for (ScriptCallback callback : part.midRenderCallbacks) callback.call(tickDelta);
+        for (var callback : part.midRenderCallbacks)
+            callback.call(new CallbackItem.F32(tickDelta));
 
         // Render children recursively
         for (FiguraModelPart child : part.children.values())
@@ -104,7 +96,7 @@ public class CompatibleRenderer extends MarkedObjectBase implements FiguraModelP
             }
         }
 
-        for (ScriptCallback callback : part.postRenderCallbacks) callback.call(tickDelta);
+        for (var callback : part.postRenderCallbacks) callback.call(new CallbackItem.F32(tickDelta));
 
         // Pop matrix stack
         matrixStack.pop();

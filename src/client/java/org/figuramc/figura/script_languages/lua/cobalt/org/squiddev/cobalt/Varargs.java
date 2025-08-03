@@ -81,6 +81,13 @@ public abstract class Varargs {
 
 	public abstract void fill(LuaValue[] array, int offset);
 
+	// ToArray
+	public LuaValue[] toArray() {
+		LuaValue[] res = new LuaValue[count()];
+		fill(res, 0);
+		return res;
+	}
+
 	/**
 	 * Return argument i as a LuaValue if it exists, or throw an error.
 	 *
@@ -88,7 +95,7 @@ public abstract class Varargs {
 	 * @return LuaValue value if the argument exists
 	 * @throws LuaError if the argument does not exist.
 	 */
-	public LuaValue checkValue(@Nullable AllocationTracker allocTracker, int i) throws LuaError {
+	public LuaValue checkValue(@Nullable AllocationTracker allocTracker, int i) throws LuaError, AllocationTracker.AvatarOOMException {
 		if (i <= count()) {
 			return arg(i);
 		} else {

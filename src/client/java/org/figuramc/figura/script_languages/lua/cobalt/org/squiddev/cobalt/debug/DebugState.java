@@ -24,6 +24,7 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 
@@ -125,7 +126,7 @@ public final class DebugState {
 	 * by the calling function.
 	 * @throws LuaError On a stack overflow
 	 */
-	public DebugFrame pushJavaInfo() throws LuaError {
+	public DebugFrame pushJavaInfo() throws LuaError, AllocationTracker.AvatarOOMException {
 		int javaCount = this.javaCount + 1;
 		if (javaCount >= MAX_JAVA_SIZE) throw new LuaError("stack overflow", state.allocationTracker);
 
@@ -141,7 +142,7 @@ public final class DebugState {
 	 * @return The created info
 	 * @throws LuaError On a stack overflow.
 	 */
-	public DebugFrame pushInfo() throws LuaError {
+	public DebugFrame pushInfo() throws LuaError, AllocationTracker.AvatarOOMException {
 		int top = this.top + 1;
 
 		DebugFrame[] frames = stack;
@@ -154,7 +155,7 @@ public final class DebugState {
 	/**
 	 * Grow the stack by a factor of 1.5, throwing {@code stack overflow} if we execed {@link #MAX_SIZE}.
 	 */
-	private static DebugFrame[] growStackOrOverflow(LuaState state, DebugFrame[] frames, int top) throws LuaError {
+	private static DebugFrame[] growStackOrOverflow(LuaState state, DebugFrame[] frames, int top) throws LuaError, AllocationTracker.AvatarOOMException {
 		if (top >= MAX_SIZE) throw new LuaError("stack overflow", state.allocationTracker);
 		int length = frames.length;
 		return growStack(frames, length == 0 ? DEFAULT_SIZE : Math.min(MAX_SIZE, length + (length / 2)));
@@ -252,13 +253,13 @@ public final class DebugState {
 		return level >= 0 && level <= top ? stack[top - level] : null;
 	}
 
-	public void onCall(DebugFrame frame) throws UnwindThrowable, LuaError {
+	public void onCall(DebugFrame frame) throws UnwindThrowable, LuaError, AllocationTracker.AvatarOOMException {
 		if ((hookMask & HOOK_CALL) == 0 || inhook) return;
 
 		callHook(frame);
 	}
 
-	private void callHook(DebugFrame frame) throws LuaError, UnwindThrowable {
+	private void callHook(DebugFrame frame) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		inhook = true;
 		frame.flags |= FLAG_CALL_HOOK;
 
@@ -295,12 +296,12 @@ public final class DebugState {
 	 * @throws LuaError        On a runtime error within the hook.
 	 * @throws UnwindThrowable If the hook transfers control to another coroutine.
 	 */
-	public void onReturn(DebugFrame frame, Varargs result) throws LuaError, UnwindThrowable {
+	public void onReturn(DebugFrame frame, Varargs result) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if ((hookMask & HOOK_RETURN) != 0 && !inhook) returnHook(frame, result);
 		onReturnNoHook();
 	}
 
-	private void returnHook(DebugFrame frame, Varargs result) throws LuaError, UnwindThrowable {
+	private void returnHook(DebugFrame frame, Varargs result) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		inhook = true;
 		frame.flags |= FLAG_RETURN_HOOK;
 
@@ -326,12 +327,12 @@ public final class DebugState {
 	 * @throws LuaError        On a runtime error.
 	 * @throws UnwindThrowable If the hook transfers control to another coroutine.
 	 */
-	public void onInstruction(DebugFrame frame, int pc) throws LuaError, UnwindThrowable {
+	public void onInstruction(DebugFrame frame, int pc) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// TODO: Can we avoid the inhook here?
 		if (inhook || (hookMask & (HOOK_LINE | HOOK_COUNT)) != 0) onInstructionWorker(frame, pc);
 	}
 
-	private void onInstructionWorker(DebugFrame frame, int pc) throws LuaError, UnwindThrowable {
+	private void onInstructionWorker(DebugFrame frame, int pc) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if (inhook) {
 			// If we're in a hook and one of these flags is set, then we are resuming from a yield inside the hook. The
 			// hooks have been run at this point, so we just need to clear the flag and continue.
@@ -350,7 +351,7 @@ public final class DebugState {
 		frame.flags &= ~(FLAG_INSN_HOOK | FLAG_LINE_HOOK);
 	}
 
-	void hookInstruction(DebugFrame frame, int pc) throws LuaError, UnwindThrowable {
+	void hookInstruction(DebugFrame frame, int pc) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		// If there is a instruction hook, and we've not yet run it, then do so!
 		if ((hookMask & HOOK_COUNT) != 0 && (frame.flags & FLAG_INSN_HOOK) == 0 && --hookPendingCount == 0) {
 			hookPendingCount = hookCount;
@@ -420,7 +421,7 @@ public final class DebugState {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Varargs resume(DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
+	public Varargs resume(DebugFrame frame, Varargs args) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int flags = frame.flags;
 
 		// Continue executing the instruction hook.
@@ -456,7 +457,7 @@ public final class DebugState {
 	}
 
 	@SuppressWarnings("unchecked")
-	public Varargs resumeError(DebugFrame frame, LuaError error) throws LuaError, UnwindThrowable {
+	public Varargs resumeError(DebugFrame frame, LuaError error) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		if ((frame.flags & FLAG_ANY_HOOK) != 0) throw error;
 
 		if (!(frame.func instanceof Resumable<?>)) {

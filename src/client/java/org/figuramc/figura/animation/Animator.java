@@ -2,8 +2,6 @@ package org.figuramc.figura.animation;
 
 import net.minecraft.util.Mth;
 import org.figuramc.figura.model.part.PartTransform;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.MathUtils;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
@@ -24,7 +22,7 @@ import java.util.List;
  * - The PartTransform is refreshed and not dirty anymore
  * - Results are cached until the next setTime(), or other dirtying event
  */
-public class Animator extends MarkedObjectBase {
+public class Animator {
 
     // Where to source time
     private final AnimationInstance instance;
@@ -103,8 +101,4 @@ public class Animator extends MarkedObjectBase {
     // This is so that Animator can mark PartTransform as dirty, and PartTransform can query Animator for its values!
     public void addTransform(PartTransform transform) { this.transforms.add(transform); }
 
-    @Override
-    protected long traceNoMark(MemoryCounter counter, int depth) {
-        throw new UnsupportedOperationException("TODO");
-    }
 }

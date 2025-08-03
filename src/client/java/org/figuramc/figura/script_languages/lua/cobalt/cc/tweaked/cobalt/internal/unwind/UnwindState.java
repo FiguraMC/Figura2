@@ -1,8 +1,7 @@
 package org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Varargs;
-
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The state of an object being unwound.

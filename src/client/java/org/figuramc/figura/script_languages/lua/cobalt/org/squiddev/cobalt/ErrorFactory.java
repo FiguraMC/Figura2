@@ -72,7 +72,7 @@ public final class ErrorFactory {
 	 * @param expected String naming the type that was expected
 	 * @return The created LuaError
 	 */
-	public static LuaError argError(LuaState state, LuaValue value, String expected) {
+	public static LuaError argError(LuaState state, LuaValue value, String expected) throws AllocationTracker.AvatarOOMException {
 		return new LuaError(new Buffer(32, state.allocationTracker)
 			.append("bad argument (")
 			.append(expected)
@@ -90,7 +90,7 @@ public final class ErrorFactory {
 	 * @param msg  String providing information about the invalid argument
 	 * @return The created LuaError
 	 */
-	public static LuaError argError(@Nullable AllocationTracker allocTracker, int iarg, String msg) {
+	public static LuaError argError(@Nullable AllocationTracker allocTracker, int iarg, String msg) throws AllocationTracker.AvatarOOMException {
 		return new LuaError("bad argument #" + iarg + " (" + msg + ")", allocTracker);
 	}
 
@@ -101,7 +101,7 @@ public final class ErrorFactory {
 	 * @param expected String naming the type that was expected
 	 * @return The created LuaError
 	 */
-	public static LuaError typeError(LuaState state, LuaValue value, String expected) {
+	public static LuaError typeError(LuaState state, LuaValue value, String expected) throws AllocationTracker.AvatarOOMException {
 		return new LuaError(new Buffer(32, state.allocationTracker)
 			.append(expected)
 			.append(" expected, got ")
@@ -110,7 +110,7 @@ public final class ErrorFactory {
 		);
 	}
 
-	public static LuaError operandError(LuaState state, LuaValue operand, String verb, int stack) {
+	public static LuaError operandError(LuaState state, LuaValue operand, String verb, int stack) throws AllocationTracker.AvatarOOMException {
 		ObjectName kind = null;
 		if (stack >= 0) {
 			DebugFrame info = DebugState.get(state).getStack();
@@ -152,7 +152,7 @@ public final class ErrorFactory {
 	 * @param rhs Right-hand-side of the comparison that resulted in the error.
 	 * @return The created LuaError
 	 */
-	public static LuaError compareError(LuaState state, LuaValue lhs, LuaValue rhs) {
+	public static LuaError compareError(LuaState state, LuaValue lhs, LuaValue rhs) throws AllocationTracker.AvatarOOMException {
 		LuaString lhsType = typeName(state, lhs), rhsType = typeName(state, rhs);
 		if (lhsType.equals(rhsType)) {
 			return new LuaError(new Buffer(state.allocationTracker)

@@ -24,12 +24,12 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaValue;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Prototype;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LocalVariable;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.DataOutputStream;
 import java.io.IOException;

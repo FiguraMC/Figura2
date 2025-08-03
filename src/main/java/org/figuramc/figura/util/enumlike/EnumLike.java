@@ -55,7 +55,7 @@ public abstract class EnumLike {
 
     // Get all values for the given class. Its direct superclass must be EnumLike.
     @SuppressWarnings("unchecked")
-    public static <T extends EnumLike> List<? extends T> values(Class<T> clazz) {
+    public static <T extends EnumLike> List<? extends T> values(Class<? super T> clazz) {
         if (clazz.getSuperclass() != EnumLike.class)
             throw new IllegalArgumentException("Argument to EnumLike.values() must be direct subclass of EnumLike");
         if (!isFrozen(clazz))

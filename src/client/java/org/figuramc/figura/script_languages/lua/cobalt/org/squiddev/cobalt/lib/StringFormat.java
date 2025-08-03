@@ -1,5 +1,6 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.doubles.DoubleToStringConverter;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 
@@ -52,7 +53,7 @@ class StringFormat {
 	 *
 	 * @throws LuaError On invalid arguments.
 	 */
-	static LuaString format(LuaState state, FormatState format) throws LuaError, UnwindThrowable {
+	static LuaString format(LuaState state, FormatState format) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		LuaString fmt = format.format;
 		final int n = fmt.length();
 		Buffer result = format.buffer;
@@ -125,7 +126,7 @@ class StringFormat {
 		return result.toLuaString();
 	}
 
-	private static long toSignedLong(int arg, LuaValue value, LuaState state) throws LuaError {
+	private static long toSignedLong(int arg, LuaValue value, LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		if (value instanceof LuaInteger i) return i.checkLong(state);
 
 		double asDouble = value.checkDouble(state);
@@ -138,7 +139,7 @@ class StringFormat {
 
 	private static final BigDecimal U64_MAX = BigDecimal.valueOf(2).pow(64);
 
-	private static long toUnsignedLong(int arg, LuaValue value, LuaState state) throws LuaError {
+	private static long toUnsignedLong(int arg, LuaValue value, LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		if (value instanceof LuaInteger i) return i.checkLong(state);
 
 		double asDouble = value.checkDouble(state);
@@ -159,7 +160,7 @@ class StringFormat {
 		throw ErrorFactory.argError(state.allocationTracker, arg, "not a number in proper range");
 	}
 
-	private static void addQuoted(Buffer buf, int arg, LuaValue s, LuaState state) throws LuaError {
+	private static void addQuoted(Buffer buf, int arg, LuaValue s, LuaState state) throws LuaError, AllocationTracker.AvatarOOMException {
 		switch (s.type()) {
 			case TSTRING -> addQuoted(buf, s.checkLuaString(state));
 			case TNUMBER -> {
@@ -180,7 +181,7 @@ class StringFormat {
 		}
 	}
 
-	private static void addQuoted(Buffer buf, LuaString s) {
+	private static void addQuoted(Buffer buf, LuaString s) throws AllocationTracker.AvatarOOMException {
 		int c;
 		buf.append((byte) '"');
 		for (int i = 0, n = s.length(); i < n; i++) {

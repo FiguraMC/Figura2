@@ -24,22 +24,21 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.debug;
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaError;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaState;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.LuaString;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.UnwindThrowable;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
-
 /**
  * A basic method for registering for debug hooks
  */
 public interface DebugHook {
-	LuaString CALL = valueOf("call", null);
-	LuaString LINE = valueOf("line", null);
-	LuaString COUNT = valueOf("count", null);
-	LuaString RETURN = valueOf("return", null);
-	LuaString TAILRETURN = valueOf("tail return", null);
+	LuaString CALL = LuaString.valueOfNoAlloc("call");
+	LuaString LINE = LuaString.valueOfNoAlloc("line");
+	LuaString COUNT = LuaString.valueOfNoAlloc("count");
+	LuaString RETURN = LuaString.valueOfNoAlloc("return");
+	LuaString TAILRETURN = LuaString.valueOfNoAlloc("tail return");
 
 	/**
 	 * Should this hook be inherited by child threads?
@@ -59,7 +58,7 @@ public interface DebugHook {
 	 * @throws LuaError        On a runtime error.
 	 * @throws UnwindThrowable If this hook transfers control to another coroutine.
 	 */
-	default void onCall(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, UnwindThrowable {
+	default void onCall(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 	}
 
 	/**
@@ -71,7 +70,7 @@ public interface DebugHook {
 	 * @throws LuaError        On a runtime error.
 	 * @throws UnwindThrowable If this hook transfers control to another coroutine.
 	 */
-	default void onReturn(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, UnwindThrowable {
+	default void onReturn(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 	}
 
 	/**
@@ -83,7 +82,7 @@ public interface DebugHook {
 	 * @throws LuaError        On a runtime error.
 	 * @throws UnwindThrowable If this hook transfers control to another coroutine.
 	 */
-	default void onCount(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, UnwindThrowable {
+	default void onCount(LuaState state, DebugState ds, DebugFrame frame) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 	}
 
 	/**
@@ -96,6 +95,6 @@ public interface DebugHook {
 	 * @throws LuaError        On a runtime error.
 	 * @throws UnwindThrowable If this hook transfers control to another coroutine.
 	 */
-	default void onLine(LuaState state, DebugState ds, DebugFrame frame, int newLine) throws LuaError, UnwindThrowable {
+	default void onLine(LuaState state, DebugState ds, DebugFrame frame, int newLine) throws LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 	}
 }

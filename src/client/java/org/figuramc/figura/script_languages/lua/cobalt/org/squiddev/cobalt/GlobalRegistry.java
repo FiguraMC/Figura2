@@ -1,20 +1,18 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * The global registry, a store of Lua values
  */
-public final class GlobalRegistry extends MarkedObjectBase {
+public final class GlobalRegistry {
 
 	private final @Nullable AllocationTracker allocTracker;
 
 	private final LuaTable table;
 
-	GlobalRegistry(@Nullable AllocationTracker allocTracker) {
+	GlobalRegistry(@Nullable AllocationTracker allocTracker) throws AllocationTracker.AvatarOOMException {
 		this.allocTracker = allocTracker;
 		this.table = new LuaTable(allocTracker);
 	}
@@ -35,7 +33,7 @@ public final class GlobalRegistry extends MarkedObjectBase {
 	 * @param name The name of the registry table.
 	 * @return The subentry.
 	 */
-	public LuaTable getSubTable(LuaString name) throws LuaError {
+	public LuaTable getSubTable(LuaString name) throws LuaError, AllocationTracker.AvatarOOMException {
 		LuaValue value = table.rawget(name);
 		if (value instanceof LuaTable table) return table;
 
@@ -44,9 +42,4 @@ public final class GlobalRegistry extends MarkedObjectBase {
 		return newValue;
 	}
 
-	@Override
-	protected long traceNoMark(MemoryCounter counter, int depth) {
-		counter.trace(table, depth);
-		return 32;
-	}
 }

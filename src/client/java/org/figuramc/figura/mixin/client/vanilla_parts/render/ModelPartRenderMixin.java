@@ -7,23 +7,17 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
-import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraModClient;
 import org.figuramc.figura.avatars.Avatar;
-import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
-import org.figuramc.figura.ducks.client.ModelPartTrackingAccess;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.ScriptError;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -114,17 +108,10 @@ public abstract class ModelPartRenderMixin {
         currentPart = null;
     }
 
-    @Unique private void runCallbacks(List<ScriptCallback> callbacks) {
-        try {
-            for (ScriptCallback callback : callbacks)
-                callback.call();
-        } catch (ScriptError ex) {
-            Component partName;
-            String str = ((ModelPartTrackingAccess) this).figura$getName();
-            if (str == null) partName = Component.translatable("figura.error.runtime.unnamed_vanilla_part");
-            else partName = Component.literal(str);
-            currentAvatar.error(new AvatarError("figura.error.runtime.vanilla_part_callback", ex, true, partName));
-        }
+    @Unique private void runCallbacks(List<ScriptCallback<CallbackItem.Unit, CallbackItem.Unit>> callbacks) {
+        // TODO try to provide info to error messages of which VanillaPart an error occurred on
+        for (ScriptCallback<CallbackItem.Unit, CallbackItem.Unit> callback : callbacks)
+            callback.call(CallbackItem.Unit.INSTANCE);
     }
 
     // Scratch math objects

@@ -24,8 +24,9 @@
  */
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt;
 
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.FormatDesc;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Extension of {@link LuaNumber} which can hold a Java double as its value.
@@ -79,9 +80,9 @@ public final class LuaDouble extends LuaNumber {
 	 */
 	private static final String JSTR_NEGINF = "-inf";
 
-	private static final LuaString STR_NAN = ValueFactory.valueOf(JSTR_NAN, null);
-	private static final LuaString STR_POSINF = ValueFactory.valueOf(JSTR_POSINF, null);
-	private static final LuaString STR_NEGINF = ValueFactory.valueOf(JSTR_NEGINF, null);
+	private static final LuaString STR_NAN = LuaString.valueOfNoAlloc(JSTR_NAN);
+	private static final LuaString STR_POSINF = LuaString.valueOfNoAlloc(JSTR_POSINF);
+	private static final LuaString STR_NEGINF = LuaString.valueOfNoAlloc(JSTR_NEGINF);
 	private static final FormatDesc NUMBER_FORMAT = FormatDesc.ofUnsafe(".14g");
 
 	/**
@@ -129,14 +130,15 @@ public final class LuaDouble extends LuaNumber {
 	public String toString() {
 		if (Double.isNaN(v)) return JSTR_NAN;
 		if (Double.isInfinite(v)) return v < 0 ? JSTR_NEGINF : JSTR_POSINF;
-
-		Buffer buffer = new Buffer(16, null); // Short string not worth tracking
-		NUMBER_FORMAT.format(buffer, v);
-		return buffer.toString();
+		try {
+			Buffer buffer = new Buffer(16, null);
+			NUMBER_FORMAT.format(buffer, v);
+			return buffer.toJavaString();
+		} catch (AllocationTracker.AvatarOOMException impossible) {throw new IllegalStateException("Should never happen. Contact Figura devs", impossible); }
 	}
 
 	@Override
-	public LuaString checkLuaString(LuaState state) {
+	public LuaString checkLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
 		if (Double.isNaN(v)) return STR_NAN;
 		if (Double.isInfinite(v)) return v < 0 ? STR_NEGINF : STR_POSINF;
 
@@ -146,7 +148,7 @@ public final class LuaDouble extends LuaNumber {
 	}
 
 	@Override
-	public LuaValue toLuaString(LuaState state) {
+	public LuaValue toLuaString(LuaState state) throws AllocationTracker.AvatarOOMException {
 		return checkLuaString(state);
 	}
 
@@ -166,18 +168,13 @@ public final class LuaDouble extends LuaNumber {
 	}
 
 	@Override
-	public String checkString(LuaState state) {
-		return toString();
+	public String checkString(LuaState state) throws AllocationTracker.AvatarOOMException {
+		return toJavaString(state.allocationTracker);
 	}
 
 	@Override
-	public String checkString(LuaState state, String message) {
-		return toString();
-	}
-
-	@Override
-	public long count(MemoryCounter counter, int depth) {
-		return OBJECT_SIZE + 8; // 8 bytes of double we'll say
+	public String checkString(LuaState state, String message) throws AllocationTracker.AvatarOOMException {
+		return toJavaString(state.allocationTracker);
 	}
 
 }

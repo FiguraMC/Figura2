@@ -25,19 +25,19 @@
 package org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler;
 
 
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.AutoUnwind;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
-import org.checkerframework.checker.nullness.qual.Nullable;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState.FunctionFactory;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaInterpretedFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.BaseLib;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoreLibraries;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
 
-import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.ValueFactory.valueOf;
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState.checkMode;
 
 /**
@@ -145,11 +145,11 @@ public class LuaC {
 	 * @return The compiled code
 	 * @throws CompileException If there is a syntax error.
 	 */
-	public static Prototype compile(LuaState state, InputStream stream, String name) throws CompileException, LuaError {
-		return compile(state, stream, valueOf(name, state.allocationTracker));
+	public static Prototype compile(LuaState state, InputStream stream, String name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
+		return compile(state, stream, LuaString.valueOf(state.allocationTracker, name));
 	}
 
-	public static Prototype compile(LuaState state, InputStream stream, LuaString name) throws CompileException, LuaError {
+	public static Prototype compile(LuaState state, InputStream stream, LuaString name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException {
 		Object result = SuspendedAction.noYield(() -> {
 			try {
 				return compile(state, new InputStreamReader(stream), name, null);
@@ -163,7 +163,7 @@ public class LuaC {
 	}
 
 	@AutoUnwind
-	public static Prototype compile(LuaState state, InputReader stream, LuaString name, LuaString mode) throws CompileException, LuaError, UnwindThrowable {
+	public static Prototype compile(LuaState state, InputReader stream, LuaString name, LuaString mode) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		int firstByte = stream.read();
 		if (firstByte == '\033') {
 			checkMode(mode, "binary");
@@ -181,7 +181,7 @@ public class LuaC {
 	 * Parse the input
 	 */
 	@AutoUnwind
-	private static Prototype loadTextChunk(LuaState state, int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, UnwindThrowable {
+	private static Prototype loadTextChunk(LuaState state, int firstByte, InputReader stream, LuaString name) throws CompileException, LuaError, AllocationTracker.AvatarOOMException, UnwindThrowable {
 		Parser parser = new Parser(state, stream, firstByte, name, LoadState.getShortName(name, state.allocationTracker));
 		parser.lexer.skipShebang();
 		return parser.mainFunction();

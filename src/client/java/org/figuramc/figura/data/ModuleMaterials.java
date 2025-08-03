@@ -54,7 +54,7 @@ public record ModuleMaterials(
             boolean autoRequireDependencies,
             // Exposed API function types
             // We simply maintain the ordering given in the json.
-            LinkedHashMap<String, CallbackType.Func> api
+            LinkedHashMap<String, CallbackType.Func<?, ?>> api
     ) {}
 
     // TEXTURES

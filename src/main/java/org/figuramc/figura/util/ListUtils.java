@@ -70,39 +70,6 @@ public class ListUtils {
         return result;
     }
 
-    // Filter the list, in-place, efficiently.
-    // If the predicate throws, that element and any subsequent elements will not be removed.
-    // The predicate is allowed to mutably append to the end of the list.
-    public static <T, E extends Throwable> void filterMut(List<T> list, ThrowingFunction<T, Boolean, E> predicate) throws E {
-        if (list instanceof RandomAccess) {
-            // TODO this can maybe be further optimized using arrays and System arraycopy
-            int i = 0, j = 0;
-            try {
-                while (i < list.size()) {
-                    T value = list.get(i);
-                    boolean keep = predicate.apply(value);
-                    if (keep) {
-                        if (i != j) list.set(j, value);
-                        j++;
-                    }
-                    i++;
-                }
-                while (j++ < i) list.removeLast();
-            } catch (Throwable error) {
-                // If anything went wrong, we need to clean up the list state...
-                while (i < list.size()) list.set(j++, list.get(i++));
-                while (j++ < i) list.removeLast();
-                throw (E) error;
-            }
-        } else {
-            // If there's no random access, use naive solution
-            Iterator<T> iter = list.iterator();
-            while (iter.hasNext())
-                if (!predicate.apply(iter.next()))
-                    iter.remove();
-        }
-    }
-
     public static <T> ArrayList<T> flatten(Iterable<? extends Iterable<T>> lists) {
         ArrayList<T> result = new ArrayList<>();
         for (Iterable<T> l : lists)

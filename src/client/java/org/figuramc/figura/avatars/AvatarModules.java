@@ -5,18 +5,18 @@ import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.directory.FiguraDir;
 import org.figuramc.figura.model.part.FiguraModelPart;
-import org.figuramc.figura.script_hooks.Event;
-import org.figuramc.figura.script_hooks.ScriptError;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
+import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
-import org.figuramc.figura.script_hooks.mem_count.MarkedObjectBase;
-import org.figuramc.figura.script_hooks.mem_count.MemoryCounter;
 import org.figuramc.figura.util.MapUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 // Tracks all modules in an avatar, including the main module and its dependencies
 public class AvatarModules {
@@ -61,20 +61,25 @@ public class AvatarModules {
 
     // Representation of a singular module in the avatar
     // May be updated and mutated by components it's used in
-    public class Module extends MarkedObjectBase {
+    public class Module {
 
         public final int index; // Index of this module in the
-        public ModuleMaterials materials;
+        public ModuleMaterials materials; // This will take up lots of memory, so we will null it out at a later stage once it's done being used.
+        private final boolean autoRequireDependencies;
+        public final LinkedHashMap<String, CallbackType.Func<?, ?>> api;
+
         public final Map<String, Integer> dependencyIndices; // Indices of dependent modules in the list, by name
         public @Nullable ScriptRuntime runtime; // The runtime used by this module, if any
         private boolean initialized = false; // Whether it's been initialized yet
 
         public @Nullable FiguraModelPart entityRoot; // This module's entity root
-        public final Map<String, ScriptCallback> callbacks = new HashMap<>(); // Exposed callbacks
+        public final Map<String, ScriptCallback<?, ?>> callbacks = new HashMap<>(); // Exposed callbacks
 
         private Module(int index, ModuleMaterials materials, Map<String, Integer> dependencyIndices) {
             this.index = index;
             this.materials = materials;
+            autoRequireDependencies = materials.metadata().autoRequireDependencies();
+            api = materials.metadata().api();
             this.dependencyIndices = dependencyIndices;
         }
 
@@ -83,14 +88,22 @@ public class AvatarModules {
             return MapUtils.mapValues(dependencyIndices, AvatarModules.this.modules::get);
         }
 
+        // Free the materials, so they don't take up memory unnecessarily.
+        // This will run at the end of initialization, BEFORE main thread initialization.
+        // Materials are never tracked in memory, so don't hold onto them after using them to init the Avatar!
+        public void freeMaterials() {
+            materials = null;
+        }
+
         // Initialize this module, should run on the main thread.
         // By default, modules will init() their dependencies before themselves.
         // (TODO Should we have some kind of cycle detection? Yes, but it doesn't have to be here at runtime, it can be at import time!)
-        public void initScript() throws ScriptError, Throwable {
+        public void initScript() throws AvatarError {
+            assert materials == null; // It's been cleared by the time this runs!
             if (initialized) return;
             initialized = true;
             // If we auto-require dependencies, do so now:
-            if (materials.metadata().autoRequireDependencies()) {
+            if (autoRequireDependencies) {
                 for (var index : dependencyIndices.values()) {
                     AvatarModules.this.modules.get(index).initScript();
                 }
@@ -99,18 +112,6 @@ public class AvatarModules {
             if (runtime != null) runtime.initModule(this);
         }
 
-
-
-        @Override
-        protected long traceNoMark(MemoryCounter counter, int depth) {
-            counter.trace(entityRoot, depth);
-            long namesSize = 0;
-            for (var entry : callbacks.entrySet()) {
-                namesSize += entry.getKey().length() * CHAR_SIZE;
-                counter.trace(entry.getValue(), depth);
-            }
-            return 48 + namesSize;
-        }
     }
 
 

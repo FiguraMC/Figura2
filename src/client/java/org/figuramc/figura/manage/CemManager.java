@@ -68,15 +68,10 @@ public class CemManager {
                     CompletionException::new
             ), Runnable::run)); // TODO: Fix texture loading so it can work in an off thread instead of render thread
         } catch (CompletionException ex) {
-            Throwable cause = ex.getCause();
             // For now, always report CEM errors to chat.
-            //noinspection SwitchStatementWithTooFewBranches
-            switch (cause) {
-                case ModuleImportingException importingException -> ErrorReporting.avatarImporting(importingException);
-                default -> ErrorReporting.unexpectedError(cause);
-            }
+            ErrorReporting.reportError(ex.getCause());
         } catch (Throwable unexpected) {
-            ErrorReporting.unexpectedError(unexpected);
+            ErrorReporting.reportError(unexpected);
         }
     }
 
