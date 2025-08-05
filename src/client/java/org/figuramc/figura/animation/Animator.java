@@ -1,8 +1,11 @@
 package org.figuramc.figura.animation;
 
 import net.minecraft.util.Mth;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.model.part.PartTransform;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.MathUtils;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
@@ -26,7 +29,7 @@ public class Animator {
 
     // Where to source time
     private final AnimationInstance instance;
-    // Keyframes
+    // Source of keyframes
     private final Animation.TransformKeyframes keyframes;
 
     private final Vector3f origin, rotation, scale;
@@ -39,7 +42,15 @@ public class Animator {
     // When the Animator updates in a channel, it should mark these transforms as dirty in that channel.
     private final List<PartTransform> transforms = new ArrayList<>(1); // Most Animators will have exactly 1 transform
 
-    public Animator(AnimationInstance instance, Animation.TransformKeyframes keyframes) {
+    public static final int SIZE_ESTIMATE =
+            AllocationTracker.OBJECT_SIZE
+            + AllocationTracker.REFERENCE_SIZE * 6
+            + AllocationTracker.VEC3F_SIZE * 3
+            + AllocationTracker.BYTE_SIZE * 2;
+
+    private final @Nullable AllocationTracker.State allocState;
+
+    public Animator(AnimationInstance instance, Animation.TransformKeyframes keyframes, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         this.instance = instance;
         this.keyframes = keyframes;
         // Detect which keyframe channels are in use, set up accordingly
@@ -48,6 +59,8 @@ public class Animator {
         if (keyframes.rotation() != null && !keyframes.rotation().isEmpty()) { this.rotation = new Vector3f(); usedChannels |= PartTransform.ROTATION_DIRTY; } else this.rotation = null;
         if (keyframes.scale() != null && !keyframes.scale().isEmpty()) { this.scale = new Vector3f(); usedChannels |= PartTransform.SCALE_DIRTY; } else this.scale = null;
         this.usedChannels = usedChannels;
+        // Track instance, save state for updates
+        if (allocationTracker != null) allocState = allocationTracker.track(this, SIZE_ESTIMATE); else allocState = null;
     }
 
     public boolean hasOrigin() { return origin != null; }
@@ -99,6 +112,9 @@ public class Animator {
 
     // PartTransform and Animator REFERENCE EACH OTHER!
     // This is so that Animator can mark PartTransform as dirty, and PartTransform can query Animator for its values!
-    public void addTransform(PartTransform transform) { this.transforms.add(transform); }
+    public void addTransform(PartTransform transform) throws AvatarError {
+        if (allocState != null) allocState.changeSize(AllocationTracker.REFERENCE_SIZE);
+        this.transforms.add(transform);
+    }
 
 }

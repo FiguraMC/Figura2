@@ -4,6 +4,8 @@ import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector4f;
 
 import java.util.concurrent.CompletableFuture;
@@ -15,11 +17,11 @@ import java.util.concurrent.CompletableFuture;
 public abstract class AvatarTexture {
 
     // Create a texture and upload it.
-    public static AvatarTexture from(Textures textureComponent, ModuleMaterials.TextureMaterials materials, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarError {
+    public static AvatarTexture from(ModuleMaterials.TextureMaterials materials, @Nullable AllocationTracker allocationTracker, Textures textureComponent, FiguraTextureAtlas.Builder atlasBuilder) throws AvatarError {
         switch (materials) {
             case ModuleMaterials.TextureMaterials.OwnedTexture owned -> {
                 if (owned.noAtlas()) {
-                    return StandaloneAvatarTexture.create(owned);
+                    return StandaloneAvatarTexture.create(owned, allocationTracker);
                 } else {
                     return new AtlasedAvatarTexture(textureComponent, owned, atlasBuilder);
                 }

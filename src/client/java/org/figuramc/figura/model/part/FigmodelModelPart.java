@@ -2,10 +2,12 @@ package org.figuramc.figura.model.part;
 
 import org.figuramc.figura.animation.Animation;
 import org.figuramc.figura.animation.AnimationInstance;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.texture.AvatarTexture;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.MapUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -22,10 +24,18 @@ public class FigmodelModelPart extends FiguraModelPart {
     // Map to textures; these may be the same object reference as other textures.
     private final Map<String, AvatarTexture> textures;
 
-    public FigmodelModelPart(ModuleMaterials.FigmodelMaterials materials, @Nullable FiguraModelPart parent, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) {
-        super(materials, parent, moduleIndex, texturesComponent, vanillaComponent);
-        animations = MapUtils.mapValues(materials.animations, animMats -> new AnimationInstance(new Animation(animMats), this));
+    public FigmodelModelPart(ModuleMaterials.FigmodelMaterials materials, @Nullable AllocationTracker allocationTracker, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
+        super(materials, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
+        animations = MapUtils.mapValues(materials.animations, animMats -> new AnimationInstance(new Animation(animMats, allocationTracker), this, allocationTracker));
         textures = MapUtils.mapValues(materials.textures, texIndex -> texturesComponent.getTexture(moduleIndex, texIndex));
+
+        if (allocationTracker != null) {
+            for (var key : animations.keySet())
+                allocationTracker.track(key);
+            for (var key : textures.keySet())
+                allocationTracker.track(key);
+            allocationTracker.track(this, AllocationTracker.OBJECT_SIZE + AllocationTracker.REFERENCE_SIZE * 2);
+        }
     }
 
     public @Nullable AnimationInstance animation(String name) { return animations.get(name); }

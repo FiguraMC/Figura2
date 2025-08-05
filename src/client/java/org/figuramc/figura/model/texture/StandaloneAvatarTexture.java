@@ -8,7 +8,9 @@ import net.minecraft.resources.ResourceLocation;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.RenderUtils;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 
@@ -37,7 +39,7 @@ public class StandaloneAvatarTexture extends AvatarTexture {
     }
 
     // Create and upload the texture.
-    public static StandaloneAvatarTexture create(ModuleMaterials.TextureMaterials.OwnedTexture materials) throws AvatarError {
+    public static StandaloneAvatarTexture create(ModuleMaterials.TextureMaterials.OwnedTexture materials, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         int id = next_id.getAndIncrement();
         ResourceLocation location = FiguraMod.id("figura_textures/" + id);
         ByteBuffer buffer = BufferUtils.createByteBuffer(materials.data().length);
@@ -46,7 +48,10 @@ public class StandaloneAvatarTexture extends AvatarTexture {
         try {
             NativeImage image = NativeImage.read(buffer);
             String debugName = "Figura texture #" + id + ": " + materials.name();
-            return new StandaloneAvatarTexture(location, new DynamicTexture(() -> debugName, image));
+            StandaloneAvatarTexture tex = new StandaloneAvatarTexture(location, new DynamicTexture(() -> debugName, image));
+            // Track the texture if needed
+            if (allocationTracker != null) allocationTracker.track(tex, image.getWidth() * image.getHeight() * 4); // 4 bytes per pixel (R, G, B, A)
+            return tex;
         } catch (IOException e) {
             throw new AvatarError("figura.error.loading.invalid_png", e, materials.name());
         }

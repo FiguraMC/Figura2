@@ -81,35 +81,6 @@ public class LuaRuntime implements ScriptRuntime {
             state.globals().rawset("micros", LibFunction.create(s -> LuaDouble.valueOf(System.nanoTime() / 1000d)));
             state.globals().rawset("print", LibFunction.create((s, v) -> { System.out.println(v); return Constants.NIL; }));
 
-            // Animation testing, todo remove
-            Animation testAnimation = new Animation(Map.of(
-                    "left_arm", new Animation.TransformKeyframes(
-                            null,
-                            List.of(
-                                    new Vec3Keyframe(0, 0, 0, 0),
-                                    new Vec3Keyframe(1, 90, 0, 0),
-                                    new Vec3Keyframe(2, 0, 0, 0)
-                            ),
-                            null
-                    ),
-                    "head", new Animation.TransformKeyframes(
-                            null,
-                            null,
-                            List.of(
-                                    new Vec3Keyframe(0, 1, 1, 1),
-                                    new Vec3Keyframe(1, 2, 1, 1),
-                                    new Vec3Keyframe(2, 1, 2, 1),
-                                    new Vec3Keyframe(3, 2, 2, 1),
-                                    new Vec3Keyframe(4, 1, 1, 1)
-                            )
-                    )
-            ));
-            state.globals().rawset("testAnimationBind", LibFunction.create((s, v) -> {
-                RiggedHierarchy<?> part = v.checkUserdata(s, RiggedHierarchy.class);
-                AnimationInstance instance = new AnimationInstance(testAnimation, part);
-                return AnimationInstanceAPI.wrap(instance, s);
-            }));
-
             // If we have vanilla rendering, add the "vanilla" table
             if (scriptsComponent.vanillaRendering != null)
                 state.globals().rawset("vanilla", VanillaTable.create(state, scriptsComponent.vanillaRendering));

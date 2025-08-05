@@ -15,7 +15,7 @@ public class AvatarTemplates {
     public static Avatar<UUID> localPlayer(UUID key, EntityRenderer<?, ?> entityRenderer, List<AvatarModules.LoadTimeModule> modules) throws AvatarError {
         AllocationTracker allocationTracker = new AllocationTracker(Integer.MAX_VALUE, 0, 0);
         Textures textures = new Textures(modules, allocationTracker);
-        VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer);
+        VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer, allocationTracker);
         EntityRoot entityRoot = new EntityRoot(modules, allocationTracker, textures, vanillaRendering);
         EntityUser entityUser = new EntityUser(key);
         CustomItems customItems = new CustomItems(modules, allocationTracker, textures, vanillaRendering);
@@ -26,7 +26,7 @@ public class AvatarTemplates {
     public static Avatar<UUID> cemAvatar(UUID key, EntityRenderer<?, ?> entityRenderer, List<AvatarModules.LoadTimeModule> modules) throws AvatarError {
         AllocationTracker allocationTracker = null;
         Textures textures = new Textures(modules, allocationTracker);
-        VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer);
+        VanillaRendering vanillaRendering = new VanillaRendering(entityRenderer, allocationTracker);
         EntityRoot entityRoot = new EntityRoot(modules, allocationTracker, textures, vanillaRendering);
         EntityUser entityUser = new EntityUser(key);
         CemSelfDeleter cemSelfDeleter = new CemSelfDeleter(key, entityUser); // Component that deletes CEM avatar when the entity unloads

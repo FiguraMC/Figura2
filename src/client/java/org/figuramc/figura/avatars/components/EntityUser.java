@@ -22,7 +22,7 @@ public class EntityUser implements AvatarComponent<EntityUser> {
 
     private final UUID uuid; // Constant, set at initialization
     private boolean justChanged; // Tracks whether the entity was just updated. Works as a flag for other components.
-    private @Nullable Entity entity; // Changes during tick(). Other components access it and use it.
+    private @Nullable Entity entity; // Changes during tick(). Other components access it and use it. (TODO pivot to EntityView idea? To prevent holding on to the entity too long?)
 
     public EntityUser(UUID uuid) {
         this.uuid = uuid;

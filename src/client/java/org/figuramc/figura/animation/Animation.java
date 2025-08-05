@@ -1,10 +1,13 @@
 package org.figuramc.figura.animation;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.ListUtils;
 import org.figuramc.figura.util.MapUtils;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -20,25 +23,40 @@ public class Animation {
     public final Map<String, TransformKeyframes> keyframesByPartPath;
 
     // Construct an animation from materials
-    public Animation(ModuleMaterials.AnimationMaterials materials) {
+    public Animation(ModuleMaterials.AnimationMaterials materials, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         keyframesByPartPath = MapUtils.mapValues(materials.transformKeyframes(), transformMats -> new TransformKeyframes(
-                ListUtils.map(transformMats.origin(), Vec3Keyframe::new),
-                ListUtils.map(transformMats.rotation(), Vec3Keyframe::new),
-                ListUtils.map(transformMats.scale(), Vec3Keyframe::new)
+                ListUtils.map(transformMats.origin(), mats -> new Vec3Keyframe(mats, allocationTracker)),
+                ListUtils.map(transformMats.rotation(), mats -> new Vec3Keyframe(mats, allocationTracker)),
+                ListUtils.map(transformMats.scale(), mats -> new Vec3Keyframe(mats, allocationTracker))
         ));
+
+        // Track all in one big track() call...
+        // Should hopefully reduce strain on reference queue?
+        // TODO make this better somehow :/
+        //      If the lists ever grow/shrink then we need to handle it,
+        //      and if not, we shouldn't track all the Vec3Keyframe instances separately like we do now
+        if (allocationTracker != null) {
+            int totalSize = AllocationTracker.OBJECT_SIZE * 2 + AllocationTracker.REFERENCE_SIZE;
+            for (var entry : keyframesByPartPath.entrySet()) {
+                // Track size of string keys
+                totalSize += AllocationTracker.OBJECT_SIZE + entry.getKey().length() * AllocationTracker.CHAR_SIZE;
+                // Track size of lists...
+                if (entry.getValue().origin != null) totalSize += AllocationTracker.OBJECT_SIZE + entry.getValue().origin.size() * AllocationTracker.REFERENCE_SIZE;
+                if (entry.getValue().rotation != null) totalSize += AllocationTracker.OBJECT_SIZE + entry.getValue().rotation.size() * AllocationTracker.REFERENCE_SIZE;
+                if (entry.getValue().scale != null) totalSize += AllocationTracker.OBJECT_SIZE + entry.getValue().scale.size() * AllocationTracker.REFERENCE_SIZE;
+            }
+            allocationTracker.track(this, totalSize);
+        }
+
         // TODO length / loop mode stuff
         // TODO script keyframes
     }
 
-    public Animation(Map<String, TransformKeyframes> keyframesByPartPath) {
-        this.keyframesByPartPath = keyframesByPartPath;
-    }
-
     // Sorted lists. If a field is null, then that channel is unaffected
     public record TransformKeyframes(
-            @Nullable List<Vec3Keyframe> origin,
-            @Nullable List<Vec3Keyframe> rotation,
-            @Nullable List<Vec3Keyframe> scale
+            @Nullable ArrayList<Vec3Keyframe> origin,
+            @Nullable ArrayList<Vec3Keyframe> rotation,
+            @Nullable ArrayList<Vec3Keyframe> scale
     ) {}
 
 }

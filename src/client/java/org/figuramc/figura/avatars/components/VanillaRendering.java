@@ -1,12 +1,15 @@
 package org.figuramc.figura.avatars.components;
 
+import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.model.part.PartTransform;
 import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -33,23 +36,29 @@ public class VanillaRendering implements AvatarComponent<VanillaRendering> {
     public final Map<ModelPart, VanillaPart> partMap = new IdentityHashMap<>();
 
     // Requires an entity renderer to create
-    public VanillaRendering(EntityRenderer<?, ?> entityRenderer) {
+    public VanillaRendering(EntityRenderer<?, ?> entityRenderer, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         this.entityRenderer = entityRenderer;
-        ModelNames.getModelsByName(entityRenderer).values().stream()
-                .flatMap(model -> model.root().getAllParts())
-                .forEach(part -> partMap.put(part, new VanillaPart(part)));
+        for (Model model : ModelNames.getModelsByName(entityRenderer).values()) {
+            for (ModelPart part : model.root().getAllParts().toList()) {
+                partMap.put(part, new VanillaPart(part, allocationTracker));
+            }
+        }
     }
 
     // Object accessible by scripts, interface to model part reading/writing.
     public class VanillaPart implements RiggedHierarchy<VanillaPart> {
 
-        // ModelPart to which this is linked
+        // Vanilla ModelPart to which this is linked
         public final ModelPart part;
-
-        public VanillaPart(ModelPart part) { this.part = part; }
-
         // Script-provided values for how to transform the vanilla part
-        public final PartTransform figuraTransform = new PartTransform();
+        public final PartTransform figuraTransform;
+
+        public VanillaPart(ModelPart part, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+            this.part = part;
+            this.figuraTransform = new PartTransform(allocationTracker);
+        }
+
+
         // Script-provided booleans saying whether to cancel each vanilla transform phase:
         public boolean cancelVanillaOrigin, cancelVanillaRotation, cancelVanillaScale;
 

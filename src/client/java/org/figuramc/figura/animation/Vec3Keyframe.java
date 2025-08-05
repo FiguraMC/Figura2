@@ -1,8 +1,11 @@
 package org.figuramc.figura.animation;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.data.ModuleMaterials;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.functional.FloatSupplier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
 
 import java.util.List;
@@ -14,7 +17,14 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
     private final FloatSupplier x, y, z;
     private final Interpolation interpolation;
 
-    public Vec3Keyframe(ModuleMaterials.TransformKeyframeMaterials materials) {
+    // Size estimate in bytes (not counting FloatSupplier implementation)
+    private static final int SIZE_ESTIMATE =
+            AllocationTracker.OBJECT_SIZE
+            + AllocationTracker.FLOAT_SIZE
+            + AllocationTracker.REFERENCE_SIZE * 4
+            + ConstantFloat.SIZE * 3; // Estimate, so we'll count this even if we're not using ConstantFloat?
+
+    public Vec3Keyframe(ModuleMaterials.TransformKeyframeMaterials materials, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         this(
                 materials.time(),
                 new ConstantFloat(Float.parseFloat(materials.x())), // TODO molang stuff
@@ -25,28 +35,29 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
                     case ModuleMaterials.InterpolationMaterials.CatmullRom __ -> Interpolation.CATMULLROM;
                     case ModuleMaterials.InterpolationMaterials.Step __ -> Interpolation.STEP;
                     case ModuleMaterials.InterpolationMaterials.Bezier bezier -> throw new UnsupportedOperationException("Bezier interpolation is TODO");
-                }
+                },
+                allocationTracker
         );
     }
 
-    public Vec3Keyframe(float time, FloatSupplier x, FloatSupplier y, FloatSupplier z, Interpolation interpolation) {
+    // Constructor from floats
+    public Vec3Keyframe(float time, float x, float y, float z, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+        this(time, new ConstantFloat(x), new ConstantFloat(y), new ConstantFloat(z), Interpolation.LINEAR, allocationTracker);
+    }
+
+    private Vec3Keyframe(float time, FloatSupplier x, FloatSupplier y, FloatSupplier z, Interpolation interpolation, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         this.time = time;
         this.x = x;
         this.y = y;
         this.z = z;
         this.interpolation = interpolation;
-    }
-
-    // Test constructor
-    public Vec3Keyframe(float time, float x, float y, float z) {
-        this(time, new ConstantFloat(x), new ConstantFloat(y), new ConstantFloat(z), Interpolation.LINEAR);
+        if (allocationTracker != null) allocationTracker.track(this, SIZE_ESTIMATE);
     }
 
     // Evaluate the keyframe into the vector, also return the vector for chaining
     public Vector3f evaluateInto(Vector3f output) {
         return output.set(x.getAsFloat(), y.getAsFloat(), z.getAsFloat());
     }
-
 
     // Static helper to convert a sorted list of keyframes + a time into a vec3, also return vector for chaining
     public static Vector3f evaluateTimelineInto(Vector3f output, List<Vec3Keyframe> timeline, float time) {
@@ -140,5 +151,7 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
     }
 
     // Cursed field name lol but it works
-    public record ConstantFloat(float getAsFloat) implements FloatSupplier {}
+    public record ConstantFloat(float getAsFloat) implements FloatSupplier {
+        public static final int SIZE = AllocationTracker.OBJECT_SIZE + AllocationTracker.FLOAT_SIZE;
+    }
 }

@@ -1,6 +1,9 @@
 package org.figuramc.figura.animation;
 
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.model.part.RiggedHierarchy;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,19 +20,29 @@ public class AnimationInstance {
     private float strength = 1.0f;
 
     // List of animators, to mark as dirty when this changes
-    private final List<Animator> animators;
+    private final Animator[] animators;
+
+    private static final int SIZE_ESTIMATE =
+            AllocationTracker.OBJECT_SIZE
+            + AllocationTracker.REFERENCE_SIZE
+            + AllocationTracker.FLOAT_SIZE * 2;
 
     // Bind the Animation to a RiggedHierarchy, within an Animations component
-    public AnimationInstance(Animation animation, RiggedHierarchy<?> root) {
-        animators = new ArrayList<>();
+    public AnimationInstance(Animation animation, RiggedHierarchy<?> root, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+        animators = new Animator[animation.keyframesByPartPath.size()];
+        int i = 0;
         for (var entry : animation.keyframesByPartPath.entrySet()) {
             String partPath = entry.getKey();
             RiggedHierarchy<?> descendant = root.getDescendantWithPath(partPath);
             if (descendant == null) continue; // TODO some kind of warning when the instance doesn't fully bind?
             Animation.TransformKeyframes keyframes = entry.getValue();
-            Animator animator = new Animator(this, keyframes);
+            Animator animator = new Animator(this, keyframes, allocationTracker);
             descendant.getTransform().addAnimator(animator);
-            animators.add(animator);
+            animators[i++] = animator;
+        }
+        // Track this instance
+        if (allocationTracker != null) {
+            allocationTracker.track(this, SIZE_ESTIMATE + animators.length * AllocationTracker.REFERENCE_SIZE);
         }
     }
 

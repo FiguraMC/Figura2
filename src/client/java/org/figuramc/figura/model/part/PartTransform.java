@@ -2,7 +2,9 @@ package org.figuramc.figura.model.part;
 
 import net.minecraft.util.Mth;
 import org.figuramc.figura.animation.Animator;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.VanillaRendering;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.jetbrains.annotations.Nullable;
 import org.joml.*;
@@ -42,6 +44,23 @@ public class PartTransform {
     public static final byte POSITION_DIRTY = 0x08; // totalScale is dirty and needs recalculation
     public static final byte MATRIX_DIRTY = 0x10; // matrix is dirty and needs recalculation
 
+    // Size estimate
+    public static final int SIZE_ESTIMATE =
+            AllocationTracker.OBJECT_SIZE
+            + AllocationTracker.REFERENCE_SIZE * 13
+            + AllocationTracker.VEC3F_SIZE * 8
+            + AllocationTracker.VEC4F_SIZE
+            + AllocationTracker.MAT3F_SIZE
+            + AllocationTracker.MAT4F_SIZE;
+    // Alloc state, for any future updates
+    private final @Nullable AllocationTracker.State allocState;
+    public PartTransform(@Nullable AllocationTracker allocationTracker) throws AvatarError {
+        if (allocationTracker != null) {
+            this.allocState = allocationTracker.track(this, SIZE_ESTIMATE);
+        } else this.allocState = null;
+    }
+
+
     // Flag get/set
     public boolean hasFlags(int flags) { return (this.flags & flags) == flags; }
     public void setFlags(int flags) { this.flags |= (byte) flags; }
@@ -78,10 +97,11 @@ public class PartTransform {
 
     public void setMimicPart(@Nullable VanillaRendering.VanillaPart mimicPart) { this.mimicPart = mimicPart; }
 
-    public void addAnimator(Animator animator) {
+    public void addAnimator(Animator animator) throws AvatarError {
         if (animators == null)
             animators = new ArrayList<>(1);
         animators.add(animator);
+        if (allocState != null) allocState.changeSize(AllocationTracker.REFERENCE_SIZE);
         animator.addTransform(this);
     }
 

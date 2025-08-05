@@ -5,7 +5,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.figuramc.figura.avatars.AvatarComponent;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.model.part.CustomItemModelPart;
 import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.model.renderers.Renderable;
@@ -13,6 +15,8 @@ import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -29,27 +33,45 @@ public class CustomItems implements AvatarComponent<CustomItems> {
      */
     private final List<PartEntry> customItems;
 
-    public CustomItems(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) {
+    public CustomItems(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) throws AvatarError {
         // Create the custom items
-        customItems = modules.stream().flatMap(mod -> mod.materials.customItemRoots().entrySet().stream().map(entry -> {
-            // Convert the String pattern to a Matcher:
-            String pattern = entry.getKey();
-            if (pattern.isEmpty()) return null;
-            Matcher matcher;
-            if (pattern.charAt(0) == '$') {
-                String endsWith = pattern.substring(1);
-                matcher = new Matcher.EndsWithMatcher(endsWith);
-            } else {
-                ResourceLocation exactLocation = ResourceLocation.parse(pattern.replace('$', ':'));
-                matcher = new Matcher.ExactMatcher(exactLocation);
+        customItems = new ArrayList<>();
+        for (var mod : modules) {
+            for (var entry : mod.materials.customItemRoots().entrySet()) {
+                // Convert the String pattern to a Matcher:
+                String pattern = entry.getKey();
+                if (pattern.isEmpty()) continue;
+                Matcher matcher;
+                if (pattern.charAt(0) == '$') {
+                    String endsWith = pattern.substring(1);
+                    matcher = new Matcher.EndsWithMatcher(endsWith);
+                } else {
+                    ResourceLocation exactLocation = ResourceLocation.parse(pattern.replace('$', ':'));
+                    matcher = new Matcher.ExactMatcher(exactLocation);
+                }
+                // Convert the materials to a CustomItemModelPart
+                Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), allocationTracker, entry.getValue().model().transforms(), mod.index, texturesComponent, vanillaRendering)) : null;
+                // Convert the texture index to a FiguraModelPart
+                Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()), allocationTracker)) : null;
+                // Yield the entry
+                customItems.add(new PartEntry(matcher, mainPart, flatPart));
             }
-            // Convert the materials to a CustomItemModelPart
-            Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), entry.getValue().model().transforms(), mod.index, texturesComponent, vanillaRendering)) : null;
-            // Convert the texture index to a RootModelPart
-            Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()))) : null;
-            // Return the entry
-            return new PartEntry(matcher, mainPart, flatPart);
-        })).filter(Objects::nonNull).sorted().toList();
+        }
+        Collections.sort(customItems);
+
+        // Track allocation
+        if (allocationTracker != null) {
+            // Track matchers
+            for (var entry : customItems) {
+                allocationTracker.track(entry, PartEntry.SIZE_ESTIMATE + switch (entry.matcher) {
+                    case Matcher.ExactMatcher exact -> exact.location.toString().length() * AllocationTracker.CHAR_SIZE;
+                    case Matcher.EndsWithMatcher endsWith -> endsWith.ending.length() * AllocationTracker.CHAR_SIZE;
+                });
+            }
+            // Track this
+            allocationTracker.track(this, AllocationTracker.OBJECT_SIZE + AllocationTracker.REFERENCE_SIZE + customItems.size() * AllocationTracker.REFERENCE_SIZE);
+        }
+
     }
 
     public @Nullable Renderable<? extends FiguraModelPart> getModelPart(ItemStack stack, ItemDisplayContext context) {
@@ -69,8 +91,10 @@ public class CustomItems implements AvatarComponent<CustomItems> {
     }
 
     private record PartEntry(Matcher matcher, @Nullable Renderable<CustomItemModelPart> mainPart, @Nullable Renderable<FiguraModelPart> flatPart) implements Comparable<PartEntry> {
-        @Override
-        public int compareTo(@NotNull CustomItems.PartEntry o) {
+        public static final int SIZE_ESTIMATE =
+                AllocationTracker.OBJECT_SIZE
+                + AllocationTracker.REFERENCE_SIZE * 3;
+        @Override public int compareTo(@NotNull CustomItems.PartEntry o) {
             return this.matcher.compareTo(o.matcher);
         }
     }

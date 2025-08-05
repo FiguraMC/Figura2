@@ -5,6 +5,7 @@ import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
@@ -12,6 +13,7 @@ import org.figuramc.figura.model.shader.FiguraRenderType;
 import org.figuramc.figura.model.texture.AvatarTexture;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.MapUtils;
 import org.figuramc.figura.vanillamodel.ModelNames;
 import org.jetbrains.annotations.Nullable;
@@ -35,13 +37,8 @@ import java.util.Map;
  */
 public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
 
-    // General info
-    // Storing the parent is dubious... might be some edge cases that could warrant removal?
-    // With shallow copies, a part might not have a singular parent, it could have multiple!
-    private @Nullable FiguraModelPart parent;
-
     // Structure / modifications
-    public final PartTransform transform = new PartTransform(); // The transform of this model part
+    public final PartTransform transform; // The transform of this model part
 
 //    private  animators; // The animators which affect this model part
     public final LinkedHashMap<String, FiguraModelPart> children; // The children of this model part in the hierarchy tree. Ordered, so we don't use a regular hashmap.
@@ -58,29 +55,36 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
             midRenderCallbacks = new ArrayList<>(0),
             postRenderCallbacks = new ArrayList<>(0);
 
+    // Alloc tracker state
+    private final @Nullable AllocationTracker.State allocState;
+
     // Construct a simple empty wrapper part around the given children
-    public FiguraModelPart(@Nullable FiguraModelPart parent, Map<String, FiguraModelPart> children) {
-        this.parent = parent;
+    public FiguraModelPart(Map<String, FiguraModelPart> children, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+        this.transform = new PartTransform(allocationTracker);
         this.children = new LinkedHashMap<>(children);
-        for (FiguraModelPart child : children.values()) {
-            if (child.parent != null)
-                throw new IllegalStateException("When constructing a wrapper part, the childrens' parent must be null!");
-            child.parent = this;
-        }
         this.vertices = new float[0];
+        if (allocationTracker != null) {
+            for (var key : children.keySet())
+                allocationTracker.track(key);
+            allocState = allocationTracker.track(this, SIZE_ESTIMATE);
+        } else allocState = null;
     }
 
+    public static final int SIZE_ESTIMATE =
+            AllocationTracker.OBJECT_SIZE
+            + AllocationTracker.REFERENCE_SIZE * 8
+            + AllocationTracker.INT_SIZE;
+
     // Vanilla parameter is used for mimics
-    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable FiguraModelPart parent, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) {
-        // Copy basic values out of the materials
-        this.parent = parent;
+    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable AllocationTracker allocationTracker, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
         // If both zero, skip setting it
+        transform = new PartTransform(allocationTracker);
         if (!materials.origin.equals(0,0,0) || !materials.rotation.equals(0,0,0)) {
             transform.setOrigin(materials.origin);
             transform.setEulerDeg(materials.rotation);
         }
 
-        // TODO: Add animators to this part
+        // TODO: Add animators to this part?
 
         // Set up mimicry
         if (vanillaComponent != null && materials.mimic != null) {
@@ -104,8 +108,8 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
 
         // Get children
         children = MapUtils.mapValues(materials.children, mat -> switch (mat) {
-            case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(figmodelMaterials, this, moduleIndex, texturesComponent, vanillaComponent);
-            default -> new FiguraModelPart(mat, this, moduleIndex, texturesComponent, vanillaComponent);
+            case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(figmodelMaterials, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
+            default -> new FiguraModelPart(mat, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
         }, LinkedHashMap::new);
 
         // Get the list of render types:
@@ -133,11 +137,22 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
         for (ModuleMaterials.CubeData cubeData : materials.cubes) addVertices(vertexData, cubeData, uvModifier);
         for (ModuleMaterials.MeshData meshData : materials.meshes) addVertices(vertexData, meshData, uvModifier);
         vertices = vertexData.toArray(new float[0]);
+
+        // Register to alloc tracker
+        if (allocationTracker != null) {
+            // Track vertices
+            if (vertices.length > 0) allocationTracker.track(vertices);
+            // Track string children names
+            for (var key : children.keySet())
+                allocationTracker.track(key);
+            // Track this
+            allocState = allocationTracker.track(this, SIZE_ESTIMATE);
+        } else allocState = null;
     }
 
     // Construct by extruding a texture
-    public FiguraModelPart(AvatarTexture texture) {
-        this.parent = null;
+    public FiguraModelPart(AvatarTexture texture, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+        this.transform = new PartTransform(allocationTracker);
         this.renderType = new FiguraRenderType.Basic(texture.getLocation(), null);
         Vector4f uvModifier = texture.getUvValues();
         this.children = new LinkedHashMap<>();
@@ -245,6 +260,12 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
         // Set up transform to be item-ish
         transform.setScale(1f/16);
         transform.setOrigin(0f, 0f, 7.5f);
+
+        // Track
+        if (allocationTracker != null) {
+            allocationTracker.track(vertices);
+            allocState = allocationTracker.track(this, SIZE_ESTIMATE);
+        } else allocState = null;
     }
 
     // Return the "opacity state" for the pixel at (x, y)

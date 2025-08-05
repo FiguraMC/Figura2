@@ -7,6 +7,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.PngInfo;
 import org.figuramc.figura.FiguraMod;
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.ListUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,7 +28,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
     /**
      * Create and upload the atlas.
      */
-    private static FiguraTextureAtlas create(int totalWidth, int totalHeight, List<TextureRectangle> rectangles) throws AvatarError {
+    private static FiguraTextureAtlas create(int totalWidth, int totalHeight, List<TextureRectangle> rectangles, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         // Unique location
         int id = next_id.getAndIncrement();
         ResourceLocation location = FiguraMod.id("figura_atlases/" + id);
@@ -52,9 +53,13 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
                 rectangle.data = null;
             }
         }
-        // Return a future on the render thread, creating and uploading the image
+        // (TODO) Return a future on the render thread, creating and uploading the image?
         String debugName = "Figura Texture Atlas #" + id;
-        return new FiguraTextureAtlas(location, new DynamicTexture(() -> debugName, backingImage));
+        FiguraTextureAtlas atlas = new FiguraTextureAtlas(location, new DynamicTexture(() -> debugName, backingImage));
+        // Track it in memory
+        if (allocationTracker != null)
+            allocationTracker.track(atlas, totalWidth * totalHeight * 4); // 4 bytes per pixel (R, G, B, A)
+        return atlas;
     }
 
     // The texture will be destroyed eventually. There is no need to use the returned future if you don't care when the texture is destroyed.
@@ -81,7 +86,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
         /**
          * Create and upload the atlas. If there are no textures to atlas, returns null.
          */
-        public @Nullable FiguraTextureAtlas build() throws AvatarError {
+        public @Nullable FiguraTextureAtlas build(@Nullable AllocationTracker allocationTracker) throws AvatarError {
             if (rectangles.isEmpty()) return null;
 
             // Guess a width as sqrt(sum(rectangle areas))
@@ -133,7 +138,7 @@ public class FiguraTextureAtlas extends StandaloneAvatarTexture {
                 }
             }
 
-            return FiguraTextureAtlas.create(totalWidth, totalHeight, rectangles);
+            return FiguraTextureAtlas.create(totalWidth, totalHeight, rectangles, allocationTracker);
         }
 
     }

@@ -31,10 +31,10 @@ public class Textures implements AvatarComponent<Textures> {
         for (var module : modules) {
             ArrayList<AvatarTexture> moduleTextures = new ArrayList<>();
             for (ModuleMaterials.TextureMaterials mats : module.materials.textures())
-                moduleTextures.add(AvatarTexture.from(this, mats, atlasBuilder));
+                moduleTextures.add(AvatarTexture.from(mats, allocationTracker, this, atlasBuilder));
             textures.add(moduleTextures);
         }
-        atlas = atlasBuilder.build();
+        atlas = atlasBuilder.build(allocationTracker);
     }
 
     public AvatarTexture getTexture(int moduleIndex, int textureIndex) {

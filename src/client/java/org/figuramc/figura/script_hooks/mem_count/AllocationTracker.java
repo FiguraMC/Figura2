@@ -30,7 +30,12 @@ public class AllocationTracker {
         OBJECT_SIZE = 8, // Object overhead
         REFERENCE_SIZE = 4, // Assume compacted references
         LONG_SIZE = 8, INT_SIZE = 4, SHORT_SIZE = 2, CHAR_SIZE = 2, BYTE_SIZE = 1, BOOLEAN_SIZE = 1,
-        DOUBLE_SIZE = 8, FLOAT_SIZE = 4;
+        DOUBLE_SIZE = 8, FLOAT_SIZE = 4,
+        VEC3F_SIZE = OBJECT_SIZE + FLOAT_SIZE * 3,
+        VEC4F_SIZE = OBJECT_SIZE + FLOAT_SIZE * 4,
+        MAT3F_SIZE = OBJECT_SIZE + FLOAT_SIZE * 9,
+        MAT4F_SIZE = OBJECT_SIZE + FLOAT_SIZE * 16 + INT_SIZE;
+
 
 
     // The cleaner used for tracking allocation amounts.
@@ -66,6 +71,10 @@ public class AllocationTracker {
 
     public void track(int[] intArray) throws AvatarError {
         track(intArray, OBJECT_SIZE + intArray.length * INT_SIZE);
+    }
+
+    public void track(float[] floatArray) throws AvatarError {
+        track(floatArray, OBJECT_SIZE + floatArray.length * FLOAT_SIZE);
     }
 
     public void track(Object[] objectArray) throws AvatarError {
