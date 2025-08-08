@@ -59,8 +59,6 @@ public class Scripts implements AvatarComponent<Scripts> {
     public <Args extends CallbackItem> void runEvent(Avatar<?> avatar, Event<Args> event, Args args) {
         if (avatar.isErrored()) return;
         try {
-            // If there's nothing registered to this event, quit.
-            if (event.id >= eventListeners.size()) return;
             // Fetch the event listener and invoke it.
             getEventListener(event).invoke(args);
         } catch (AvatarError e) {

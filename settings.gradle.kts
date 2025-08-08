@@ -7,3 +7,4 @@ pluginManagement {
 }
 
 include(":cobalt-build-tools")
+include(":figura-comptime")

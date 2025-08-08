@@ -1,6 +1,8 @@
 package org.figuramc.figura.manage;
 
+import net.minecraft.world.entity.Entity;
 import org.figuramc.figura.avatars.Avatar;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -38,6 +40,12 @@ public class AvatarManager {
         GUI_AVATARS.forEach(consumer);
     }
 
+    // Utility: Fetch avatar for entity, or start looking for CEM
+    public static @Nullable Avatar<UUID> tryGetEntityAvatar(Entity entity) {
+        Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
+        if (avatar == null)  { CemManager.tryGetCem(entity); return null; }
+        return avatar;
+    }
 
     // Only 1 type of GUI planned for now in the mod, might change later?
     public enum GuiType {

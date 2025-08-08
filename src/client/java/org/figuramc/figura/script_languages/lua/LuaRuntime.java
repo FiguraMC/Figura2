@@ -2,18 +2,14 @@ package org.figuramc.figura.script_languages.lua;
 
 import net.minecraft.network.chat.Component;
 import org.figuramc.figura.FiguraModClient;
-import org.figuramc.figura.animation.Animation;
-import org.figuramc.figura.animation.AnimationInstance;
-import org.figuramc.figura.animation.Vec3Keyframe;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
 import org.figuramc.figura.avatars.components.Scripts;
-import org.figuramc.figura.model.part.RiggedHierarchy;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_languages.lua.animations.AnimationInstanceAPI;
+import org.figuramc.figura.script_languages.lua.callback_types.LuaCallback;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.LoadState;
@@ -23,10 +19,11 @@ import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.funct
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.interrupt.InterruptAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.Bit32Lib;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.lib.CoreLibraries;
-import org.figuramc.figura.script_languages.lua.events.EventsTable;
-import org.figuramc.figura.script_languages.lua.math.FiguraMath;
-import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
-import org.figuramc.figura.script_languages.lua.vanilla.VanillaTable;
+import org.figuramc.figura.script_languages.lua.other_apis.EventsTable;
+import org.figuramc.figura.script_languages.lua.other_apis.FiguraMath;
+import org.figuramc.figura.script_languages.lua.other_apis.FiguraTable;
+import org.figuramc.figura.script_languages.lua.other_apis.VanillaTable;
+import org.figuramc.figura.script_languages.lua.type_apis.model_parts.FiguraPartAPI;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayInputStream;
@@ -70,11 +67,9 @@ public class LuaRuntime implements ScriptRuntime {
             // Type metatables are shared across modules
             state.figuraMetatables.addTypesTo(state.globals());
 
-            // Add more stuff to math and table APIs
+            // Set up some global APIs
             FiguraMath.init(state);
             FiguraTable.init(state);
-
-            // Add events
             EventsTable.createEventsTable(state, scriptsComponent.eventListeners);
 
             // Benchmark testers, todo remove
@@ -100,7 +95,7 @@ public class LuaRuntime implements ScriptRuntime {
                 // models:
                 LuaTable models = ValueFactory.tableOf(state.allocationTracker);
                 _ENV.rawset("models", models);
-                if (module.entityRoot != null) models.rawset("entity", ModelPartAPI.wrap(module.entityRoot, state));
+                if (module.entityRoot != null) models.rawset("entity", FiguraPartAPI.wrap(module.entityRoot, state));
 
                 // Create require() for this module
                 _ENV.rawset("require", FiguraRequire.createRequire(state, _ENV, module));

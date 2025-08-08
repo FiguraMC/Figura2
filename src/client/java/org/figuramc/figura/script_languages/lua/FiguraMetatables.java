@@ -1,26 +1,16 @@
 package org.figuramc.figura.script_languages.lua;
 
 import org.figuramc.figura.avatars.AvatarError;
-import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.script_languages.lua.animations.AnimationInstanceAPI;
-import org.figuramc.figura.script_languages.lua.callback.CallbackTypeAPI;
-import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
-import org.figuramc.figura.script_languages.lua.callback.to_lua.ListViewAPI;
-import org.figuramc.figura.script_languages.lua.callback.to_lua.StringViewAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.Dispatch;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LibFunction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.function.LuaFunction;
-import org.figuramc.figura.script_languages.lua.events.EventListenerAPI;
-import org.figuramc.figura.script_languages.lua.math.vector.Vector4API;
-import org.figuramc.figura.script_languages.lua.model_parts.FigmodelAPI;
-import org.figuramc.figura.script_languages.lua.model_parts.ModelPartAPI;
-import org.figuramc.figura.script_languages.lua.model_parts.RiggedHierarchyAPI;
-import org.figuramc.figura.script_languages.lua.vanilla.VanillaPartAPI;
+import org.figuramc.figura.script_languages.lua.generated.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 
 import static org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.Constants.INDEX;
@@ -35,11 +25,14 @@ public class FiguraMetatables {
     // General
     public final LuaTable eventListener; // EventListener
 
-    // Callbacks
+    // Callbacks and callback items
     public final LuaTable callback; // ScriptCallback
     public final LuaTable callbackType; // CallbackType
     public final LuaTable stringView; // StringView
     public final LuaTable listView; // ListView
+
+    // Minecraft callback items
+    public final LuaTable entityView;
 
     // Math objects
     public final LuaTable vec2;
@@ -50,51 +43,45 @@ public class FiguraMetatables {
     public final LuaTable riggedHierarchy;
     public final LuaTable modelPart;
     public final LuaTable figmodelModelPart;
-    public final LuaTable customItemModelPart;
 
     // Vanilla rendering
-    public final LuaTable vanillaPart; // VanillaRendering.ScriptVanillaPart
+    public final LuaTable vanillaPart; // VanillaRendering.VanillaPart
 //    public final LuaTable vanillaRenderLayer;
 
     // Animation stuff
     public final LuaTable animationInstance;
 
-    // Lua-specific
-//    public final LuaTable promise; // Promise
-
     public FiguraMetatables(LuaState state) throws LuaError, AvatarError {
         // General
-        eventListener = EventListenerAPI.createMetatable(state);
+        eventListener = API__EventListener.createMetatable(state);
 
         // Callbacks
-        callback = CallbackAPI.createMetatable(state);
-        callbackType = CallbackTypeAPI.createMetatable(state);
-        stringView = StringViewAPI.createMetatable(state);
-        listView = ListViewAPI.createMetatable(state);
+        callback = API__Callback.createMetatable(state);
+        callbackType = API__CallbackType.createMetatable(state);
+        stringView = API__StringView.createMetatable(state);
+        listView = API__ListView.createMetatable(state);
+
+        // Minecraft items
+        entityView = API__Entity.createMetatable(state);
 
         // Math objects
-        vec2 = null; // TODO
-        vec3 = null;
-        vec4 = Vector4API.createMetatable(state);
+        vec2 = API__Vec2.createMetatable(state);
+        vec3 = API__Vec3.createMetatable(state);
+        vec4 = API__Vec4.createMetatable(state);
 
         // Model part
-        riggedHierarchy = RiggedHierarchyAPI.createMetatable(state);
-        modelPart = ModelPartAPI.createMetatable(state, riggedHierarchy);
-        figmodelModelPart = FigmodelAPI.createMetatable(state, modelPart);
-        customItemModelPart = modelPart; // TODO
+        riggedHierarchy = API__RiggedHierarchy.createMetatable(state);
+        modelPart = API__FiguraPart.createMetatable(state, riggedHierarchy);
+        figmodelModelPart = API__Figmodel.createMetatable(state, modelPart);
 
         // Vanilla rendering
-        vanillaPart = VanillaPartAPI.createMetatable(state, riggedHierarchy);
+        vanillaPart = API__VanillaPart.createMetatable(state, riggedHierarchy);
 
         // Animations
-        animationInstance = AnimationInstanceAPI.createMetatable(state);
-
-        // Lua-specific
-//        promise = LuaPromise.createMetatable(state, this);
-//        eventLoop = LuaEventLoop.createMetatable(state, this);
+        animationInstance = API__AnimationInstance.createMetatable(state);
     }
 
-    // Add type metatables, with PascalCase keys, to the given table
+    // Add all the type metatables, with PascalCase keys, to the given table
     public void addTypesTo(LuaTable table) throws LuaError, AvatarError {
         table.rawset("EventListener", eventListener);
 
@@ -103,8 +90,10 @@ public class FiguraMetatables {
         table.rawset("StringView", stringView);
         table.rawset("ListView", listView);
 
-//        table.rawset("Vec2", vec2);
-//        table.rawset("Vec3", vec3);
+        table.rawset("Entity", entityView);
+
+        table.rawset("Vec2", vec2);
+        table.rawset("Vec3", vec3);
         table.rawset("Vec4", vec4);
 
         table.rawset("RiggedHierarchy", riggedHierarchy);

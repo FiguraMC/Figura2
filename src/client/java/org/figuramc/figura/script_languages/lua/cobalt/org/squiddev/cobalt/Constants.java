@@ -290,6 +290,11 @@ public final class Constants {
 		}
 
 		@Override
+		public LuaValue second() {
+			return NIL;
+		}
+
+		@Override
 		public String toString() {
 			return "none";
 		}

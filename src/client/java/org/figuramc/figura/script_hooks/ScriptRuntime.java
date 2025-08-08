@@ -27,9 +27,9 @@ public interface ScriptRuntime {
     void destroy();
 
     /**
-     * Initialize the state on the main thread. This runs before any initModule calls.
+     * Initialize the state on the main thread. This runs before any initModule() calls.
      * This is used so scripts can reference the Avatar.
-     * (TODO: look into providing the avatar earlier? Avatar object exists before main thread init...)
+     * (TODO: look into providing the avatar earlier? Avatar object exists before main thread init, so it could theoretically be provided earlier)
      */
     void mainThreadInitialize(Avatar<?> self) throws AvatarError;
 

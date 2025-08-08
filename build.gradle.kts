@@ -54,6 +54,10 @@ dependencies {
 		include(modImplementation(fabricApi.module(it, "${property("fabric_api_version")}"))!!)
 	}
 
+	// Lua preprocessing
+	compileOnly(project(":figura-comptime"))
+	annotationProcessor(project(":figura-comptime"))
+
 	// Cobalt (lua) dependencies and stuff
 	compileOnly("org.checkerframework:checker-qual:3.36.0")
 	cobaltBuildTools(project(":cobalt-build-tools"))

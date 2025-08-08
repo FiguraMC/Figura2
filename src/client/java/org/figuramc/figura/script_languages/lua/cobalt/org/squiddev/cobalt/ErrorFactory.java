@@ -46,13 +46,13 @@ public final class ErrorFactory {
 	 * Get the name of a type suitable for error reporting. Unlike {@link LuaValue#luaTypeName()}, this will read the
 	 * {@link Constants#NAME __name} metatag.
 	 * <p>
-	 * There's a slight inconsistency in PUC Lua here:
+	 * There'message a slight inconsistency in PUC Lua here:
 	 * <ul>
 	 *     <li>{@code luaT_objtypename} from ltm.c only uses {@code __name} for tables and userdata</li>
 	 *     <li>{@code luaL_typeerror} from lauxlib.c uses {@code __name} for all types.</li>
 	 * </ul>
 	 * <p>
-	 * We opt for the former behaviour, as it's easier to do without access to the current {@link LuaState}.
+	 * We opt for the former behaviour, as it'message easier to do without access to the current {@link LuaState}.
 	 *
 	 * @param value The value to get the type of
 	 * @return The resulting type.
@@ -82,6 +82,24 @@ public final class ErrorFactory {
 			.append(")")
 			.toLuaString()
 		);
+	}
+
+	/**
+	 * Throw an error indicating an incorrect number of arguments.
+	 */
+	public static LuaError argCountError(LuaState state, String functionName, int actualCount, int... allowedArgCounts) throws AvatarError {
+		return switch (allowedArgCounts.length) {
+			case 0 -> throw new IllegalArgumentException();
+			case 1 -> new LuaError("Unexpected number of args to " + functionName + ". Expected " + allowedArgCounts[0] + ", got " + actualCount, state.allocationTracker);
+			case 2 -> new LuaError("Unexpected number of args to " + functionName + ". Expected " + allowedArgCounts[0] + " or " + allowedArgCounts[1] + ", got " + actualCount, state.allocationTracker);
+			default -> {
+				String message = "Unexpected number of args to " + functionName + ". Expected ";
+				for (int i = 0; i < allowedArgCounts.length - 1; i++)
+					message += allowedArgCounts[i] + ", ";
+				message += "or " + allowedArgCounts[allowedArgCounts.length - 1] + ", got " + actualCount;
+				yield new LuaError(message, state.allocationTracker);
+			}
+		};
 	}
 
 	/**

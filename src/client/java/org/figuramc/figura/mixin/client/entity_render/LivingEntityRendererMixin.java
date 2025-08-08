@@ -4,12 +4,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.components.EntityRoot;
+import org.figuramc.figura.avatars.components.Scripts;
 import org.figuramc.figura.ducks.client.EntityRenderStateAccess;
 import org.figuramc.figura.manage.AvatarManager;
 import org.figuramc.figura.manage.CemManager;
+import org.figuramc.figura.script_hooks.Event;
+import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
+import org.figuramc.figura.script_hooks.callback.items.EntityView;
 import org.figuramc.figura.util.FiguraTransformStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,6 +26,27 @@ import java.util.UUID;
 @SuppressWarnings({"unchecked", "rawtypes"})
 @Mixin(LivingEntityRenderer.class)
 public class LivingEntityRendererMixin {
+
+    /**
+     * Inject before rendering the vanilla model, to call the entity_render event.
+     */
+    @Inject(
+            method = "render(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V",
+            at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/client/model/EntityModel;setupAnim(Lnet/minecraft/client/renderer/entity/state/EntityRenderState;)V")
+    )
+    public void beforeRenderLivingEntity(LivingEntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int i, CallbackInfo ci) {
+        // Fetch avatar
+        LivingEntity livingEntity = (LivingEntity) ((EntityRenderStateAccess) renderState).figura$getEntity();
+        Avatar<UUID> avatar = AvatarManager.tryGetEntityAvatar(livingEntity);
+        if (avatar == null) return;
+        // Call entity_render event
+        Scripts scripts = avatar.getComponent(Scripts.TYPE);
+        if (scripts == null) return;
+        float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();
+        EntityView<LivingEntity> entityView = new EntityView<>(livingEntity);
+        scripts.runEvent(avatar, Event.ENTITY_RENDER, new CallbackItem.Tuple2<>(new CallbackItem.F32(tickDelta), entityView));
+        entityView.revoke();
+    }
 
     /**
      * Inject after rendering the vanilla model, to render our own model.
@@ -46,10 +72,10 @@ public class LivingEntityRendererMixin {
             at = @At(value = "INVOKE", shift = At.Shift.BEFORE, target = "Lcom/mojang/blaze3d/vertex/PoseStack;popPose()V")
     )
     public void afterRenderLivingEntity(LivingEntityRenderState renderState, PoseStack poseStack, MultiBufferSource multiBufferSource, int light, CallbackInfo ci) {
-        // Fetch entity
+        // Fetch avatar
         LivingEntity livingEntity = (LivingEntity) ((EntityRenderStateAccess) renderState).figura$getEntity();
-        Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(livingEntity.getUUID());
-        if (avatar == null)  { CemManager.tryGetCem(livingEntity); return; }
+        Avatar<UUID> avatar = AvatarManager.tryGetEntityAvatar(livingEntity);
+        if (avatar == null) return;
         EntityRoot root = avatar.getComponent(EntityRoot.TYPE);
         if (root != null) {
             FiguraTransformStack matrixStack = new FiguraTransformStack(poseStack);

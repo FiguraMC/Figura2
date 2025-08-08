@@ -3,7 +3,7 @@ package org.figuramc.figura.script_languages.lua;
 import org.figuramc.figura.avatars.Avatar;
 import org.figuramc.figura.avatars.AvatarError;
 import org.figuramc.figura.avatars.AvatarModules;
-import org.figuramc.figura.script_languages.lua.callback.to_lua.CallbackAPI;
+import org.figuramc.figura.script_languages.lua.type_apis.callback.CallbackAPI;
 import org.figuramc.figura.script_languages.lua.cobalt.cc.tweaked.cobalt.internal.unwind.SuspendedAction;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.*;
 import org.figuramc.figura.script_languages.lua.cobalt.org.squiddev.cobalt.compiler.CompileException;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Class for setup of require() function, given the provided scripts map
+ * Class for setup of a module's require() function
  */
 public class FiguraRequire {
 

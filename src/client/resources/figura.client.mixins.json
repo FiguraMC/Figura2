@@ -10,6 +10,7 @@
     "entity_render.EntityRendererMixin",
     "entity_render.EntityRenderStateMixin",
     "entity_render.LivingEntityRendererMixin",
+    "entity_tick.ClientLevelMixin",
     "general_render.GameRendererMixin",
     "item_render.ItemModelResolverMixin",
     "item_render.ItemStackRenderStateMixin",

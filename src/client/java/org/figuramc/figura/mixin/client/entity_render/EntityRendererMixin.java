@@ -30,10 +30,12 @@ public class EntityRendererMixin {
         if ((Object) this instanceof LivingEntityRenderer<?,?,?>)
             return;
 
+        // TODO inject at the callsite and invoke the entity_render event there, before any rendering occurs(? maybe?)
+
         // Otherwise, render the Avatar's entity root if it exists.
         Entity entity = ((EntityRenderStateAccess) renderState).figura$getEntity();
-        Avatar<UUID> avatar = AvatarManager.ENTITY_AVATARS.get(entity.getUUID());
-        if (avatar == null) { CemManager.tryGetCem(entity); return; }
+        Avatar<UUID> avatar = AvatarManager.tryGetEntityAvatar(entity);
+        if (avatar == null) return;
         EntityRoot root = avatar.getComponent(EntityRoot.TYPE);
         if (root != null) {
             float tickDelta = ((EntityRenderStateAccess) renderState).figura$getTickDelta();

@@ -2,6 +2,7 @@ package org.figuramc.figura.script_hooks;
 
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.items.CallbackItem;
+import org.figuramc.figura.script_hooks.callback.items.EntityView;
 import org.figuramc.figura.util.enumlike.EnumLike;
 
 import java.util.LinkedHashMap;
@@ -28,11 +29,19 @@ public final class Event<Args extends CallbackItem> extends EnumLike {
     // If it returns true, the listener is removed from the registered list.
 
     // () -> bool
-    // Runs every client tick (20 times per second).
+    // Runs at the END of every client tick (20 times per second).
     public static final Event<CallbackItem.Unit> CLIENT_TICK = new Event<>("client_tick", CallbackType.Unit.INSTANCE);
 
     // f32 -> bool
-    // Runs every frame. The passed number is the tick progress, often called "tick delta", the progress 0 to 1 between the previous tick and the current tick.
-    public static final Event<CallbackItem.F32> CLIENT_FRAME = new Event<>("client_frame", CallbackType.F32.INSTANCE);
+    // Runs at the BEGINNING of every frame. The passed number is the tick progress, often called "tick delta", the progress 0 to 1 between the previous tick and the current tick.
+    public static final Event<CallbackItem.F32> CLIENT_RENDER = new Event<>("client_render", CallbackType.F32.INSTANCE);
+
+    // Entity -> bool
+    public static final Event<EntityView<?>> ENTITY_TICK = new Event<>("entity_tick", CallbackType.Entity.INSTANCE);
+
+    // (f32, Entity) -> bool
+    // Runs during entity rendering, at a specific point after the entity has been posed, but before its vanilla model been drawn.
+    public static final Event<CallbackItem.Tuple2<CallbackItem.F32, EntityView<?>>> ENTITY_RENDER = new Event<>("entity_render", new CallbackType.Tuple2<>(CallbackType.F32.INSTANCE, CallbackType.Entity.INSTANCE));
+
 
 }

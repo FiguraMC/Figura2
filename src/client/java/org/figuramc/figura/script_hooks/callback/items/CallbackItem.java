@@ -9,9 +9,15 @@ import org.jetbrains.annotations.Nullable;
  * However, not all items support sending across Avatars, as it could lead to memory-hostage issues.
  */
 public sealed interface CallbackItem permits
+        // Primitives
         CallbackItem.Unit, CallbackItem.Bool, CallbackItem.F32, CallbackItem.F64,
+        // Figura types
+        EntityView,
+        // Tuples
         CallbackItem.Tuple2, CallbackItem.Tuple3, CallbackItem.Tuple4, CallbackItem.Tuple5, CallbackItem.Tuple6, CallbackItem.Tuple7, CallbackItem.Tuple8,
+        // Generics
         CallbackItem.Optional,
+        // Generics with many implementations
         ListView, StringView, MapView, FuncView
 {
 
@@ -30,7 +36,7 @@ public sealed interface CallbackItem permits
     record Tuple7<A extends CallbackItem, B extends CallbackItem, C extends CallbackItem, D extends CallbackItem, E extends CallbackItem, F extends CallbackItem, G extends CallbackItem>(A a, B b, C c, D d, E e, F f, G g) implements CallbackItem {}
     record Tuple8<A extends CallbackItem, B extends CallbackItem, C extends CallbackItem, D extends CallbackItem, E extends CallbackItem, F extends CallbackItem, G extends CallbackItem, H extends CallbackItem>(A a, B b, C c, D d, E e, F f, G g, H h) implements CallbackItem {}
 
-    // Optional
+    // Optional (only one implementation)
     record Optional<T extends CallbackItem>(@Nullable T value, boolean isPresent) implements CallbackItem {}
 
 }

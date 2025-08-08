@@ -21,7 +21,7 @@ public class GameRendererMixin {
         AvatarManager.forEachAvatar(avatar -> {
             Scripts scripts;
             if ((scripts = avatar.getComponent(Scripts.TYPE)) != null)
-                scripts.runEvent(avatar, Event.CLIENT_FRAME, new CallbackItem.F32(tickDelta));
+                scripts.runEvent(avatar, Event.CLIENT_RENDER, new CallbackItem.F32(tickDelta));
         });
     }
 

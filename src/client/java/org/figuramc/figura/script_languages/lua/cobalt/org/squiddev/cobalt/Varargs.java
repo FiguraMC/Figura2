@@ -80,6 +80,10 @@ public abstract class Varargs {
 	 */
 	public abstract LuaValue first();
 
+	public LuaValue second() { return arg(2); }
+	public LuaValue third() { return arg(3); }
+
+
 	public abstract void fill(LuaValue[] array, int offset);
 
 	// ToArray

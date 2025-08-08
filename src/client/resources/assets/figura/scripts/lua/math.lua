@@ -33,12 +33,3 @@ end
 function math.sign(x)
     return x > 0 and 1 or x < 0 and -1 or 0
 end
-
---- The scale factor with which players are rendered by Minecraft, relative to the world
---- @type number
-math.playerScale = 0.9375
-
---- The scale factor with which the world is rendered, relative to players.
---- Just equal to 1 / math.playerScale.
---- @type number
-math.worldScale = 1 / math.playerScale

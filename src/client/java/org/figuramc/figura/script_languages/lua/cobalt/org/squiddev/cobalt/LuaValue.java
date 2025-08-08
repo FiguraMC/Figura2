@@ -901,6 +901,11 @@ public abstract class LuaValue extends Varargs {
 		}
 
 		@Override
+		public LuaValue second() {
+			return v2.first();
+		}
+
+		@Override
 		public void fill(LuaValue[] array, int offset) {
 			array[offset] = v1;
 			v2.fill(array, offset + 1);

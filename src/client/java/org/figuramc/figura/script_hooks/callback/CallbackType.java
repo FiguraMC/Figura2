@@ -57,6 +57,13 @@ public sealed interface CallbackType<T extends CallbackItem> {
         @Override public <Outside> Outside fromItem(FromItemVisitor<Outside> visitor, StringView item) { return visitor.visit(this, item); }
     }
 
+    // Figura items
+    final class Entity implements CallbackType<EntityView<?>> {
+        public static final Entity INSTANCE = new Entity(); private Entity() {}
+        @Override public <Outside, E1 extends Throwable, E2 extends Throwable> EntityView<?> toItem(ToItemVisitor<Outside, E1, E2> visitor, Outside outside) throws E1, E2 { return visitor.visit(this, outside); }
+        @Override public <Outside> Outside fromItem(FromItemVisitor<Outside> visitor, EntityView<?> item) { return visitor.visit(this, item); }
+    }
+
     // Objects
 //    final class FiguraPart implements CallbackType { public static final FiguraPart INSTANCE = new FiguraPart(); private FiguraPart() {} }
 
@@ -133,12 +140,15 @@ public sealed interface CallbackType<T extends CallbackItem> {
     // This is potentially fallible, since that outside object might not fit the proper type, so let it throw errors.
     interface ToItemVisitor<Outside, E1 extends Throwable, E2 extends Throwable> {
         // Primitive
-        CallbackItem.Unit visit(Unit unit, Outside outside) throws E1, E2;
-        CallbackItem visit(Any any, Outside outside) throws E1, E2;
-        CallbackItem.Bool visit(Bool bool, Outside outside) throws E1, E2;
-        CallbackItem.F32 visit(F32 f32, Outside outside) throws E1, E2;
-        CallbackItem.F64 visit(F64 f64, Outside outside) throws E1, E2;
-        StringView visit(Str str, Outside outside) throws E1, E2;
+        CallbackItem.Unit visit(Unit __, Outside outside) throws E1, E2;
+        CallbackItem visit(Any __, Outside outside) throws E1, E2;
+        CallbackItem.Bool visit(Bool __, Outside outside) throws E1, E2;
+        CallbackItem.F32 visit(F32 __, Outside outside) throws E1, E2;
+        CallbackItem.F64 visit(F64 __, Outside outside) throws E1, E2;
+        StringView visit(Str __, Outside outside) throws E1, E2;
+        // Figura items
+        EntityView<?> visit(Entity __, Outside outside) throws E1, E2;
+
         // Generic
         <T extends CallbackItem> ListView<T> visit(List<T> list, Outside outside) throws E1, E2;
 //        <K extends CallbackItem, V extends CallbackItem> R visit(Map<K, V> map);
@@ -157,12 +167,14 @@ public sealed interface CallbackType<T extends CallbackItem> {
     // A Visitor that converts from a CallbackItem + Type into an outside object.
     interface FromItemVisitor<Outside> {
         // Primitive
-        Outside visit(Unit unit, CallbackItem.Unit item);
-        Outside visit(Any any, CallbackItem item);
-        Outside visit(Bool bool, CallbackItem.Bool item);
-        Outside visit(F32 f32, CallbackItem.F32 item);
-        Outside visit(F64 f64, CallbackItem.F64 item);
-        Outside visit(Str str, StringView item);
+        Outside visit(Unit __, CallbackItem.Unit item);
+        Outside visit(Any __, CallbackItem item);
+        Outside visit(Bool __, CallbackItem.Bool item);
+        Outside visit(F32 __, CallbackItem.F32 item);
+        Outside visit(F64 __, CallbackItem.F64 item);
+        Outside visit(Str __, StringView item);
+        // Figura items
+        Outside visit(Entity __, EntityView<?> item);
         // Generic
         <T extends CallbackItem> Outside visit(List<T> list, ListView<T> item);
     }
@@ -174,12 +186,14 @@ public sealed interface CallbackType<T extends CallbackItem> {
         public static final StringifyVisitor INSTANCE = new StringifyVisitor();
         private StringifyVisitor() {}
 
-        @Override public String visit(Unit unit, CallbackItem.Unit item) { return "()"; }
-        @Override public String visit(Any any, CallbackItem item) { return "any"; }
-        @Override public String visit(Bool bool, CallbackItem.Bool item) { return "bool"; }
-        @Override public String visit(F32 f32, CallbackItem.F32 item) { return "f32"; }
-        @Override public String visit(F64 f64, CallbackItem.F64 item) { return "f64"; }
-        @Override public String visit(Str str, StringView item) { return "string"; }
+        @Override public String visit(Unit __, CallbackItem.Unit item) { return "()"; }
+        @Override public String visit(Any __, CallbackItem item) { return "any"; }
+        @Override public String visit(Bool __, CallbackItem.Bool item) { return "bool"; }
+        @Override public String visit(F32 __, CallbackItem.F32 item) { return "f32"; }
+        @Override public String visit(F64 __, CallbackItem.F64 item) { return "f64"; }
+        @Override public String visit(Str __, StringView item) { return "string"; }
+
+        @Override public String visit(Entity __, EntityView<?> item) { return "entity"; }
 
         @Override public <T extends CallbackItem> String visit(List<T> list, ListView<T> item) { return "[" + list.element.fromItem(this, null) + "]"; }
     }
