@@ -1,6 +1,7 @@
 package org.figuramc.figura.script_hooks.callback;
 
 import org.figuramc.figura.script_hooks.callback.items.*;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 
 import java.util.function.IntFunction;
 
@@ -10,6 +11,10 @@ public sealed interface CallbackType<T extends CallbackItem> {
 
     <Outside, E1 extends Throwable, E2 extends Throwable> T toItem(ToItemVisitor<Outside, E1, E2> visitor, Outside outside) throws E1, E2;
     <Outside> Outside fromItem(FromItemVisitor<Outside> visitor, T item);
+
+
+    default String stringify() { return fromItem(StringifyVisitor.INSTANCE, null); }
+    default int getSize() { return fromItem(SizeVisitor.INSTANCE, null); }
 
     // Max supported tuple size
     int MAX_TUPLE_SIZE = 8;
@@ -186,16 +191,37 @@ public sealed interface CallbackType<T extends CallbackItem> {
         public static final StringifyVisitor INSTANCE = new StringifyVisitor();
         private StringifyVisitor() {}
 
-        @Override public String visit(Unit __, CallbackItem.Unit item) { return "()"; }
-        @Override public String visit(Any __, CallbackItem item) { return "any"; }
-        @Override public String visit(Bool __, CallbackItem.Bool item) { return "bool"; }
-        @Override public String visit(F32 __, CallbackItem.F32 item) { return "f32"; }
-        @Override public String visit(F64 __, CallbackItem.F64 item) { return "f64"; }
-        @Override public String visit(Str __, StringView item) { return "string"; }
+        @Override public String visit(Unit __, CallbackItem.Unit ___) { return "()"; }
+        @Override public String visit(Any __, CallbackItem ___) { return "any"; }
+        @Override public String visit(Bool __, CallbackItem.Bool ___) { return "bool"; }
+        @Override public String visit(F32 __, CallbackItem.F32 ___) { return "f32"; }
+        @Override public String visit(F64 __, CallbackItem.F64 ___) { return "f64"; }
+        @Override public String visit(Str __, StringView ___) { return "string"; }
 
-        @Override public String visit(Entity __, EntityView<?> item) { return "entity"; }
+        @Override public String visit(Entity __, EntityView<?> ___) { return "entity"; }
 
-        @Override public <T extends CallbackItem> String visit(List<T> list, ListView<T> item) { return "[" + list.element.fromItem(this, null) + "]"; }
+        @Override public <T extends CallbackItem> String visit(List<T> list, ListView<T> ___) { return "[" + list.element.fromItem(this, null) + "]"; }
+    }
+
+    // Visitor for calculating the size of a type.
+    // Just pass null as the item!
+    class SizeVisitor implements FromItemVisitor<Integer> {
+        public static final SizeVisitor INSTANCE = new SizeVisitor();
+        private SizeVisitor() {}
+
+        // Singletons are size 0
+        @Override public Integer visit(Unit __, CallbackItem.Unit ___) { return 0; }
+        @Override public Integer visit(Any __, CallbackItem ___) { return 0; }
+        @Override public Integer visit(Bool __, CallbackItem.Bool ___) { return 0; }
+        @Override public Integer visit(F32 __, CallbackItem.F32 ___) { return 0; }
+        @Override public Integer visit(F64 __, CallbackItem.F64 ___) { return 0; }
+        @Override public Integer visit(Str __, StringView ___) { return 0; }
+
+        @Override public Integer visit(Entity __, EntityView<?> ___) { return 0; }
+
+        @Override public <T extends CallbackItem> Integer visit(List<T> list, ListView<T> ___) {
+            return AllocationTracker.OBJECT_SIZE + AllocationTracker.REFERENCE_SIZE + list.element.fromItem(this, null);
+        }
     }
 
 

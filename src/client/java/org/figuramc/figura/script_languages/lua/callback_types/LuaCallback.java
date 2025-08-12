@@ -56,13 +56,13 @@ public class LuaCallback<I extends CallbackItem, O extends CallbackItem> impleme
                     return type.returnType() instanceof CallbackType.Tuple<O> tuple ? tuple.toItems(state.luaToCallbackItem, luaResult.toArray()) : type.returnType().toItem(state.luaToCallbackItem, luaResult.first());
                 } catch (LuaError luaError) {
                     // Lua returned an incorrect type from the callback? Let's error with an appropriate message.
-                    String expectedType = type.returnType().fromItem(CallbackType.StringifyVisitor.INSTANCE, null);
+                    String expectedType = type.returnType().stringify();
                     String actualType = (luaResult.count() == 1 ? Stream.of(luaResult.first()) : Arrays.stream(luaResult.toArray())).map(LuaValue::typeName).toList().toString(); // (WIP. Could be better...)
-                    state.avatar.error(new AvatarError("figura.error.runtime.script.lua.incorrect_callback_return", expectedType, actualType));
+                    state.avatar.error(new AvatarError("figura.error.script.lua.incorrect_callback_return", expectedType, actualType));
                 }
             } catch (LuaError luaError) {
                 // The callback encountered an error while running.
-                state.avatar.error(new AvatarError("figura.error.runtime.script.lua.error_in_callback", luaError, luaError.getMessage()));
+                state.avatar.error(new AvatarError("figura.error.script.lua.error_in_callback", luaError, luaError.getMessage()));
             } catch (AvatarError avatarError) {
                 // The callback's owner ran out of memory
                 state.avatar.error(avatarError);

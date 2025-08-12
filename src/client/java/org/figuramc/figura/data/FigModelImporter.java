@@ -60,7 +60,7 @@ public class FigModelImporter {
     public static ModuleMaterials.CustomItemModel parseCustomItemModel(String fileName, String prefix, JsonObject figmodel, ArrayList<ModuleMaterials.TextureMaterials> textures) throws ModuleImportingException {
         try {
             // First parse the regular model:
-            ModuleMaterials.ModelPartMaterials mats = parseFigModel(fileName, prefix, figmodel, textures);
+            ModuleMaterials.FigmodelMaterials mats = parseFigModel(fileName, prefix, figmodel, textures);
             // Also parse the enum map
             EnumMap<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms = new EnumMap<>(ItemDisplayContext.class);
             if (figmodel.has("item_display_data")) {

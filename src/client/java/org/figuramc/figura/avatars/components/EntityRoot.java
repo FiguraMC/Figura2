@@ -16,19 +16,19 @@ import java.util.List;
 
 public class EntityRoot implements AvatarComponent<EntityRoot> {
 
-    public static final Type<EntityRoot> TYPE = new Type<>(Textures.TYPE);
+    public static final Type<EntityRoot> TYPE = new Type<>();
     public Type<EntityRoot> getType() { return TYPE; }
 
     private final Renderable<FiguraModelPart> root;
 
     // Vanilla rendering parameter if possible, this will allow mimics to work
-    public EntityRoot(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) throws AvatarError {
+    public EntityRoot(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable MolangStateComponent molangStateComponent, @Nullable VanillaRendering vanillaRendering) throws AvatarError {
         // Wrap the entity roots of each module into a new wrapper part
         int name = 0;
         LinkedHashMap<String, FiguraModelPart> roots = new LinkedHashMap<>();
         for (AvatarModules.LoadTimeModule mod : modules) {
             if (mod.materials.entityRoot() == null) continue;
-            FiguraModelPart part = new FiguraModelPart(mod.materials.entityRoot(), allocationTracker, mod.index, texturesComponent, vanillaRendering);
+            FiguraModelPart part = new FiguraModelPart(mod, mod.materials.entityRoot(), allocationTracker, texturesComponent, molangStateComponent, vanillaRendering);
             // Also store the parts in the module objects to be later accessed
             mod.entityRoot = part;
             roots.put(Integer.toString(name++), part);

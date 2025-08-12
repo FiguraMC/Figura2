@@ -4,6 +4,8 @@ import net.minecraft.client.renderer.block.model.ItemTransform;
 import net.minecraft.client.renderer.block.model.ItemTransforms;
 import net.minecraft.world.item.ItemDisplayContext;
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
@@ -17,7 +19,7 @@ import java.util.Map;
  * A root which works for rendering a custom item.
  * Contains information about how to transform the item in different contexts.
  */
-public class CustomItemModelPart extends FiguraModelPart {
+public class CustomItemModelPart extends FigmodelModelPart {
 
     public final ItemTransforms itemTransforms;
 
@@ -30,8 +32,8 @@ public class CustomItemModelPart extends FiguraModelPart {
             // ItemTransform instances
             + (AllocationTracker.OBJECT_SIZE + AllocationTracker.VEC3F_SIZE * 3) * 8;
 
-    public CustomItemModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable AllocationTracker allocationTracker, Map<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanilla) throws AvatarError {
-        super(materials, allocationTracker, moduleIndex, texturesComponent, vanilla);
+    public CustomItemModelPart(AvatarModules.LoadTimeModule module, ModuleMaterials.FigmodelMaterials materials, Map<ItemDisplayContext, ModuleMaterials.ItemPartTransform> transforms, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable MolangStateComponent molangState, @Nullable VanillaRendering vanilla) throws AvatarError {
+        super(module, materials, allocationTracker, texturesComponent, molangState, vanilla);
         this.itemTransforms = new ItemTransforms(
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_LEFT_HAND, transforms, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND),
                 getTransformOrNone(ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, transforms),

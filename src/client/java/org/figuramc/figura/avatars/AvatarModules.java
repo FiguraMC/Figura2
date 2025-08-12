@@ -1,5 +1,7 @@
 package org.figuramc.figura.avatars;
 
+import com.google.common.collect.ImmutableMap;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.data.ModuleImporter;
 import org.figuramc.figura.data.ModuleImportingException;
 import org.figuramc.figura.data.ModuleMaterials;
@@ -8,6 +10,9 @@ import org.figuramc.figura.model.part.FiguraModelPart;
 import org.figuramc.figura.script_hooks.ScriptRuntime;
 import org.figuramc.figura.script_hooks.callback.CallbackType;
 import org.figuramc.figura.script_hooks.callback.ScriptCallback;
+import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
+import org.figuramc.figura.script_languages.molang.AllMolangQueries;
+import org.figuramc.figura.script_languages.molang.MolangInstance;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -63,14 +68,22 @@ public class AvatarModules {
         public final LinkedHashMap<String, Integer> dependencyIndices; // Indices of dependent modules in the list, by name
         public @Nullable ScriptRuntime runtime; // The runtime used by this module, if any
 
+        // Molang instance for this module
+        private @Nullable MolangInstance<MolangStateComponent> molang;
+
         public @Nullable FiguraModelPart entityRoot; // This module's entity root
-        public final Map<String, ScriptCallback<?, ?>> callbacks = new HashMap<>(); // Exposed callbacks
 
         private LoadTimeModule(int index, ModuleMaterials materials, LinkedHashMap<String, Integer> dependencyIndices) {
             this.index = index;
             this.materials = materials;
             this.dependencyIndices = dependencyIndices;
         }
+
+        public MolangInstance<MolangStateComponent> getOrCreateMolang(@Nullable MolangStateComponent molangState, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+            if (molang == null) molang = new MolangInstance<>(molangState, allocationTracker, AllMolangQueries.AVATAR_QUERIES);
+            return molang;
+        }
+
     }
 
     // A module in the avatar, represented at runtime.
@@ -82,22 +95,48 @@ public class AvatarModules {
         private final int[] dependencyIndices; // Indices of this module's dependencies
         private boolean initialized = false;
         private final boolean autoInitializeDependencies; // Whether this module will automatically initialize its dependencies
-        public final Map<String, CallbackType.Func<?, ?>> api; // The typed functions this module is expected to provide
+        public final ImmutableMap<String, CallbackType.Func<?, ?>> api; // The typed functions this module is expected to provide
         public final Map<String, ScriptCallback<?, ?>> callbacks; // The functions this module *did* provide (after initialization)
 
         public final @Nullable ScriptRuntime runtime; // The script runtime this module uses (if any)
 
-        public RuntimeModule(LoadTimeModule loadTime) {
+        // The molang instance for this module.
+        // It's shared between all molang expressions using this module.
+        // The actor, the MolangStateComponent instance, is shared between all modules in an avatar.
+        // Used for:
+        // - Animation keyframes
+        // - Custom fancy text components in future? { color = "math.lerp(#FF0000, #00FFFF, q.text_progress)" } for a gradient :3333
+        public final MolangInstance<MolangStateComponent> molang;
+
+        private static final int SIZE_ESTIMATE =
+                AllocationTracker.OBJECT_SIZE * 4
+                + AllocationTracker.REFERENCE_SIZE * 5
+                + AllocationTracker.INT_SIZE
+                + AllocationTracker.BOOLEAN_SIZE * 2;
+
+        public RuntimeModule(LoadTimeModule loadTime, @Nullable AllocationTracker allocationTracker) throws AvatarError {
             this.index = loadTime.index;
             this.autoInitializeDependencies = loadTime.materials.metadata().autoRequireDependencies();
-            this.api = loadTime.materials.metadata().api();
+            this.api = ImmutableMap.copyOf(loadTime.materials.metadata().api());
             this.callbacks = new HashMap<>();
             this.dependencyIndices = loadTime.dependencyIndices.values().stream().mapToInt(x -> x).toArray();
             this.runtime = loadTime.runtime;
+            this.molang = loadTime.molang;
+            // Track!
+            if (allocationTracker != null) {
+                int totalSize = SIZE_ESTIMATE;
+                totalSize += dependencyIndices.length * AllocationTracker.INT_SIZE;
+                totalSize += api.size() + AllocationTracker.REFERENCE_SIZE * 4;
+                for (var entry : api.entrySet()) {
+                    totalSize += entry.getKey().length() * AllocationTracker.CHAR_SIZE + AllocationTracker.OBJECT_SIZE;
+                    allocationTracker.track(entry.getValue(), entry.getValue().getSize());
+                }
+                allocationTracker.track(this, totalSize);
+            }
         }
 
         // Initialize this module, given the list of all RuntimeModules.
-        // (TODO Should we have some kind of cycle detection? Yes, but it doesn't have to be here at runtime, it can be at import time!)
+        // (TODO Should we have some kind of cycle detection? Yes, but it doesn't have to be here at runtime, it can be at import time)
         public void initialize(List<RuntimeModule> allRuntimeModules) throws AvatarError {
             // If already initialized, we're done.
             if (initialized) return;

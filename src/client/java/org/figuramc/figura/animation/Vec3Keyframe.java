@@ -1,9 +1,13 @@
 package org.figuramc.figura.animation;
 
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
-import org.figuramc.figura.util.functional.FloatSupplier;
+import org.figuramc.figura.script_languages.molang.CompiledMolang;
+import org.figuramc.figura.script_languages.molang.MolangInstance;
+import org.figuramc.figura.script_languages.molang.compile.MolangCompileException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
@@ -14,56 +18,77 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
 
     // Time at which this keyframe occurs, in seconds.
     private final float time;
-    private final FloatSupplier x, y, z;
+    // XYZ values provided by some impl
+    private final AnimVec3Supplier xyz;
+    // Interpolation to be used by this keyframe
     private final Interpolation interpolation;
 
     // Size estimate in bytes (not counting FloatSupplier implementation)
     private static final int SIZE_ESTIMATE =
             AllocationTracker.OBJECT_SIZE
             + AllocationTracker.FLOAT_SIZE
-            + AllocationTracker.REFERENCE_SIZE * 4
-            + ConstantFloat.SIZE * 3; // Estimate, so we'll count this even if we're not using ConstantFloat?
+            + AllocationTracker.REFERENCE_SIZE * 4;
 
-    public Vec3Keyframe(ModuleMaterials.TransformKeyframeMaterials materials, @Nullable AllocationTracker allocationTracker) throws AvatarError {
-        this(
-                materials.time(),
-                new ConstantFloat(Float.parseFloat(materials.x())), // TODO molang stuff
-                new ConstantFloat(Float.parseFloat(materials.y())),
-                new ConstantFloat(Float.parseFloat(materials.z())),
-                switch (materials.interpolation()) {
-                    case ModuleMaterials.InterpolationMaterials.Linear __ -> Interpolation.LINEAR;
-                    case ModuleMaterials.InterpolationMaterials.CatmullRom __ -> Interpolation.CATMULLROM;
-                    case ModuleMaterials.InterpolationMaterials.Step __ -> Interpolation.STEP;
-                    case ModuleMaterials.InterpolationMaterials.Bezier bezier -> throw new UnsupportedOperationException("Bezier interpolation is TODO");
-                },
-                allocationTracker
+    // Animation name for error reporting
+    public Vec3Keyframe(AvatarModules.LoadTimeModule module, String animName, ModuleMaterials.TransformKeyframeMaterials materials, @Nullable MolangStateComponent molangState, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+        this.time = materials.time();
+        Float x = tryParseFloat(materials.x());
+        Float y = tryParseFloat(materials.y());
+        Float z = tryParseFloat(materials.z());
+        this.xyz = new AnimVec3Supplier.ThreeFloats( // TODO add vector mode
+                x != null ? __ -> x : supplierFromMolang(animName, module.getOrCreateMolang(molangState, allocationTracker), materials.x()),
+                y != null ? __ -> y : supplierFromMolang(animName, module.getOrCreateMolang(molangState, allocationTracker), materials.y()),
+                z != null ? __ -> z : supplierFromMolang(animName, module.getOrCreateMolang(molangState, allocationTracker), materials.z())
         );
+        this.interpolation = switch (materials.interpolation()) {
+            case ModuleMaterials.InterpolationMaterials.Linear __ -> Interpolation.LINEAR;
+            case ModuleMaterials.InterpolationMaterials.CatmullRom __ -> Interpolation.CATMULLROM;
+            case ModuleMaterials.InterpolationMaterials.Step __ -> Interpolation.STEP;
+            case ModuleMaterials.InterpolationMaterials.Bezier bezier -> throw new UnsupportedOperationException("Bezier interpolation is TODO");
+        };
+        if (allocationTracker != null)
+            allocationTracker.track(this, SIZE_ESTIMATE);
     }
 
-    // Constructor from floats
-    public Vec3Keyframe(float time, float x, float y, float z, @Nullable AllocationTracker allocationTracker) throws AvatarError {
-        this(time, new ConstantFloat(x), new ConstantFloat(y), new ConstantFloat(z), Interpolation.LINEAR, allocationTracker);
+    // Cringe
+    private static @Nullable Float tryParseFloat(String str) {
+        try { return Float.parseFloat(str); }
+        catch (NumberFormatException e) { return null; }
+    }
+    private static AnimFloatSupplier supplierFromMolang(String animName, MolangInstance<MolangStateComponent> molang, String code) throws AvatarError {
+        try {
+            CompiledMolang<?> compiled = molang.compile(code);
+            if (compiled.returnCount != 1) throw new AvatarError("figura.error.loading.animation.invalid_molang_return_count", animName, 1, compiled.returnCount);
+            return instance -> {
+                if (molang.actor == null)
+                    return compiled.evaluate().get(0);
+                molang.actor.pushAnim(instance);
+                float res = compiled.evaluate().get(0);
+                molang.actor.popAnim();
+                return res;
+            };
+        } catch (MolangCompileException compileFail) {
+            throw new AvatarError("figura.error.loading.animation.invalid_molang", animName, compileFail.component);
+        }
     }
 
-    private Vec3Keyframe(float time, FloatSupplier x, FloatSupplier y, FloatSupplier z, Interpolation interpolation, @Nullable AllocationTracker allocationTracker) throws AvatarError {
-        this.time = time;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.interpolation = interpolation;
-        if (allocationTracker != null) allocationTracker.track(this, SIZE_ESTIMATE);
-    }
 
     // Evaluate the keyframe into the vector, also return the vector for chaining
-    public Vector3f evaluateInto(Vector3f output) {
-        return output.set(x.getAsFloat(), y.getAsFloat(), z.getAsFloat());
+    public Vector3f evaluateInto(Vector3f output, AnimationInstance instance) {
+        xyz.fillVec3(output, instance);
+        return output;
     }
 
+    // Static cache temporary vectors. Recall the output vector may also be used as a cache vector
+    private static final Vector3f p0 = new Vector3f(), p1 = new Vector3f(), p2 = new Vector3f(), p3 = new Vector3f();
+
     // Static helper to convert a sorted list of keyframes + a time into a vec3, also return vector for chaining
-    public static Vector3f evaluateTimelineInto(Vector3f output, List<Vec3Keyframe> timeline, float time) {
+    // Should be called only on one thread, since static cache vectors are used.
+    // May cause an error for the owner of the keyframes. (TODO)
+    public static Vector3f evaluateTimelineInto(Vector3f output, List<Vec3Keyframe> timeline, float time, AnimationInstance instance) {
         if (timeline.isEmpty()) throw new IllegalArgumentException("Internal Figura error - attempt to interpolate animation timeline with no keyframes");
 
-        // Binary search:
+        // Binary search to find keyframe (todo: can likely improve this by searching linearly from a stored "prev keyframe"?)
         int low = 0, high = timeline.size();
         while (low < high) {
             int mid = low + (high - low) / 2;
@@ -75,66 +100,76 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
         // low is the index of the next keyframe.
 
         // If we're not between two keyframes, snap to the closer keyframe
-        if (low == 0) return timeline.getFirst().evaluateInto(output);
-        if (low == timeline.size()) return timeline.getLast().evaluateInto(output);
+        if (low == 0) return timeline.getFirst().evaluateInto(output, instance);
+        if (low == timeline.size()) return timeline.getLast().evaluateInto(output, instance);
 
         // Otherwise, perform interpolation on previous and next keyframes
         Vec3Keyframe prev = timeline.get(low - 1);
         // If interpolation is STEP, return prev directly
-        if (prev.interpolation == Interpolation.STEP) return prev.evaluateInto(output);
+        if (prev.interpolation == Interpolation.STEP) return prev.evaluateInto(output, instance);
         // Otherwise, fetch next and alpha so we can interpolate!
         Vec3Keyframe next = timeline.get(low);
         float alpha = (time - prev.time) / (next.time - prev.time);
 
         if (prev.interpolation == Interpolation.LINEAR) {
-            float x0 = prev.x.getAsFloat();
-            float y0 = prev.y.getAsFloat();
-            float z0 = prev.z.getAsFloat();
-            return output.set(
-                    org.joml.Math.fma(next.x.getAsFloat() - x0, alpha, x0),
-                    org.joml.Math.fma(next.y.getAsFloat() - y0, alpha, y0),
-                    org.joml.Math.fma(next.z.getAsFloat() - z0, alpha, z0)
-            );
+            prev.evaluateInto(output, instance);
+            next.evaluateInto(p0, instance);
+            return output.lerp(p0, alpha);
         } else if (prev.interpolation == Interpolation.CATMULLROM) {
-            float x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3;
             if (low >= 2) {
                 Vec3Keyframe prevPrev = timeline.get(low - 2);
-                x0 = prevPrev.x.getAsFloat();
-                y0 = prevPrev.y.getAsFloat();
-                z0 = prevPrev.z.getAsFloat();
-                x1 = prev.x.getAsFloat();
-                y1 = prev.y.getAsFloat();
-                z1 = prev.z.getAsFloat();
+                prevPrev.evaluateInto(p0, instance);
+                prev.evaluateInto(p1, instance);
             } else {
-                x0 = x1 = prev.x.getAsFloat();
-                y0 = y1 = prev.y.getAsFloat();
-                z0 = z1 = prev.z.getAsFloat();
+                prev.evaluateInto(p0, instance);
+                p1.set(p0);
             }
-            x2 = next.x.getAsFloat();
-            y2 = next.y.getAsFloat();
-            z2 = next.z.getAsFloat();
+            next.evaluateInto(p2, instance);
             if (low + 1 < timeline.size()) {
                 Vec3Keyframe nextNext = timeline.get(low + 1);
-                x3 = nextNext.x.getAsFloat();
-                y3 = nextNext.y.getAsFloat();
-                z3 = nextNext.z.getAsFloat();
-            } else { x3 = x2; y3 = y2; z3 = z2; }
+                nextNext.evaluateInto(p3, instance);
+            } else {
+                p3.set(p2);
+            }
 
-            return output.set(
-                    catmullrom(alpha, x0, x1, x2, x3),
-                    catmullrom(alpha, y0, y1, y2, y3),
-                    catmullrom(alpha, z0, z1, z2, z3)
-            );
+            // Perform catmull-rom
+            // TODO benchmark this vector impl against channel-wise impl with floats and see if it's actually better
+//            return output.set(
+//                    catmullrom(alpha, p0.x, p1.x, p2.x, p3.x),
+//                    catmullrom(alpha, p0.y, p1.y, p2.y, p3.y),
+//                    catmullrom(alpha, p0.z, p1.z, p2.z, p3.z)
+//            );
+
+            p0.sub(p2).mul(-0.5f); // v0 stored in p0
+            p3.sub(p1).mul(0.5f); // v1 stored in p3
+            p2.sub(p1); // d stored in p2
+            return output
+                    .set(p2).mul(-2.0f) // - 2 * d
+                    .add(p0) // + v0
+                    .add(p3) // + v1
+                    .mul(alpha)
+                    .add(p2.mul(3.0f)) // + 3 * d
+                    // p2 is now available, no longer used, so use as temporary for 2*v0
+                    .sub(p0.mul(2.0f, p2)) // - 2 * v0
+                    .sub(p3) // - v1
+                    .mul(alpha)
+                    .add(p0) // + v0
+                    .mul(alpha)
+                    .add(p1); // + p1
         }
         throw new IllegalArgumentException("Unexpected interpolation");
     }
 
+    // Catmullrom on floats
+    // Used as reference to create the vector catmull-rom above
     private static float catmullrom(float t, float p0, float p1, float p2, float p3) {
         float v0 = (p2 - p0) * 0.5f;
         float v1 = (p3 - p1) * 0.5f;
-        float t2 = t * t;
         float d = p2 - p1;
-        return (v0 + v1 - 2.0f * d) * t2 * t + (3.0f * d - 2.0f * v0 - v1) * t2 + v0 * t + p1;
+        return (((v0 + v1 - 2.0f * d) * t + 3.0f * d - 2.0f * v0 - v1) * t + v0) * t + p1;
+        // Original impl fetched from online:
+//        float t2 = t * t;
+//        return (v0 + v1 - 2.0f * d) * t2 * t + (3.0f * d - 2.0f * v0 - v1) * t2 + v0 * t + p1;
     }
 
     public enum Interpolation {
@@ -150,8 +185,36 @@ public class Vec3Keyframe implements Comparable<Vec3Keyframe> {
         return Float.compare(time, o.time);
     }
 
-    // Cursed field name lol but it works
-    public record ConstantFloat(float getAsFloat) implements FloatSupplier {
-        public static final int SIZE = AllocationTracker.OBJECT_SIZE + AllocationTracker.FLOAT_SIZE;
+    // Interface to fill a Vec3f
+    private interface AnimVec3Supplier {
+        void fillVec3(Vector3f vec3f, AnimationInstance instance); // Fill the given vec3.
+        // Three float values
+        record ThreeFloats(AnimFloatSupplier x, AnimFloatSupplier y, AnimFloatSupplier z) implements AnimVec3Supplier {
+            @Override
+            public void fillVec3(Vector3f vector3f, AnimationInstance instance) {
+                vector3f.set(x.get(instance), y.get(instance), z.get(instance));
+            }
+        }
+        // Vector mode, one molang expr evaluating to a vec3
+        record VectorMode(CompiledMolang<MolangStateComponent> molang) implements AnimVec3Supplier {
+            @Override
+            public void fillVec3(Vector3f vector3f, AnimationInstance instance) {
+                CompiledMolang.FloatArraySlice slice;
+                if (molang.instance.actor == null) {
+                    slice = molang.evaluate();
+                } else {
+                    molang.instance.actor.pushAnim(instance);
+                    slice = molang.evaluate();
+                    molang.instance.actor.popAnim();
+                }
+                vector3f.set(slice.get(0), slice.get(1), slice.get(2));
+            }
+        }
+    }
+
+    // Interface to fetch a float
+    @FunctionalInterface
+    private interface AnimFloatSupplier {
+        float get(AnimationInstance instance);
     }
 }

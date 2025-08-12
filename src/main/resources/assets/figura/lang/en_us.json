@@ -27,7 +27,9 @@
 
       "figura.error.loading.invalid_png": "Failed to process texture \"%s\". Are you sure this is a valid PNG file?",
       "figura.error.loading.script.unknown_language": "Unknown language \"%s\". Currently the only supported language is \"lua\".",
-      "figura.error.loading.script.lua.compile_error": "Script \"%s\" failed to compile: \n%s",
+
+      "figura.error.loading.animation.invalid_molang": "Failed to compile molang in animation \"%s\".\n%s",
+      "figura.error.loading.animation.invalid_molang_return_count": "Molang expression in animation \"%s\" should return %s values, but it returns %s.",
 
     "figura.COMMENT.--------------------RUNTIME ERRORS--------------------": "",
 
@@ -40,10 +42,40 @@
 
     "figura.COMMENT.--------------------SCRIPT ERRORS--------------------": "",
 
-      "figura.error.runtime.script.stage.event": "\"%s\" event",
+      "figura.COMMENT.--------------------MOLANG ERRORS--------------------": "",
+
+        "figura.error.script.molang.compile": "Molang snippet failed to compile: \nReason: %s. Source:\n%s",
+
+        "figura.error.script.molang.compile.return_outside_block": "\"return\" must be inside a {} block",
+        "figura.error.script.molang.compile.temp_var_outside_block": "Attempt to declare temp variable \"%s\" outside of a {} block",
+        "figura.error.script.molang.compile.diff_return_sizes": "Attempted to return 2 different sizes of value from the same block: %s and %s",
+        "figura.error.script.molang.compile.expected_expression": "Expected an expression",
+        "figura.error.script.molang.compile.number_parse": "Failed to parse number",
+        "figura.error.script.molang.compile.unknown_math": "Unrecognized math function \"%s\"",
+        "figura.error.script.molang.compile.expected_temp_var": "Expected \"t.varname\" or \"temp.varname\" after \"t\"",
+        "figura.error.script.molang.compile.nonexistent_temp_var": "No temp variable named \"%s\"",
+        "figura.error.script.molang.compile.expected_actor_var": "Expected \"v.varname\" or \"variable.varname\" after \"v\"",
+        "figura.error.script.molang.compile.var_size_too_low": "Vector variables, like \"v.3.varname\", must have size at least 2",
+        "figura.error.script.molang.compile.expect_dollar_after_var_size": "Expected \"$\" after variable size indicator \"%s\"",
+        "figura.error.script.molang.compile.expected_query": "Expected \"q.queryname\" or \"query.queryname\" after \"q\"",
+        "figura.error.script.molang.compile.unknown_query": "Unrecognized query \"%s\"",
+        "figura.error.script.molang.compile.expected_close_paren": "Expected \")\" to close previous \"(\"",
+        "figura.error.script.molang.compile.expected_ternary_colon": "Expected \":\" to finish ternary with previous \"?\"",
+        "figura.error.script.molang.compile.expected_name": "Expected name after \".\"",
+        "figura.error.script.molang.compile.expected_list": "Expected \"%s\" or \"%s\" to continue or end list, respectively",
+        "figura.error.script.molang.compile.logical_and_expects_scalars": "Logical \"and\" operator (&&) requires non-vector arguments",
+        "figura.error.script.molang.compile.logical_or_expects_scalars": "Logical \"or\" operator (||) requires non-vector arguments",
+        "figura.error.script.molang.compile.ternary_condition_expects_scalar": "Ternary condition (?) must not be a vector",
+        "figura.error.script.molang.compile.ternary_branches_must_be_same_size": "Branches of a ternary (a ? b : c) must be the same size, but got %s and %s",
+        "figura.error.script.molang.compile.incompatible_var_size": "Variable \"%s\" has size %s, but you attempt to assign %s values to it",
+        "figura.error.script.molang.compile.vector_constructor_expects_two_args": "A vector constructor must have at least 2 args passed to it",
+        "figura.error.script.molang.compile.wrong_arg_count": "Function \"%s\" expects %s args, but received %s",
+        "figura.error.script.molang.compile.vector_args_same_size": "All vector args to function \"%s\" must have the same size, but got vectors of size %s and %s",
+        "figura.error.script.molang.compile.scalar_args_only": "Function \"%s\" expects only scalar args",
 
       "figura.COMMENT.--------------------LUA ERRORS--------------------": "",
 
-        "figura.error.runtime.script.lua.error_in_callback": "Error occurred inside Lua callback: %s",
-        "figura.error.runtime.script.lua.incorrect_callback_return": "Expected callback function to return %s, but it returned %s"
+        "figura.error.script.lua.compile_error": "Lua Script \"%s\" failed to compile: \n%s",
+        "figura.error.script.lua.error_in_callback": "Error occurred inside Lua callback: %s",
+        "figura.error.script.lua.incorrect_callback_return": "Expected callback function to return %s, but it returned %s"
 }

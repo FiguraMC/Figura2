@@ -6,6 +6,8 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
@@ -76,7 +78,7 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
             + AllocationTracker.INT_SIZE;
 
     // Vanilla parameter is used for mimics
-    public FiguraModelPart(ModuleMaterials.ModelPartMaterials materials, @Nullable AllocationTracker allocationTracker, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
+    public FiguraModelPart(AvatarModules.LoadTimeModule module, ModuleMaterials.ModelPartMaterials materials, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable MolangStateComponent molangStateComponent, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
         // If both zero, skip setting it
         transform = new PartTransform(allocationTracker);
         if (!materials.origin.equals(0,0,0) || !materials.rotation.equals(0,0,0)) {
@@ -108,15 +110,15 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
 
         // Get children
         children = MapUtils.mapValues(materials.children, mat -> switch (mat) {
-            case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(figmodelMaterials, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
-            default -> new FiguraModelPart(mat, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
+            case ModuleMaterials.FigmodelMaterials figmodelMaterials -> new FigmodelModelPart(module, figmodelMaterials, allocationTracker, texturesComponent, molangStateComponent, vanillaComponent);
+            default -> new FiguraModelPart(module, mat, allocationTracker, texturesComponent, molangStateComponent, vanillaComponent);
         }, LinkedHashMap::new);
 
         // Get the list of render types:
         Vector4f uvModifier = new Vector4f(0, 0, 1, 1);
         if (materials.textureIndex != -1) {
             // If tex index is not -1, then generate a render type from the texture:
-            AvatarTexture tex = texturesComponent.getTexture(moduleIndex, materials.textureIndex);
+            AvatarTexture tex = texturesComponent.getTexture(module.index, materials.textureIndex);
             renderType = new FiguraRenderType.Basic(tex.getLocation(), null);
             // Also, set the UV modifier from the texture (for atlases)
             uvModifier.set(tex.getUvValues());

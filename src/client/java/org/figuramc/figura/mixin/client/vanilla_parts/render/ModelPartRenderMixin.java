@@ -129,7 +129,7 @@ public abstract class ModelPartRenderMixin {
         // Depending on whether the entity is cancelling the vanilla transform.
 
         // Origin:
-        TEMPVEC.set(currentPart.figuraTransform.getOrigin()); // Figura-applied amount
+        TEMPVEC.set(currentPart.figuraTransform.totalOrigin()); // Figura-applied amount
         currentPart.storedVanillaOrigin.set(TEMPVEC);
         TEMPVEC.mul(inv, inv, 1); // Apply inversions
         if (currentPart.cancelVanillaOrigin) {
@@ -142,7 +142,7 @@ public abstract class ModelPartRenderMixin {
         poseStack.translate(TEMPVEC.x, TEMPVEC.y, TEMPVEC.z);
 
         // Rotation:
-        TEMPVEC.set(currentPart.figuraTransform.getEulerRad()); // Figura-applied amount
+        TEMPVEC.set(currentPart.figuraTransform.totalEulerRad()); // Figura-applied amount
         currentPart.storedVanillaRotation.set(TEMPVEC);
         TEMPVEC.mul(inv, inv, 1); // Apply inversions
         if (currentPart.cancelVanillaRotation) {
@@ -155,7 +155,7 @@ public abstract class ModelPartRenderMixin {
         poseStack.mulPose(TEMPQUAT);
 
         // Scale:
-        TEMPVEC.set(currentPart.figuraTransform.getScale()); // Figura-applied amount
+        TEMPVEC.set(currentPart.figuraTransform.totalScale()); // Figura-applied amount
         currentPart.storedVanillaScale.set(TEMPVEC);
         if (currentPart.cancelVanillaScale) {
             TEMPVEC.mul(initialPose.xScale(), initialPose.yScale(), initialPose.zScale());
@@ -166,7 +166,7 @@ public abstract class ModelPartRenderMixin {
         poseStack.scale(TEMPVEC.x, TEMPVEC.y, TEMPVEC.z);
 
         // Position (only comes from Figura):
-        TEMPVEC.set(currentPart.figuraTransform.getPosition());
+        TEMPVEC.set(currentPart.figuraTransform.totalPosition());
         currentPart.storedVanillaPosition.set(TEMPVEC);
         TEMPVEC.mul(inv, inv, 1);
         poseStack.translate(TEMPVEC.x / 16f, TEMPVEC.y / 16f, TEMPVEC.z / 16f);

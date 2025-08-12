@@ -31,7 +31,7 @@ public class FiguraModClient implements ClientModInitializer {
         EnumLike.freeze(Event.class);
 
         // Avatar component types are currently stored in their classes respectively, though this isn't actually forced and could change
-        ReflectionUtils.ensureInitialized(CemSelfDeleter.class, CustomItems.class, EntityRoot.class, EntityUser.class, Scripts.class, Textures.class, VanillaRendering.class);
+        ReflectionUtils.ensureInitialized(CemSelfDeleter.class, CustomItems.class, EntityRoot.class, EntityUser.class, MolangStateComponent.class, Scripts.class, Textures.class, VanillaRendering.class);
         EnumLike.freeze(AvatarComponent.Type.class);
 
         // Init configs

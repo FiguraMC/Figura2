@@ -28,22 +28,28 @@ public class RiggedHierarchyAPI {
     // more args -> number setter
 
     @LuaExpose @LuaReturnSelf public static Vector3d origin(RiggedHierarchy<?> self) { return self.getTransform().getOrigin().get(new Vector3d()); }
+    @LuaExpose @LuaReturnSelf public static Vector3d totalOrigin(RiggedHierarchy<?> self) { return self.getTransform().totalOrigin().get(new Vector3d()); }
     @LuaExpose @LuaReturnSelf public static void origin(RiggedHierarchy<?> self, Vector3d origin) { origin(self, (float) origin.x, (float) origin.y, (float) origin.z); }
     @LuaExpose @LuaReturnSelf public static void origin(RiggedHierarchy<?> self, float x, float y, float z) { self.getTransform().setOrigin(x, y, z); }
 
+
     @LuaExpose @LuaReturnSelf public static Vector3d rot(RiggedHierarchy<?> self) { return rad(self).mul(180 / Math.PI); }
+    @LuaExpose @LuaReturnSelf public static Vector3d totalRot(RiggedHierarchy<?> self) { return totalRad(self).mul(180 / Math.PI); }
     @LuaExpose @LuaReturnSelf public static void rot(RiggedHierarchy<?> self, Vector3d degrees) { rot(self, (float) degrees.x, (float) degrees.y, (float) degrees.z); }
     @LuaExpose @LuaReturnSelf public static void rot(RiggedHierarchy<?> self, float x, float y, float z) { self.getTransform().setEulerDeg(x, y, z); }
 
     @LuaExpose @LuaReturnSelf public static Vector3d rad(RiggedHierarchy<?> self) { return self.getTransform().getEulerRad().get(new Vector3d()); }
+    @LuaExpose @LuaReturnSelf public static Vector3d totalRad(RiggedHierarchy<?> self) { return self.getTransform().totalEulerRad().get(new Vector3d()); }
     @LuaExpose @LuaReturnSelf public static void rad(RiggedHierarchy<?> self, Vector3d radians) { rad(self, (float) radians.x, (float) radians.y, (float) radians.z); }
     @LuaExpose @LuaReturnSelf public static void rad(RiggedHierarchy<?> self, float x, float y, float z) { self.getTransform().setEulerRad(x, y, z); }
 
     @LuaExpose @LuaReturnSelf public static Vector3d scale(RiggedHierarchy<?> self) { return self.getTransform().getScale().get(new Vector3d()); }
+    @LuaExpose @LuaReturnSelf public static Vector3d totalScale(RiggedHierarchy<?> self) { return self.getTransform().totalScale().get(new Vector3d()); }
     @LuaExpose @LuaReturnSelf public static void scale(RiggedHierarchy<?> self, Vector3d scale) { scale(self, (float) scale.x, (float) scale.y, (float) scale.z); }
     @LuaExpose @LuaReturnSelf public static void scale(RiggedHierarchy<?> self, float x, float y, float z) { self.getTransform().setScale(x, y, z); }
 
     @LuaExpose @LuaReturnSelf public static Vector3d pos(RiggedHierarchy<?> self) { return self.getTransform().getPosition().get(new Vector3d()); }
+    @LuaExpose @LuaReturnSelf public static Vector3d totalPos(RiggedHierarchy<?> self) { return self.getTransform().totalPosition().get(new Vector3d()); }
     @LuaExpose @LuaReturnSelf public static void pos(RiggedHierarchy<?> self, Vector3d pos) { pos(self, (float) pos.x, (float) pos.y, (float) pos.z); }
     @LuaExpose @LuaReturnSelf public static void pos(RiggedHierarchy<?> self, float x, float y, float z) { self.getTransform().setPosition(x, y, z); }
 
@@ -55,7 +61,5 @@ public class RiggedHierarchyAPI {
     // Visibility getter/setter
     @LuaExpose public static boolean vis(RiggedHierarchy<?> self) { return self.getTransform().getVisible(); }
     @LuaExpose @LuaReturnSelf public static void vis(RiggedHierarchy<?> self, boolean visible) { self.getTransform().setVisible(visible); }
-
-
 
 }

@@ -46,7 +46,7 @@ public class FiguraRequire {
                 LuaClosure closure = LoadState.load(state, new ByteArrayInputStream(code), "@" + name, _ENV);
                 functionStorage.rawset(name, closure);
             } catch (CompileException ex) {
-                throw new AvatarError("figura.error.loading.script.lua.compile_error", ex, name, ex.getMessage());
+                throw new AvatarError("figura.error.script.lua.compile_error", ex, name, ex.getMessage());
             }
         }
         for (var entry : module.dependencyIndices.entrySet()) {

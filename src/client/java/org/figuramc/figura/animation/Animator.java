@@ -72,7 +72,7 @@ public class Animator {
         if (!hasOrigin()) return MathUtils.ZERO;
         if (hasFlags(PartTransform.ORIGIN_DIRTY)) {
             assert keyframes.origin() != null;
-            Vec3Keyframe.evaluateTimelineInto(origin, keyframes.origin(), instance.getTime());
+            Vec3Keyframe.evaluateTimelineInto(origin, keyframes.origin(), instance.getTime(), instance);
             origin.mul(instance.getStrength()); // Apply strength
             removeFlags(PartTransform.ORIGIN_DIRTY);
         }
@@ -83,8 +83,8 @@ public class Animator {
         if (!hasRotation()) return MathUtils.ZERO;
         if (hasFlags(PartTransform.ROTATION_DIRTY)) {
             assert keyframes.rotation() != null;
-            Vec3Keyframe.evaluateTimelineInto(rotation, keyframes.rotation(), instance.getTime()).mul(Mth.DEG_TO_RAD); // Remember to convert to radians
-            rotation.mul(instance.getStrength()); // Apply strength
+            Vec3Keyframe.evaluateTimelineInto(rotation, keyframes.rotation(), instance.getTime(), instance);
+            rotation.mul(instance.getStrength() * Mth.DEG_TO_RAD); // Apply strength, and convert to radians
             removeFlags(PartTransform.ROTATION_DIRTY);
         }
         return rotation;
@@ -94,7 +94,7 @@ public class Animator {
         if (!hasScale()) return MathUtils.ONE;
         if (hasFlags(PartTransform.SCALE_DIRTY)) {
             assert keyframes.scale() != null;
-            Vec3Keyframe.evaluateTimelineInto(scale, keyframes.scale(), instance.getTime());
+            Vec3Keyframe.evaluateTimelineInto(scale, keyframes.scale(), instance.getTime(), instance);
             // Apply strength. It's a bit weird for scale, it needs to be centered around 1.
             if (instance.getStrength() != 1.0f) scale.sub(MathUtils.ONE).mul(instance.getStrength()).add(MathUtils.ONE);
             removeFlags(PartTransform.SCALE_DIRTY);

@@ -119,7 +119,7 @@ public record ModuleMaterials(
 
     // CUSTOM ITEMS
     public record CustomItem(@Nullable CustomItemModel model, int textureIndex) {}
-    public record CustomItemModel(ModelPartMaterials model, EnumMap<ItemDisplayContext, ItemPartTransform> transforms) {}
+    public record CustomItemModel(FigmodelMaterials model, EnumMap<ItemDisplayContext, ItemPartTransform> transforms) {}
     public record ItemPartTransform(Vector3f translation, Vector3f rotation, Vector3f scale) {}
 
     // ANIMATIONS

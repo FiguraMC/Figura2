@@ -1,0 +1,126 @@
+package org.figuramc.figura.script_languages.molang;
+
+import org.figuramc.figura.script_languages.molang.ast.MolangExpr;
+import org.figuramc.figura.script_languages.molang.compile.CompilationContext;
+import org.figuramc.figura.script_languages.molang.compile.MolangCompileException;
+import org.figuramc.figura.util.BytecodeUtil;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+
+import java.util.List;
+
+/**
+ * Class for creating custom queries on actors. They only accept scalars.
+ */
+public class QueryFactory<Actor> {
+
+    /**
+     * The method should be a non-static method, on the Actor class, accepting (paramCount) float args and returning a float (if returnCount == 1), or a float[] otherwise.
+     * If the actor is not present, or is not an instance of actorClass, the query will return 0 (or a vector of zeros).
+     */
+    public static <Actor> MolangInstance.Query<Actor> fromActorMethod(String name, Class<Actor> actorClass, String methodName, int paramCount, int returnCount) {
+        return fromActorMethod(name, actorClass, actorClass, false, methodName, paramCount, returnCount);
+    }
+
+    /**
+     * Similar to fromActorMethod, but instead of invokevirtual on the Actor, it's invokestatic on methodClass.
+     * It still checks that the actor is an instance of actorClass before invoking the static method.
+     */
+    public static <Actor> MolangInstance.Query<Actor> fromStaticActorMethod(String name, Class<Actor> actorClass, Class<?> methodClass, String methodName, int paramCount, int returnCount) {
+        return fromActorMethod(name, actorClass, methodClass, true, methodName, paramCount, returnCount);
+    }
+
+    /**
+     * From a generic static method, does not use an Actor.
+     */
+    public static MolangInstance.Query<Object> fromStaticMethod(String name, Class<?> methodOwnerClass, String methodName, int paramCount, int returnCount) {
+        return (parser, args, source, funcNameStart, funcNameEnd) -> {
+            // Verify args
+            if (args.size() != paramCount) throw new MolangCompileException("figura.error.script.molang.compile.wrong_arg_count", source, funcNameStart, funcNameEnd, name, "at least 3", args.size());
+            if (args.stream().anyMatch(MolangExpr::isVector)) throw new MolangCompileException("figura.error.script.molang.compile.scalar_args_only", source, funcNameStart, funcNameEnd, name);
+            // Return
+            return new MolangExpr() {
+                @Override
+                protected int computeReturnCount() {
+                    return returnCount;
+                }
+                @Override
+                public void compile(MethodVisitor visitor, int outputArrayIndex, CompilationContext context) {
+                    // Call the method.
+                    for (MolangExpr arg : args) arg.compile(visitor, outputArrayIndex, context);
+                    String descriptor = "(" + "F".repeat(paramCount) + ")" + (returnCount == 1 ? "F" : "[F");
+                    visitor.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(methodOwnerClass), methodName, descriptor, false);
+                    // If it returned 1 float, we're done, otherwise copy from float[] into output
+                    if (returnCount != 1) {
+                        BytecodeUtil.constInt(visitor, 0); // [arr, 0]
+                        visitor.visitVarInsn(Opcodes.ALOAD, 1); // [arr, 0, temp]
+                        BytecodeUtil.constInt(visitor, outputArrayIndex); // [arr, 0, temp, dst]
+                        BytecodeUtil.constInt(visitor, returnCount); // [arr, 0, temp, dst, count]
+                        visitor.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V", false);
+                    }
+                }
+            };
+        };
+    }
+
+
+    private static <Actor> MolangInstance.Query<Actor> fromActorMethod(String name, Class<Actor> actorClass, Class<?> methodOwnerClass, boolean isStatic, String methodName, int paramCount, int returnCount) {
+        return (parser, args, source, funcNameStart, funcNameEnd) -> {
+            // Verify args
+            if (args.size() != paramCount) throw new MolangCompileException("figura.error.script.molang.compile.wrong_arg_count", source, funcNameStart, funcNameEnd, name, "at least 3", args.size());
+            if (args.stream().anyMatch(MolangExpr::isVector)) throw new MolangCompileException("figura.error.script.molang.compile.scalar_args_only", source, funcNameStart, funcNameEnd, name);
+            // Return
+            return new MolangExpr() {
+                @Override
+                protected int computeReturnCount() {
+                    return returnCount;
+                }
+                @Override
+                public void compile(MethodVisitor visitor, int outputArrayIndex, CompilationContext context) {
+                    // Test if actor instanceof actorClass
+                    visitor.visitVarInsn(Opcodes.ALOAD, 0);
+                    visitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(CompiledMolang.class), "instance", Type.getDescriptor(MolangInstance.class));
+                    visitor.visitFieldInsn(Opcodes.GETFIELD, Type.getInternalName(MolangInstance.class), "actor", Type.getDescriptor(Object.class));
+                    visitor.visitInsn(Opcodes.DUP);
+                    visitor.visitTypeInsn(Opcodes.INSTANCEOF, Type.getInternalName(actorClass));
+                    BytecodeUtil.ifElse(visitor, Opcodes.IFEQ, v -> {
+                        // If it's an instance, call the method
+                        visitor.visitTypeInsn(Opcodes.CHECKCAST, Type.getInternalName(actorClass));
+                        for (MolangExpr arg : args) arg.compile(v, outputArrayIndex, context);
+                        if (isStatic) {
+                            String descriptor = "(" + Type.getDescriptor(actorClass) + "F".repeat(paramCount) + ")" + (returnCount == 1 ? "F" : "[F");
+                            v.visitMethodInsn(Opcodes.INVOKESTATIC, Type.getInternalName(methodOwnerClass), methodName, descriptor, false);
+                        } else {
+                            String descriptor = "(" + "F".repeat(paramCount) + ")" + (returnCount == 1 ? "F" : "[F");
+                            v.visitMethodInsn(Opcodes.INVOKEVIRTUAL, Type.getInternalName(actorClass), methodName, descriptor, false);
+                        }
+                        // If it returned 1 float, we're done, otherwise copy from float[] into output
+                        if (returnCount != 1) {
+                            BytecodeUtil.constInt(v, 0); // [arr, 0]
+                            v.visitVarInsn(Opcodes.ALOAD, 1); // [arr, 0, temp]
+                            BytecodeUtil.constInt(v, outputArrayIndex); // [arr, 0, temp, dst]
+                            BytecodeUtil.constInt(v, returnCount); // [arr, 0, temp, dst, count]
+                            v.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V", false);
+                        }
+                    }, v -> {
+                        // Pop the extra reference
+                        v.visitInsn(Opcodes.POP);
+                        // Either push 0, or fill the result slice with 0.
+                        if (returnCount == 1) {
+                            BytecodeUtil.constFloat(v, 0);
+                        } else {
+                            v.visitVarInsn(Opcodes.ALOAD, 1);
+                            BytecodeUtil.constInt(v, outputArrayIndex);
+                            BytecodeUtil.constInt(v, outputArrayIndex + returnCount);
+                            BytecodeUtil.constFloat(v, 0);
+                            v.visitMethodInsn(Opcodes.INVOKESTATIC, "java/util/Arrays", "fill", "([FIIF)V", false);
+                        }
+                    });
+                }
+            };
+        };
+    }
+
+
+}

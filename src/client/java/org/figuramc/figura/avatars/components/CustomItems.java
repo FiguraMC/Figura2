@@ -33,7 +33,7 @@ public class CustomItems implements AvatarComponent<CustomItems> {
      */
     private final List<PartEntry> customItems;
 
-    public CustomItems(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable VanillaRendering vanillaRendering) throws AvatarError {
+    public CustomItems(List<AvatarModules.LoadTimeModule> modules, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable MolangStateComponent molangState, @Nullable VanillaRendering vanillaRendering) throws AvatarError {
         // Create the custom items
         customItems = new ArrayList<>();
         for (var mod : modules) {
@@ -50,7 +50,7 @@ public class CustomItems implements AvatarComponent<CustomItems> {
                     matcher = new Matcher.ExactMatcher(exactLocation);
                 }
                 // Convert the materials to a CustomItemModelPart
-                Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(entry.getValue().model().model(), allocationTracker, entry.getValue().model().transforms(), mod.index, texturesComponent, vanillaRendering)) : null;
+                Renderable<CustomItemModelPart> mainPart = entry.getValue().model() != null ? new Renderable<>(new CustomItemModelPart(mod, entry.getValue().model().model(), entry.getValue().model().transforms(), allocationTracker, texturesComponent, molangState, vanillaRendering)) : null;
                 // Convert the texture index to a FiguraModelPart
                 Renderable<FiguraModelPart> flatPart = entry.getValue().textureIndex() != -1 ? new Renderable<>(new FiguraModelPart(texturesComponent.getTexture(mod.index, entry.getValue().textureIndex()), allocationTracker)) : null;
                 // Yield the entry

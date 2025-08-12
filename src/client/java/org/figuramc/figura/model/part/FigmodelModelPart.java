@@ -3,6 +3,8 @@ package org.figuramc.figura.model.part;
 import org.figuramc.figura.animation.Animation;
 import org.figuramc.figura.animation.AnimationInstance;
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.avatars.components.Textures;
 import org.figuramc.figura.avatars.components.VanillaRendering;
 import org.figuramc.figura.data.ModuleMaterials;
@@ -24,10 +26,10 @@ public class FigmodelModelPart extends FiguraModelPart {
     // Map to textures; these may be the same object reference as other textures.
     private final Map<String, AvatarTexture> textures;
 
-    public FigmodelModelPart(ModuleMaterials.FigmodelMaterials materials, @Nullable AllocationTracker allocationTracker, int moduleIndex, Textures texturesComponent, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
-        super(materials, allocationTracker, moduleIndex, texturesComponent, vanillaComponent);
-        animations = MapUtils.mapValues(materials.animations, animMats -> new AnimationInstance(new Animation(animMats, allocationTracker), this, allocationTracker));
-        textures = MapUtils.mapValues(materials.textures, texIndex -> texturesComponent.getTexture(moduleIndex, texIndex));
+    public FigmodelModelPart(AvatarModules.LoadTimeModule module, ModuleMaterials.FigmodelMaterials materials, @Nullable AllocationTracker allocationTracker, Textures texturesComponent, @Nullable MolangStateComponent molangState, @Nullable VanillaRendering vanillaComponent) throws AvatarError {
+        super(module, materials, allocationTracker, texturesComponent, molangState, vanillaComponent);
+        animations = MapUtils.mapValues(materials.animations, (animName, animMats) -> new AnimationInstance(new Animation(module, animName, animMats, molangState, allocationTracker), this, allocationTracker));
+        textures = MapUtils.mapValues(materials.textures, texIndex -> texturesComponent.getTexture(module.index, texIndex));
 
         if (allocationTracker != null) {
             for (var key : animations.keySet())

@@ -45,7 +45,7 @@ public class FiguraMetatables {
     public final LuaTable figmodelModelPart;
 
     // Vanilla rendering
-    public final LuaTable vanillaPart; // VanillaRendering.VanillaPart
+    public final LuaTable vanillaPart;
 //    public final LuaTable vanillaRenderLayer;
 
     // Animation stuff

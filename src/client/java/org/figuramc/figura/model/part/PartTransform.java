@@ -74,18 +74,22 @@ public class PartTransform {
     // Property set/get
     public void setOrigin(Vector3fc origin) { this.origin.set(origin); setFlags(ORIGIN_DIRTY | MATRIX_DIRTY); }
     public void setOrigin(float x, float y, float z) { this.origin.set(x, y, z); setFlags(ORIGIN_DIRTY | MATRIX_DIRTY); }
+    public Vector3fc getOrigin() { return this.origin; }
 
     public void setEulerRad(Vector3fc rotation) { this.rotation.set(rotation); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
     public void setEulerRad(float x, float y, float z) { this.rotation.set(x, y, z); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
     public void setEulerDeg(Vector3fc rotation) { this.rotation.set(rotation).mul(Mth.DEG_TO_RAD); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
     public void setEulerDeg(float x, float y, float z) { this.rotation.set(x, y, z).mul(Mth.DEG_TO_RAD); setFlags(ROTATION_DIRTY | MATRIX_DIRTY); }
+    public Vector3fc getEulerRad() { return this.rotation; }
 
     public void setScale(Vector3fc scale) { this.scale.set(scale); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
     public void setScale(float x, float y, float z) { this.scale.set(x, y, z); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
     public void setScale(float s) { this.scale.set(s); setFlags(SCALE_DIRTY | MATRIX_DIRTY); }
+    public Vector3fc getScale() { return this.scale; }
 
     public void setPosition(Vector3fc position) { this.position.set(position); setFlags(POSITION_DIRTY | MATRIX_DIRTY); }
     public void setPosition(float x, float y, float z) { this.position.set(x, y, z); setFlags(POSITION_DIRTY | MATRIX_DIRTY); }
+    public Vector3fc getPosition() { return this.position; }
 
     public void forceMatrix(Matrix4fc matrix) { this.totalMatrix.set(matrix); this.totalMatrix.normal(totalNormalMatrix); removeFlags(MATRIX_DIRTY); }
     public void unforceMatrix() { setFlags(MATRIX_DIRTY); }
@@ -105,7 +109,7 @@ public class PartTransform {
         animator.addTransform(this);
     }
 
-    public Vector3fc getOrigin() {
+    public Vector3fc totalOrigin() {
         if (originDirty()) {
             totalOrigin.set(origin);
             if (mimicPart != null)
@@ -118,7 +122,7 @@ public class PartTransform {
         }
         return totalOrigin;
     }
-    public Vector3fc getEulerRad() {
+    public Vector3fc totalEulerRad() {
         if (rotationDirty()) {
             totalRotation.set(rotation);
             if (mimicPart != null)
@@ -131,7 +135,7 @@ public class PartTransform {
         }
         return totalRotation;
     }
-    public Vector3fc getScale() {
+    public Vector3fc totalScale() {
         if (scaleDirty()) {
             totalScale.set(scale);
             if (mimicPart != null)
@@ -144,7 +148,7 @@ public class PartTransform {
         }
         return totalScale;
     }
-    public Vector3fc getPosition() {
+    public Vector3fc totalPosition() {
         if (positionDirty()) {
             totalPosition.set(position);
             if (mimicPart != null) totalPosition.add(mimicPart.storedVanillaPosition);
@@ -163,10 +167,10 @@ public class PartTransform {
     // Affect the transform stack with this
     public void affect(FiguraTransformStack stack) {
         if (matrixDirty()) {
-            Vector3fc origin = getOrigin();
-            Vector3fc rotation = getEulerRad();
-            Vector3fc scale = getScale();
-            Vector3fc position = getPosition();
+            Vector3fc origin = totalOrigin();
+            Vector3fc rotation = totalEulerRad();
+            Vector3fc scale = totalScale();
+            Vector3fc position = totalPosition();
             totalMatrix
                     .translation(origin.x() / 16f, origin.y() / 16f, origin.z() / 16f)
                     .rotateZYX(rotation.z(), rotation.y(), rotation.x())

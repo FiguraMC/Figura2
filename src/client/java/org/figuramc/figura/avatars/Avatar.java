@@ -40,7 +40,7 @@ public class Avatar<K> {
         // Create presentComponents array by removing null elements for faster iteration.
         this.presentComponents = this.components.values().stream().filter(Objects::nonNull).toArray(AvatarComponent[]::new);
         // Create runtime modules
-        this.modules = ListUtils.map(loadTimeModules, AvatarModules.RuntimeModule::new);
+        this.modules = ListUtils.map(loadTimeModules, loadTime -> new AvatarModules.RuntimeModule(loadTime, allocationTracker));
     }
 
     // Access this using the static field <subclass of AvatarComponent>.TYPE.

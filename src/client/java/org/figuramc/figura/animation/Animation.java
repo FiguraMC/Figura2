@@ -1,6 +1,8 @@
 package org.figuramc.figura.animation;
 
 import org.figuramc.figura.avatars.AvatarError;
+import org.figuramc.figura.avatars.AvatarModules;
+import org.figuramc.figura.avatars.components.MolangStateComponent;
 import org.figuramc.figura.data.ModuleMaterials;
 import org.figuramc.figura.script_hooks.mem_count.AllocationTracker;
 import org.figuramc.figura.util.ListUtils;
@@ -23,11 +25,11 @@ public class Animation {
     public final Map<String, TransformKeyframes> keyframesByPartPath;
 
     // Construct an animation from materials
-    public Animation(ModuleMaterials.AnimationMaterials materials, @Nullable AllocationTracker allocationTracker) throws AvatarError {
+    public Animation(AvatarModules.LoadTimeModule module, String animName, ModuleMaterials.AnimationMaterials materials, @Nullable MolangStateComponent molangState, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         keyframesByPartPath = MapUtils.mapValues(materials.transformKeyframes(), transformMats -> new TransformKeyframes(
-                ListUtils.map(transformMats.origin(), mats -> new Vec3Keyframe(mats, allocationTracker)),
-                ListUtils.map(transformMats.rotation(), mats -> new Vec3Keyframe(mats, allocationTracker)),
-                ListUtils.map(transformMats.scale(), mats -> new Vec3Keyframe(mats, allocationTracker))
+                ListUtils.map(transformMats.origin(), mats -> new Vec3Keyframe(module, animName, mats, molangState, allocationTracker)),
+                ListUtils.map(transformMats.rotation(), mats -> new Vec3Keyframe(module, animName, mats, molangState, allocationTracker)),
+                ListUtils.map(transformMats.scale(), mats -> new Vec3Keyframe(module, animName, mats, molangState, allocationTracker))
         ));
 
         // Track all in one big track() call...
