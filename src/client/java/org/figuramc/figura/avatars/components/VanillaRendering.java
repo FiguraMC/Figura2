@@ -39,7 +39,7 @@ public class VanillaRendering implements AvatarComponent<VanillaRendering> {
     public VanillaRendering(EntityRenderer<?, ?> entityRenderer, @Nullable AllocationTracker allocationTracker) throws AvatarError {
         this.entityRenderer = entityRenderer;
         for (Model model : ModelNames.getModelsByName(entityRenderer).values()) {
-            for (ModelPart part : model.root().getAllParts().toList()) {
+            for (ModelPart part : model.root().getAllParts()) {
                 partMap.put(part, new VanillaPart(part, allocationTracker));
             }
         }

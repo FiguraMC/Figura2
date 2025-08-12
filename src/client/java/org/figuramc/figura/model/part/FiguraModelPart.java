@@ -97,7 +97,7 @@ public class FiguraModelPart implements RiggedHierarchy<FiguraModelPart> {
                 Map<String, Model> models = ModelNames.getModelsByName(vanillaComponent.entityRenderer);
                 Model model = models.get(modelName);
                 if (model != null) {
-                    ModelPart part = model.getAnyDescendantWithName(partName).orElse(null);
+                    ModelPart part = model.root().createPartLookup().apply(partName);
                     if (part != null) {
                         VanillaRendering.VanillaPart scriptPart = vanillaComponent.partMap.get(part);
                         if (scriptPart != null) {
